@@ -4,7 +4,12 @@
   "version": "0.0.0",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
+    "dev": "pnpm run --parallel --filter \"@all-in-one/*\" --if-present dev",
     "dev:web": "pnpm --filter @all-in-one/web dev",
-    "build:web": "pnpm --filter @all-in-one/web build"
+    "dev:server": "pnpm --filter @all-in-one/server dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
   }
 }

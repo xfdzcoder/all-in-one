@@ -166,6 +166,18 @@ importers:
 
   .: {}
 
+  apps/server:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.19.0
+      oxlint:
+        specifier: ^1.81.0
+        version: 1.85.0
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+
   apps/web:
     dependencies:
       gridstack:
@@ -200,7 +212,14 @@ importers:
         specifier: ^8.3.0
         version: 8.3.1(@types/node@24.19.0)
 
-  packages/widget-sdk: {}
+  packages/widget-sdk:
+    devDependencies:
+      oxlint:
+        specifier: ^1.81.0
+        version: 1.85.0
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
 
 packages:
 
