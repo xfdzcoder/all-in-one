@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.local
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.DS_Store
+
+# IDE / 工具本地状态
+.idea/
+.mimocode/
