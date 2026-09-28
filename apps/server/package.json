@@ -14,5 +14,10 @@
     "@types/node": "^24.13.3",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "drizzle-orm": "^0.45.3",
+    "fastify": "^5.12.5"
   }
 }

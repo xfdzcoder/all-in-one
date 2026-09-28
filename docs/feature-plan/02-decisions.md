@@ -127,6 +127,14 @@
 - **影响**：M2/M3 交付物边界与 05-mvp §6/§7 定稿。
 - **被否备选**：RSS 提前至 M2；全部旅程强制自动化。
 
+## D16 · SQLite 驱动：libsql 本地文件（开发期简决）
+
+- **状态**：已决
+- **背景**：M1-② 落地 Drizzle + SQLite(WAL) 时，`better-sqlite3` 需 node-gyp 原生编译，本机/CI 环境缺少构建链，安装失败。
+- **决策**：使用 `@libsql/client` 的 `file:` 本地 URL 作为 Drizzle 驱动（`drizzle-orm/libsql`），库文件仍是标准 SQLite，启用 WAL。对外仍是「SQLite + Drizzle」栈（04 不变）。
+- **影响**：运行时多一层 libsql client；备份仍为拷贝 `data/app.db`（含 `-wal`/`-shm`）。若日后需要 better-sqlite3，可只换 `db/client.ts` 适配层。
+- **被否备选**：强装 node-gyp/better-sqlite3（环境脆弱）；node:sqlite 直写（放弃 Drizzle，违背 D11）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）

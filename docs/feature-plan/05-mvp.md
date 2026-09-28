@@ -32,7 +32,7 @@
 | 交付物 | ① pnpm monorepo（`apps/web` / `apps/server` / `packages/widget-sdk` 占位）② Fastify + Drizzle + SQLite schema（`user` / `dashboard` / widget 布局 JSON + `schemaVersion` + 归属字段，对齐 NFR5）③ 账号初始化 + argon2id + Cookie 会话（SEC1/SEC2）④ Dashboard CRUD/排序 ⑤ 布局引擎接入（按 M0 结论）、编辑/浏览模式分离（FR-P8）、防抖自动保存、刷新恢复、默认布局兜底（FR-P4）⑥ 移动端隐藏编辑入口（FR-P7） |
 | 验收 | **J1**（部署→初始化→登录→默认首页）、**J2**（编辑→拖拽→保存→恢复）；组件暂用占位件验证框架 |
 | 对应需求 | FR-P1~P8、SEC1/2、NFR5 |
-| **状态** | 🔄 进行中：**M1-① ✅**（2026-09-28）三包齐备 `apps/web` / `apps/server` / `packages/widget-sdk`，根脚本 `dev`/`build`/`lint`/`test`/`typecheck` 覆盖三包；**M1-②–⑥ 待做** |
+| **状态** | 🔄 进行中：**M1-① ✅**（2026-09-28）三包齐备，根脚本覆盖三包；**M1-② ✅**（2026-09-28）Fastify + Drizzle + SQLite(WAL) schema（`user`/`dashboard` + `layout_json`/`schema_version`/`user_id` 归属）+ `/api/health`，冒烟通过（D16 驱动选型）；**M1-③–⑥ 待做** |
 
 ### M2 · Widget 契约 + 数据通道 + 首批组件
 

@@ -15,7 +15,7 @@
 - 根脚本（覆盖三包）：`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test` / `pnpm typecheck`
 - 分包：`pnpm dev:web`、`pnpm dev:server`；`pnpm --filter @all-in-one/web build` 等
 - 测试：尚无 runner（计划 M2 Vitest 契约测试、M3 Playwright J1–J4）；`test` 脚本目前为占位。UI 行为验证可用系统 Chrome（`/usr/bin/google-chrome`）+ puppeteer-core 驱动（M0 spike 即如此做的拖拽/缩放/断点验证）。
-- `apps/server` 为 M1-① 占位（入口 `src/index.ts`，Node 26 可直接跑 TS）；Fastify + Drizzle 在 M1-②。
+- `apps/server`：M1-② 已接 Fastify + Drizzle + libsql(`file:` SQLite WAL)（D16）；schema 见 `apps/server/src/db/schema.ts`。入口 `src/index.ts`（Node 26 直跑 TS，相对 import 用 `.ts`）。
 
 ## Monorepo 边界
 

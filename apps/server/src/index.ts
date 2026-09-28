@@ -1,8 +1,8 @@
-/** @all-in-one/server placeholder — Fastify + Drizzle land in M1-②. */
+import { startServer } from "./app.ts";
+
 export const serviceName = "@all-in-one/server";
 
-export function boot(): void {
-  console.log(`[${serviceName}] placeholder boot (real API server lands in M1-②)`);
-}
-
-boot();
+startServer().catch((err: unknown) => {
+  console.error(`[${serviceName}] failed to start`, err);
+  process.exit(1);
+});
