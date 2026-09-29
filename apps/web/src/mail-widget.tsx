@@ -14,6 +14,7 @@ import {
 
 import type { MailListEntry } from "./api";
 import { ConfirmAction } from "./confirm";
+import { HtmlSandbox } from "./html-sandbox";
 import {
   useMailAccounts,
   useMailMessage,
@@ -26,19 +27,6 @@ import {
  * 正文为不可信 HTML —— 以沙箱 iframe 渲染（D30/D25：deny-all + CSP 禁脚本/远程图）；
  * 账号管理在组件内（口令走凭证库 SEC3）；D3 只读：无发送/删除/标记端点。
  */
-
-/** 正文沙箱：脚本永不执行（sandbox="" + CSP script-src 'none' 双保险）。 */
-function HtmlSandbox({ html, title }: { html: string; title: string }) {
-  const srcDoc = `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-src 'none'; form-action 'none'; base-uri 'none'"></head><body>${html}</body></html>`;
-  return (
-    <iframe
-      title={title}
-      sandbox=""
-      srcDoc={srcDoc}
-      style={{ width: "100%", height: "100%", minHeight: 200, border: 0, borderRadius: 6, background: "#fff" }}
-    />
-  );
-}
 
 export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refreshSec?: number }) {
   const [filter, setFilter] = useState<string>("");

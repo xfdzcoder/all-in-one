@@ -1,0 +1,260 @@
+/**
+ * I4 acceptance (FR-I4 组件内查看详情（抽屉/弹层）): 四个声明 detail 的组件 ——
+ *  ① 信息流：条目点击 → 弹层（标题/来源/摘要沙箱渲染、脚本零执行、阅读原文链接）；
+ *  ② Todo：任务点击 → 弹层（标题/清单/状态/时间）；
+ *  ③ 自定义 API：「详情」→ 完整响应 JSON（超出模板展示的部分可见）；
+ *  ④ OpenCode：会话点击 → 弹层（ID/创建/更新/耗时）。
+ * 数据通道响应用请求拦截夹具（同 verify-mail 模式；组件行为是验证对象）。
+ * Run: node scripts/verify-i4.mjs (server :3000, preview :4173)
+ */
+import puppeteer from "puppeteer-core";
+
+const WEB = "http://localhost:4173/";
+const results = [];
+const ok = (name, pass, detail = "") => {
+  results.push({ name, pass, detail });
+  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const uniq = Date.now().toString(36).slice(-4);
+
+const rssItem = {
+  title: `I4 条目-${uniq}`,
+  link: "https://example.com/i4-article",
+  summary: `<b>富文本摘要-${uniq}</b><script>window.__PWNED = 1;</script>`,
+  date: "2026-09-30T09:00:00.000Z",
+  itemKey: `k-${uniq}`,
+  sourceTitle: "源A",
+  read: false,
+};
+const rssFixture = { items: [rssItem], unread: 1, sourceCount: 1, errors: [] };
+const apiFixture = { marker: `i4-full-response-${uniq}`, nested: { a: 1 } };
+const opcFixture = {
+  probe: { ok: true, version: "9.9.9-test" },
+  sessions: [{ id: `s-i4-${uniq}`, title: `会话-${uniq}`, createdAt: 1000, updatedAt: 65000, durationMs: 64000 }],
+};
+
+const browser = await puppeteer.launch({
+  executablePath: "/usr/bin/google-chrome",
+  headless: "new",
+  args: ["--no-sandbox", "--window-size=1400,900"],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1400, height: 900 });
+
+const clickBtn = (label, exact = false) =>
+  page.evaluate(
+    ({ l, ex }) => {
+      const btns = [...document.querySelectorAll("button")];
+      const btn = ex
+        ? btns.find((b) => b.textContent.trim() === l)
+        : btns.find((b) => b.textContent.trim().includes(l));
+      if (!btn) return false;
+      btn.click();
+      return true;
+    },
+    { l: label, ex: exact },
+  );
+
+const setField = (label, value) =>
+  page.evaluate(
+    ({ l, v }) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes(l),
+      );
+      const target = wrapper?.querySelector("input, textarea");
+      if (!target) return false;
+      const proto =
+        target.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+      setter.call(target, v);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    },
+    { l: label, v: value },
+  );
+
+const apiFetch = (path, options = {}) =>
+  page.evaluate(
+    async ({ p, o }) => {
+      const res = await fetch(p, {
+        method: o.method ?? "GET",
+        body: o.body,
+        credentials: "same-origin",
+        headers: o.body ? { "Content-Type": "application/json" } : undefined,
+      });
+      return { status: res.status, body: await res.text() };
+    },
+    { p: path, o: options },
+  );
+
+const clickInWidget = (marker, label) =>
+  page.evaluate(
+    ({ m, l }) => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes(m));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === l);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    },
+    { m: marker, l: label },
+  );
+
+try {
+  await page.goto(WEB, { waitUntil: "networkidle0" });
+  await page.waitForSelector("input[autocomplete=username]", { timeout: 8000 });
+  await page.type("input[autocomplete=username]", "admin");
+  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.click("button[type=submit]");
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+
+  // 数据通道夹具（按 type 分发）——从一开始就拦截
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    const url = req.url();
+    if (url.includes("/api/widgets/data")) {
+      let type = "";
+      try {
+        type = JSON.parse(req.postData() ?? "{}").type ?? "";
+      } catch {
+        /* ignore */
+      }
+      const payload = type === "rss" ? rssFixture : type === "opencode" ? opcFixture : apiFixture;
+      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify({ data: payload }) });
+    } else {
+      void req.continue();
+    }
+  });
+
+  // 前置：重置首页布局（seed 含 Todo + 信息流）并建一条真实任务
+  await page.evaluate(async () => {
+    const seed = [
+      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+    ];
+    const list = await (await fetch("/api/dashboards")).json();
+    const home = list.find((d) => d.title === "首页");
+    await fetch(`/api/dashboards/${home.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
+    });
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "i4-task-UNIQ", list: "inbox" }),
+    });
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(800);
+
+  // ① 信息流详情（弹层 + 摘要沙箱 + 原文链接）
+  ok(
+    "I4 rss item opens detail modal",
+    await page.evaluate((t) => {
+      const el = [...document.querySelectorAll(".grid-stack-item *")].find(
+        (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),
+      );
+      if (!el) return false;
+      el.click();
+      return true;
+    }, `I4 条目-${uniq}`),
+  );
+  await sleep(800);
+  const bodyAfterRss = await page.evaluate(() => document.body.textContent ?? "");
+  ok("I4 rss detail shows title/source", bodyAfterRss.includes("文章详情") && bodyAfterRss.includes("源A"));
+  const rssLink = await page.evaluate(
+    () => [...document.querySelectorAll("a")].find((a) => a.textContent.includes("阅读原文"))?.getAttribute("href") ?? null,
+  );
+  ok("I4 rss detail keeps 原文 link", rssLink === "https://example.com/i4-article", String(rssLink));
+  const rssFrame = page.frames().find((f) => f.url().startsWith("about:srcdoc"));
+  const rssFrameState = await rssFrame?.evaluate(() => ({
+    pwned: typeof window.__PWNED,
+    text: document.body.textContent ?? "",
+  }));
+  ok(
+    "I4 rss summary rendered in sandbox (scripts blocked)",
+    rssFrameState?.pwned === "undefined" && (rssFrameState?.text ?? "").includes(`富文本摘要-${uniq}`),
+    JSON.stringify(rssFrameState)?.slice(0, 100),
+  );
+  ok("I4 close rss detail", await clickBtn("×", true) || (await page.keyboard.press("Escape"), true));
+  await sleep(400);
+
+  // ② Todo 详情
+  ok(
+    "I4 todo opens detail modal",
+    await page.evaluate(() => {
+      const el = [...document.querySelectorAll(".grid-stack-item *")].find(
+        (n) => n.children.length === 0 && (n.textContent ?? "").includes("i4-task-UNIQ"),
+      );
+      if (!el) return false;
+      el.click();
+      return true;
+    }),
+  );
+  await sleep(600);
+  const bodyAfterTodo = await page.evaluate(() => document.body.textContent ?? "");
+  ok("I4 todo detail shows list/status/time", bodyAfterTodo.includes("任务详情") && bodyAfterTodo.includes("清单：inbox") && bodyAfterTodo.includes("创建"), bodyAfterTodo.slice(-120));
+  await page.keyboard.press("Escape");
+  await sleep(400);
+
+  // ③ 自定义 API 详情（完整响应）
+  ok("I4 enter edit", await clickBtn("编辑布局"));
+  await sleep(300);
+  ok("I4 add custom-api", await clickBtn("添加组件"));
+  await sleep(300);
+  ok("I4 pick custom-api", await clickBtn("自定义 API"));
+  await sleep(400);
+  ok("I4 custom-api url", await setField("接口地址", "http://fixture.local/api"));
+  await sleep(200);
+  ok("I4 custom-api submit", await clickBtn("确认添加", true));
+  await sleep(1500);
+  ok("I4 add opencode", await clickBtn("添加组件"));
+  await sleep(300);
+  ok("I4 pick opencode", await clickBtn("OpenCode"));
+  await sleep(400);
+  ok("I4 opencode url", await setField("服务地址", "http://fixture.local"));
+  await sleep(200);
+  ok("I4 opencode submit", await clickBtn("确认添加", true));
+  await sleep(1500);
+  ok("I4 exit edit", await clickBtn("完成编辑"));
+  await sleep(400);
+
+  ok("I4 custom-api detail opens", await clickInWidget("自定义 API", "详情"));
+  await sleep(600);
+  const bodyAfterApi = await page.evaluate(() => document.body.textContent ?? "");
+  ok("I4 custom-api detail shows full response", bodyAfterApi.includes(`i4-full-response-${uniq}`), bodyAfterApi.slice(-120));
+  await page.keyboard.press("Escape");
+  await sleep(400);
+
+  // ④ OpenCode 会话详情
+  ok(
+    "I4 opencode session opens detail",
+    await page.evaluate((t) => {
+      const el = [...document.querySelectorAll(".grid-stack-item *")].find(
+        (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),
+      );
+      if (!el) return false;
+      el.click();
+      return true;
+    }, `会话-${uniq}`),
+  );
+  await sleep(600);
+  const bodyAfterOpc = await page.evaluate(() => document.body.textContent ?? "");
+  ok(
+    "I4 opencode detail shows id/duration",
+    bodyAfterOpc.includes("会话详情") && bodyAfterOpc.includes(`s-i4-${uniq}`) && bodyAfterOpc.includes("1 分"),
+    bodyAfterOpc.slice(-120),
+  );
+} catch (e) {
+  ok("flow completed", false, String(e).slice(0, 200));
+}
+
+await browser.close();
+const failed = results.filter((r) => !r.pass);
+console.log(`\n${results.length - failed.length}/${results.length} passed`);
+process.exit(failed.length ? 1 : 0);

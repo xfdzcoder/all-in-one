@@ -1,4 +1,5 @@
-import { Badge, Button, Group, JsonInput, Stack, Table, Text } from "@mantine/core";
+import { useState } from "react";
+import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@mantine/core";
 
 import { useCustomApiData } from "./data-hooks";
 
@@ -34,6 +35,7 @@ function pickPath(root: unknown, path?: string): unknown {
 export function CustomApiWidget(props: CustomApiConfig) {
   const display = props.display ?? "stat";
   const { data, loading, error, refresh } = useCustomApiData(props);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   return (
     <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
@@ -41,6 +43,11 @@ export function CustomApiWidget(props: CustomApiConfig) {
         <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
           自定义 API
         </Text>
+        {data !== undefined && data !== null && (
+          <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
+            详情
+          </Button>
+        )}
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
         </Button>
@@ -52,6 +59,11 @@ export function CustomApiWidget(props: CustomApiConfig) {
         </Text>
       )}
       {!loading && !error && <ApiDisplay display={display} data={pickPath(data, props.path)} config={props} />}
+      {detailOpen && (
+        <Modal opened onClose={() => setDetailOpen(false)} title="详情 · 完整响应（FR-I4）" size="lg">
+          <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />
+        </Modal>
+      )}
     </Stack>
   );
 }

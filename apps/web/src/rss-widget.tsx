@@ -1,7 +1,9 @@
-import { Badge, Button, Group, Stack, Text, TextInput } from "@mantine/core";
+import { useState } from "react";
+import { Badge, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 
 import type { FeedItem, FeedSource } from "./api";
 import { useDraft, useFeeds, useFeedSources, useFeedMutations } from "./data-hooks";
+import { HtmlSandbox } from "./html-sandbox";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -18,6 +20,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
   const { markRead, addSource, removeSource } = useFeedMutations();
   const [newUrl, setNewUrl] = useDraft();
   const [newTitle, setNewTitle] = useDraft();
+  const [detail, setDetail] = useState<FeedItem | null>(null);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -82,8 +85,9 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
               fw={it.read ? 400 : 700}
               style={{ cursor: "pointer" }}
               onClick={() => {
+                // FR-I4：点开详情（弹层）；跳转原文在详情内（S6）
                 if (!it.read) markRead.mutate(it.itemKey);
-                if (it.link) window.open(it.link, "_blank", "noopener");
+                setDetail(it);
               }}
             >
               {it.title}
@@ -107,6 +111,37 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
             </Badge>
           ))}
         </Group>
+      )}
+      {detail && (
+        <Modal opened onClose={() => setDetail(null)} title="文章详情" size="lg">
+          <Stack gap="xs">
+            <Text size="sm" fw={600}>
+              {detail.title}
+            </Text>
+            <Text size="xs" c="dimmed">
+              {detail.sourceTitle} · {detail.date.slice(0, 16).replace("T", " ")}
+            </Text>
+            {/<[a-z/]/i.test(detail.summary) ? (
+              <HtmlSandbox html={detail.summary} title={`rss-${detail.itemKey.slice(0, 8)}`} />
+            ) : (
+              <Text size="xs" style={{ whiteSpace: "pre-wrap" }}>
+                {detail.summary}
+              </Text>
+            )}
+            {detail.link && (
+              <Button
+                size="xs"
+                variant="light"
+                component="a"
+                href={detail.link}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                阅读原文
+              </Button>
+            )}
+          </Stack>
+        </Modal>
       )}
     </Stack>
   );

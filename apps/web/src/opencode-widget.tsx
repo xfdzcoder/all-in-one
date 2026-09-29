@@ -1,6 +1,7 @@
-import { Alert, Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
+import { useState } from "react";
+import { Alert, Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
-import { useOpencodeData } from "./data-hooks";
+import { useOpencodeData, type OpencodeSession } from "./data-hooks";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -26,6 +27,7 @@ function formatTime(ms: number): string {
 export function OpencodeWidget(config: { url?: string; limit?: number } & Record<string, unknown>) {
   const { data, loading, error, refresh } = useOpencodeData(config);
   const url = config.url;
+  const [detail, setDetail] = useState<OpencodeSession | null>(null);
 
   return (
     <Stack gap={6} style={{ height: "100%", overflow: "hidden" }}>
@@ -78,7 +80,14 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
           </Text>
         )}
         {(data?.sessions ?? []).map((s) => (
-          <Card key={s.id} withBorder padding={6} radius={6}>
+          <Card
+            key={s.id}
+            withBorder
+            padding={6}
+            radius={6}
+            style={{ cursor: "pointer" }}
+            onClick={() => setDetail(s)}
+          >
             <Group gap={6} justify="space-between" wrap="nowrap">
               <Text size="xs" fw={500} lineClamp={1} style={{ flex: 1 }}>
                 {s.title}
@@ -93,6 +102,25 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
           </Card>
         ))}
       </Stack>
+
+      {detail && (
+        <Modal opened onClose={() => setDetail(null)} title="会话详情（FR-I4）" size="sm">
+          <Stack gap="xs">
+            <Text size="sm" fw={600}>
+              {detail.title}
+            </Text>
+            <Text size="xs" c="dimmed">
+              ID：{detail.id}
+            </Text>
+            <Text size="xs" c="dimmed">
+              创建 {formatTime(detail.createdAt)} · 更新 {formatTime(detail.updatedAt)}
+            </Text>
+            <Text size="xs" c="dimmed">
+              耗时 {formatDuration(detail.durationMs)}
+            </Text>
+          </Stack>
+        </Modal>
+      )}
     </Stack>
   );
 }

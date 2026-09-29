@@ -1,5 +1,7 @@
-import { Button, Checkbox, Group, List, Stack, Text, TextInput } from "@mantine/core";
+import { useState } from "react";
+import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@mantine/core";
 
+import type { TodoItem } from "./api";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
@@ -19,6 +21,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
   const { data, loading, error, refresh } = useTodos(list, refreshSec);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
+  const [detail, setDetail] = useState<TodoItem | null>(null);
 
   const items = (data ?? []).filter((t) => (filter === "open" ? !t.done : true));
 
@@ -68,7 +71,11 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
                 onChange={(e) => toggle.mutate({ id: t.id, done: e.currentTarget.checked })}
                 aria-label={`toggle ${t.title}`}
               />
-              <Text size="sm" style={{ flex: 1, textDecoration: t.done ? "line-through" : undefined }}>
+              <Text
+                size="sm"
+                style={{ flex: 1, textDecoration: t.done ? "line-through" : undefined, cursor: "pointer" }}
+                onClick={() => setDetail(t)}
+              >
                 {t.title}
               </Text>
               <Button size="compact-xs" variant="subtle" color="red" onClick={() => remove.mutate(t.id)}>
@@ -81,6 +88,22 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
           <Text size="xs" c="dimmed">暂无任务</Text>
         )}
       </List>
+      {detail && (
+        <Modal opened onClose={() => setDetail(null)} title="任务详情" size="sm">
+          <Stack gap="xs">
+            <Text size="sm" fw={600}>
+              {detail.title}
+            </Text>
+            <Text size="xs" c="dimmed">
+              清单：{detail.list} · 状态：{detail.done ? "已完成" : "未完成"}
+            </Text>
+            <Text size="xs" c="dimmed">
+              创建 {new Date(detail.createdAt).toISOString().slice(0, 16).replace("T", " ")} · 更新{" "}
+              {new Date(detail.updatedAt).toISOString().slice(0, 16).replace("T", " ")}
+            </Text>
+          </Stack>
+        </Modal>
+      )}
     </Stack>
   );
 }
