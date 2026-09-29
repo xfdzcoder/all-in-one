@@ -14,6 +14,7 @@ import {
 import { DataCache } from "./cache.ts";
 import { EventBus, type InvalidationEvent } from "./events.ts";
 import { todoConnector } from "../todo/connector.ts";
+import { httpConnector } from "../connector/http.ts";
 
 const queryBody = z.object({
   type: z.string().min(1).max(64),
@@ -36,6 +37,7 @@ export function createDataChannel(deps: DataChannelDeps): DataChannelDeps {
 export function defaultDataChannel(): DataChannelDeps {
   const registry = createConnectorRegistry();
   registry.register(todoConnector);
+  registry.register(httpConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),

@@ -22,4 +22,9 @@ export const config = {
   /** libsql local file path; override for tests / Docker volume.
    *  Resolved to an absolute `file:` URL at load (D20-④). */
   databaseUrl: normalizeFileUrl(process.env.DATABASE_URL ?? "file:./data/app.db"),
-} as const;
+  /** SEC4 测试/开发逃生阀：放行内网出站目标（默认 false = 拒内网）。
+   *  用 getter 动态读取，便于测试在 import 后切换（config 是模块级单例）。 */
+  get allowPrivateOutbound(): boolean {
+    return process.env.ALLOW_PRIVATE_OUTBOUND === "1";
+  },
+};

@@ -15,6 +15,7 @@ import {
 } from "./data/routes.ts";
 import { createDb, ensureSchema, type Db } from "./db/client.ts";
 import { LAYOUT_SCHEMA_VERSION, session } from "./db/schema.ts";
+import { registerCredentialRoutes } from "./credentials/routes.ts";
 import { registerTodoRoutes } from "./todo/routes.ts";
 
 export type AppDeps = {
@@ -41,6 +42,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerAuthRoutes(app);
   registerDashboardRoutes(app);
   registerDataRoutes(app, dataChannel);
+  registerCredentialRoutes(app);
   // Todo 变更 → 失效缓存 + SSE 广播（FR-I6 双页面同步）
   registerTodoRoutes(app, () => {
     dataChannel.cache.clear();

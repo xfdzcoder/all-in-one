@@ -4,6 +4,7 @@ import type { Db } from "../db/client.ts";
 import type { SecretRef } from "@all-in-one/widget-sdk";
 import { isSecretRef } from "@all-in-one/widget-sdk";
 import { assertSafeOutboundUrl } from "./ssrf.ts";
+import { config } from "../config.ts";
 
 /**
  * FR-W3 数据通道：Widget 声明数据源 → 服务端 connector 代取。
@@ -90,7 +91,7 @@ export async function outboundRequest(
     maxBytes?: number;
   } = {},
 ): Promise<{ status: number; text: string }> {
-  const url = await assertSafeOutboundUrl(rawUrl);
+  const url = await assertSafeOutboundUrl(rawUrl, config.allowPrivateOutbound);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000);
   try {

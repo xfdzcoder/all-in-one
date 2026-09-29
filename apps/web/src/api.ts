@@ -61,4 +61,8 @@ export const api = {
   patchTodo: (id: string, patch: { done?: boolean; title?: string }) =>
     req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
+  widgetData: (type: string, config: Record<string, unknown>, force = false) =>
+    req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
+  createCredential: (name: string, secret: string, kind = "http-header") =>
+    req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
 };

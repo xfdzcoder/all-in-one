@@ -63,3 +63,23 @@ export function useDraft(initial = ""): [string, (v: string) => void] {
   const [v, setV] = useState(initial);
   return [v, setV];
 }
+
+/** 自定义 API 组件数据（走服务端数据通道 POST /api/widgets/data —— FR-W3）。 */
+export function useCustomApiData(config: Record<string, unknown>): WidgetDataState<unknown> & {
+  refresh: () => void;
+} {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: ["custom-api", JSON.stringify(config)],
+    queryFn: () => api.widgetData("custom-api", config),
+    enabled: Boolean(config.url),
+    staleTime: 60_000,
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
+    refresh: () => void qc.invalidateQueries({ queryKey: ["custom-api"] }),
+  };
+}

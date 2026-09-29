@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GridStack, useGridStack } from "gridstack/dist/react";
 import type { GridStackHandle, GridStackWidget } from "gridstack/dist/react";
-import { Alert, Button, Group, Text } from "@mantine/core";
+import { Alert, Button, Group, Modal, Text } from "@mantine/core";
 
 import { api } from "./api";
-import { FALLBACK_LAYOUT, widgetComponents } from "./widget-registry";
+import { FALLBACK_LAYOUT, widgetComponents, customApiManifest } from "./widget-registry";
+import { ConfigForm } from "./ConfigForm";
+import { defaultsFromSchema } from "./config-form-utils";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -31,6 +33,8 @@ function BoardToolbar({
   onToggleEdit: () => void;
 }) {
   const { grid, addWidget, removeWidget } = useGridStack();
+  const [configOpen, setConfigOpen] = useState(false);
+  const [apiConfig, setApiConfig] = useState(() => defaultsFromSchema(customApiManifest.configSchema));
 
   // ids must be unique across sessions — persisted layouts may already contain
   // t100/n100 from earlier runs; collisions leave the new portal empty (M2-④ 实测).
@@ -79,6 +83,9 @@ function BoardToolbar({
           >
             添加 Todo
           </Button>
+          <Button size="xs" variant="light" onClick={() => setConfigOpen(true)}>
+            配置 API 组件
+          </Button>
           <Button
             size="xs"
             variant="light"
@@ -91,6 +98,39 @@ function BoardToolbar({
           >
             删除最后
           </Button>
+          <Modal opened={configOpen} onClose={() => setConfigOpen(false)} title="自定义 API 组件配置">
+            <ConfigForm
+              schema={customApiManifest.configSchema}
+              values={apiConfig}
+              onChange={(key, value) => setApiConfig((c) => ({ ...c, [key]: value }))}
+              onSubmit={(values) => {
+                // SEC3：secret 字段的明文先入凭证库，props 只保存引用
+                void (async () => {
+                  const props: Record<string, unknown> = { ...values };
+                  for (const f of customApiManifest.configSchema) {
+                    if (f.type !== "secret") continue;
+                    const v = props[f.key];
+                    if (typeof v === "string" && v) {
+                      const cred = await api.createCredential(`${f.key}-${Date.now()}`, v);
+                      props[f.key] = { credentialRef: cred.id };
+                    }
+                  }
+                  addWidget({
+                    id: nextId("api"),
+                    x: 0,
+                    y: 100,
+                    w: 4,
+                    h: 3,
+                    component: "custom-api",
+                    props,
+                  });
+                  setApiConfig(defaultsFromSchema(customApiManifest.configSchema));
+                  setConfigOpen(false);
+                })();
+              }}
+              submitLabel="添加 API 组件"
+            />
+          </Modal>
         </>
       )}
       {!canEdit && (
