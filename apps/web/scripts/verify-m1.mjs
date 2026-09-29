@@ -202,6 +202,84 @@ try {
     "D31 page deleted after confirm",
     await page.evaluate((n) => ![...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
   );
+
+  // FR-P1：页面重命名 + 排序（在临时页上验证，不动首页 fixture）
+  const p1 = `P1-${Date.now().toString(36).slice(-4)}`;
+  const renamed = `改名-${Date.now().toString(36).slice(-4)}`;
+  await page.type('input[placeholder="新页面名"]', p1);
+  ok("P1 create page", await clickBtn("新建页面"));
+  await sleep(800);
+  ok("P1 open rename dialog", await clickBtn("重命名"));
+  await sleep(400);
+  ok(
+    "P1 fill new name",
+    await page.evaluate((t) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes("页面名称"),
+      );
+      const input = wrapper?.querySelector("input");
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(input, t);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }, renamed),
+  );
+  ok("P1 save rename", await clickBtn("保存", true));
+  await sleep(1000);
+  ok(
+    "P1 tab renamed",
+    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === t), renamed),
+  );
+
+  const orderBefore = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+  );
+  ok("P1 move up", await clickBtn("上移"));
+  await sleep(1200);
+  const orderAfter = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+  );
+  ok("P1 order changed", JSON.stringify(orderBefore) !== JSON.stringify(orderAfter), JSON.stringify(orderAfter));
+  await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(600);
+  const orderReload = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+  );
+  ok(
+    "P1 rename + order persist after reload",
+    JSON.stringify(orderReload) === JSON.stringify(orderAfter),
+    JSON.stringify(orderReload),
+  );
+
+  // 清理临时页：先选中目标 tab（刷新后活动页会回到第一个！），并核对确认弹窗点名的是它
+  ok(
+    "P1 select renamed tab before cleanup",
+    await page.evaluate((t) => {
+      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => x.textContent.trim() === t);
+      if (!tab) return false;
+      tab.click();
+      return true;
+    }, renamed),
+  );
+  await sleep(600);
+  ok("P1 cleanup open confirm", await clickBtn("删除此页"));
+  await sleep(400);
+  ok(
+    "P1 confirm dialog names the target page",
+    await page.evaluate((t) => (document.body.textContent ?? "").includes(`确认删除页面「${t}」`), renamed),
+  );
+  ok("P1 cleanup confirm", await clickBtn("确认", true));
+  await sleep(800);
+  ok(
+    "P1 cleanup done",
+    await page.evaluate((t) => ![...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === t), renamed),
+  );
+  ok(
+    "P1 首页 fixture untouched",
+    await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === "首页")),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

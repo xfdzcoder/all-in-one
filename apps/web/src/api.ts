@@ -132,8 +132,10 @@ export const api = {
   logout: () => req<{ ok: boolean }>("POST", "/api/auth/logout"),
   listDashboards: () => req<Dashboard[]>("GET", "/api/dashboards"),
   createDashboard: (title: string) => req<Dashboard>("POST", "/api/dashboards", { title }),
-  patchDashboard: (id: string, patch: Partial<Pick<Dashboard, "title" | "layoutJson">>) =>
-    req<Dashboard>("PATCH", `/api/dashboards/${id}`, patch),
+  patchDashboard: (
+    id: string,
+    patch: Partial<Pick<Dashboard, "title" | "icon" | "sortOrder" | "layoutJson">>,
+  ) => req<Dashboard>("PATCH", `/api/dashboards/${id}`, patch),
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),
   deleteDashboard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/dashboards/${id}`),

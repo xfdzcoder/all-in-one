@@ -6,6 +6,7 @@ import {
   Group,
   Loader,
   MantineProvider,
+  Modal,
   Tabs,
   Text,
   TextInput,
@@ -31,6 +32,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [pluginAdminOpen, setPluginAdminOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState("");
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -65,6 +68,29 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
     if (!active) return;
     await api.deleteDashboard(active.id);
     setActiveId(null);
+    await refresh();
+  };
+
+  // FR-P1：页面重命名
+  const renameActive = async () => {
+    const title = renameTitle.trim();
+    if (!active || !title) return;
+    await api.patchDashboard(active.id, { title });
+    setRenameOpen(false);
+    await refresh();
+  };
+
+  // FR-P1：页面排序（现状 sortOrder 多为 0 —— 移动后按新序统一编号）
+  const moveActive = async (delta: -1 | 1) => {
+    if (!active || !dashboards) return;
+    const order = [...dashboards];
+    const idx = order.findIndex((d) => d.id === active.id);
+    const target = idx + delta;
+    if (idx < 0 || target < 0 || target >= order.length) return;
+    order.splice(target, 0, ...order.splice(idx, 1));
+    await Promise.all(
+      order.map((d, i) => (d.sortOrder !== i ? api.patchDashboard(d.id, { sortOrder: i }) : null)),
+    );
     await refresh();
   };
 
@@ -123,6 +149,23 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <Button size="xs" variant="light" onClick={() => void addDashboard()}>
               新建页面
             </Button>
+            <Button
+              size="xs"
+              variant="light"
+              disabled={!active}
+              onClick={() => {
+                setRenameTitle(active?.title ?? "");
+                setRenameOpen(true);
+              }}
+            >
+              重命名
+            </Button>
+            <Button size="xs" variant="light" disabled={!active} onClick={() => void moveActive(-1)}>
+              上移
+            </Button>
+            <Button size="xs" variant="light" disabled={!active} onClick={() => void moveActive(1)}>
+              下移
+            </Button>
             {active && dashboards.length > 1 && (
               <ConfirmAction
                 label="删除此页"
@@ -130,6 +173,27 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
                 onConfirm={() => void removeActive()}
               />
+            )}
+            {renameOpen && (
+              <Modal opened onClose={() => setRenameOpen(false)} title="重命名页面" size="sm">
+                <TextInput
+                  size="xs"
+                  label="页面名称"
+                  value={renameTitle}
+                  onChange={(e) => setRenameTitle(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void renameActive();
+                  }}
+                />
+                <Group gap="xs" mt="sm">
+                  <Button size="xs" onClick={() => void renameActive()}>
+                    保存
+                  </Button>
+                  <Button size="xs" variant="default" onClick={() => setRenameOpen(false)}>
+                    取消
+                  </Button>
+                </Group>
+              </Modal>
             )}
           </Group>
 
