@@ -114,6 +114,7 @@ export const builtinManifests  = […, myManifest];
 - **加载与沙箱（FR-W7 / D25）**：宿主以 **iframe sandbox（`allow-scripts`，不透明源）+ CSP（`connect-src 'none'` 等）** 隔离加载（D25 否决 Web Component —— Shadow DOM 只隔离样式不隔离 JS）；入口模块经 data: URL 在框内 `import()`（**自包含，禁止 import 外部模块**），源码永不进入宿主作用域；越权调用由宿主按白名单拒绝。
 - **运行时 ABI（D25）**：入口默认导出 `render(props, ctx)`；`props = { config, data }`，`ctx = { root, onAction(name, params), onResize(height), onError(err) }`；宿主↔插件只交换结构化 postMessage。
 - **数据桥（FR-W3 / D26）**：插件数据走宿主统一数据通道（`type` = 插件 type）；v1 数据源 `http-connector`（config 键沿用约定：url / apiToken / authHeader / headers / method / body）或 `none`；取数须 `permissions.apis` 含 `"widgets.data"`；secret 字段的凭证件 kind 须列入 `permissions.credentialKinds`，明文只在服务端解密。
+- **动作（FR-I5 / D27）**：`ctx.onAction(name, params)` 经桥到宿主；`name` 须在 `permissions.actions` 白名单内；由**服务端固定 registry** 执行（v1：`todo.create` / `todo.toggle` / `feed.markRead`，参数 zod 校验），每次执行记结构化审计日志（参数不入日志）。
 - **生命周期（FR-W6）**：上传 → 校验 → 启用 / 禁用 / 卸载；`apiVersion` 主版本与宿主（`HOST_API_VERSION`）不一致的插件拒绝启用。
 
 ---

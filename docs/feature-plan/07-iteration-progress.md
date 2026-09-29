@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 9 轮完成 · Q5d-2 ✅ 数据桥与权限执行（D26）；下一项 Q5d-3 动作执行通道） |
+| 最近更新 | 2026-09-29（第 10 轮完成 · Q5d-3 ✅ 动作执行通道（D27）——**Q5 代码级插件全部完成**；下一项 Q6 Kanban 组件） |
 
 ## 迭代队列
 
@@ -18,13 +18,13 @@
 - [x] Q2 · J6/J7 验收脚本化（verify-j6.mjs / verify-j7.mjs；复跑 verify-m1/j3/j4/j5）**✅ 2026-09-29**
 - [x] Q3 · J8 扩展机制验收脚本化 + [05-mvp.md](05-mvp.md) 出口标准勾选（J1–J8 全绿记录落盘）**✅ 2026-09-29**
 - [x] Q4 · 组件配置变更（FR-W4 生命周期收口：编辑已有组件的 configSchema 配置）**✅ 2026-09-29**
-- [ ] Q5 · 二期：代码级插件（FR-W5③ + FR-W6 管理 + FR-W7 沙箱/权限声明；**拆分为 Q5a–Q5d 逐轮推进**）
+- [x] Q5 · 二期：代码级插件（FR-W5③ + FR-W6 管理 + FR-W7 沙箱/权限声明；Q5a–Q5d 全部完成）**✅ 2026-09-29**
   - [x] Q5a · 插件 ABI 契约（PluginManifest + 权限白名单 + apiVersion + validatePluginManifest + 规范文档，D7 契约先行，**D24**）**✅ 2026-09-29**
   - [x] Q5b · 插件包上传/校验/存储（服务端：zip 解析 → validatePluginManifest → plugin 表（D18 drizzle）+ REST）**✅ 2026-09-29**
   - [x] Q5c · 插件运行时加载与沙箱（FR-W7 落地形态选型：**D25 = iframe CSP**）+ 启用/禁用**✅ 2026-09-29**
   - [x] Q5d-1 · 插件管理页（上传 → 校验报错 → 启用/禁用/卸载 + 权限声明展示，FR-W6/FR-W7 可见性）**✅ 2026-09-29**
   - [x] Q5d-2 · 数据桥（capabilities.data → 宿主数据通道）+ 权限白名单执行（widgets.data / credentialKinds / 数据源白名单，**D26**）**✅ 2026-09-29**
-  - [ ] Q5d-3 · 插件动作执行通道（permissions.actions 白名单 + 服务端执行 + 审计日志）
+  - [x] Q5d-3 · 插件动作执行通道（permissions.actions 白名单 + 服务端固定 registry 执行 + 审计日志，**D27**）**✅ 2026-09-29**
 - [ ] Q6 · 二期：Kanban 组件（依赖布局引擎拖拽冲突方案，见 06 §1）
 - [ ] Q7 · 二期：邮件组件（只读，IMAP connector；D3 只读边界不变）
 - [ ] Q8 · 二期：OpenCode 组件（薄封装官方 SDK，experimental API 风险）
@@ -44,6 +44,7 @@
 | 7 | 2026-09-29 | **Q5c 插件运行时加载与沙箱（D25）+ 启用/禁用**：`plugin-frame.tsx` 沙箱宿主——iframe `sandbox="allow-scripts"`（不透明源）+ srcdoc CSP（`connect-src 'none'` 等，插件零网络）、入口经 data: URL 框内 `import()`（自包含、源码不进宿主作用域）、结构化 postMessage 桥（sourceWindow 校验）+ 运行时 ABI `render(props, ctx)`；启用插件按 manifest.type 动态注册进 components/选择器/配置表单（J8 不改核心，组件实例模块级缓存防重挂载）；动作按 permissions.actions 白名单放行。服务端 enable/disable（启用复核 apiVersion）+ entry 源码以 JSON 下发。**D25**：iframe CSP，否决 Web Component（Shadow DOM 不隔离 JS）。附带：脚本侧 REST 调用不发空 body Content-Type（Fastify 400） | verify-pl5 22/22（安装→选择器→配置表单→沙箱渲染（不透明源/存储拒/no-cors fetch 被 CSP 拦）→配置变更过桥重渲染→禁用/卸载）✅；server 92/92 ✅；全量 verify（m1/j3–j8/w4）✅；Playwright J1–J4 5/5 ✅；typecheck/lint ✅ | `cae7c28` |
 | 8 | 2026-09-29 | **Q5d-1 插件管理页（FR-W6）**：`plugin-admin.tsx` 管理弹窗（header 入口，桌面端限定 D10）——zip 上传（体积上限 + base64 走安装 API）、校验错误原样展示、列表状态徽标（未启用/已启用/已禁用）+ **权限声明展示**（FR-W7 可见性：apis/凭证/动作 chips）、启用/禁用/卸载；所有变更失效 ["plugins"] 查询 → 选择器与动态注册免刷新即时更新（收口 Q5c 发现的清单过期问题）。verify-pl6 覆盖管理旅程 | verify-pl6 20/20（非法包报错→安装→未启用+权限摘要→启用→免刷新进选择器→禁用→卸载清理）✅；全量回归（m1/j3–j8/w4/pl5）✅；Playwright J1–J4 5/5 ✅；Vitest 92/92 ✅；typecheck/lint ✅ | `bf59f3a` |
 | 9 | 2026-09-29 | **Q5d-2 插件数据桥 + 权限白名单执行（D26）**：服务端 `plugin/data.ts`——插件取数走宿主统一数据通道（type = 插件 type），数据源白名单 v1 = http-connector/none（config 键沿用 http connector 约定）、`permissions.apis` 须含 `widgets.data`、`credentialKinds` 按凭证件 kind 在**解密前**逐个把关（`getCredentialMeta`，拒绝 403+原因；禁用/未安装=未知类型 400）；data 路由插件分支跳过无守卫预解析（否则 SecretRef 先被解开、守卫失效）。Web：`usePluginData` 统一取数 → data 经桥进沙箱，取数报错宿主侧横幅。决策记 **D26** | server 测试 98/98（新增 6 项：桥路由/apis 拒绝/credentialKinds 拒绝+放行注入/no-source/禁用）✅；verify-pl7 17/17（UI 权限矩阵：沙箱渲染含鉴权注入的数据、两类越权可见报错）✅；全量回归（m1/j3–j8/w4/pl5/pl6）✅；Playwright 5/5 ✅；typecheck/lint ✅ | `5905f15` |
+| 10 | 2026-09-29 | **Q5d-3 插件动作执行通道（D27）**：`plugin/actions.ts` 服务端固定 registry（v1 = todo.create/todo.toggle/feed.markRead，zod 参数校验、薄封装既有写操作）——动作名 `permissions.actions` 白名单（宿主桥先拒 + 服务端复核）、未声明 403/未知 400/参数非法 400/禁用 400；每次执行记结构化审计日志（who/plugin/action，**参数不入日志**）+ 按主题失效缓存与 SSE；PluginFrame 桥接派发 + 失败可见报错。**Q5（代码级插件）Q5a–Q5d 全部完成** | server 103/103（新增 5 项）✅；verify-pl8 18/18（沙箱按钮→桥→服务端建任务→工作台可见；未声明动作可见拒绝且零写入）✅；全量回归（m1/j3–j8/w4/pl5–pl7）✅；Playwright 5/5 ✅；typecheck/lint ✅ | `dc4fd3b` |
 
 ## 待用户确认
 
