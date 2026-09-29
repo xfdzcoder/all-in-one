@@ -27,7 +27,7 @@ import { WidgetEditContext } from "./widget-edit-context";
 type NodeLike = { el?: HTMLElement; props?: Record<string, unknown> };
 
 export function KanbanWidget({ boardId }: { boardId?: string }) {
-  const { requestSave } = useContext(WidgetEditContext);
+  const { editMode, requestSave } = useContext(WidgetEditContext);
   const { grid } = useGridStack();
   const { node } = useGridStackItem();
   const { boards, refresh: refreshBoards } = useKanbanBoards();
@@ -45,6 +45,17 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
       grid.update(n.el, { props: { ...(n.props ?? {}), boardId: id } } as GridStackWidget);
     }
     requestSave();
+  };
+
+  /** 卡片移动到目标列末尾（sortOrder = 该列最大 + 1；拖拽与「移动到」共用）。 */
+  const moveCardTo = (cardId: string, columnId: string) => {
+    const max = Math.max(
+      -1,
+      ...(tree?.cards ?? [])
+        .filter((c) => c.columnId === columnId && !c.archived)
+        .map((c) => c.sortOrder),
+    );
+    void m.patchCard(cardId, { columnId, sortOrder: max + 1 });
   };
 
   const createBoardAndSelect = async () => {
@@ -98,6 +109,11 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
           选择或新建看板后显示列与卡片
         </Text>
       )}
+      {boardId && editMode && (
+        <Text size="xs" c="dimmed">
+          编辑模式：拖动 = 调整布局，卡片暂不可拖（完成后可拖动卡片，或用卡片内「移动到」）
+        </Text>
+      )}
       {error && (
         <Text size="xs" c="red">
           {error}
@@ -115,6 +131,16 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
                 background: "rgba(255,255,255,0.04)",
                 borderRadius: 8,
                 padding: 6,
+              }}
+              onDragOver={(e) => {
+                // Q6c 拖拽冲突方案（D29）：仅浏览模式接卡片拖放；编辑模式让位布局拖拽
+                if (!editMode) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                if (editMode) return;
+                e.preventDefault();
+                const cardId = e.dataTransfer.getData("text/plain");
+                if (cardId) moveCardTo(cardId, col.id);
               }}
             >
               <Group gap={4} wrap="nowrap" mb={4}>
@@ -145,6 +171,11 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
                     padding={6}
                     radius={6}
                     style={{ cursor: "pointer" }}
+                    draggable={!editMode}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", card.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
                     onClick={() => setEditing(card)}
                   >
                     <Text size="xs">{card.title}</Text>
@@ -246,7 +277,8 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
               value={editing.columnId}
               onChange={(v) => {
                 if (v && v !== editing.columnId) {
-                  void m.patchCard(editing.id, { columnId: v, sortOrder: 0 });
+                  // 触控/键盘可达的移动备选（D29）：与拖拽同路径，落目标列末尾
+                  moveCardTo(editing.id, v);
                   setEditing(null);
                 }
               }}

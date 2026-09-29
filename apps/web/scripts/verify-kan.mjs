@@ -102,6 +102,37 @@ const clickCard = (title) =>
     return true;
   }, title);
 
+/** 卡片 draggable 属性（Q6c/D29：仅浏览模式可拖）。 */
+const cardDraggable = (title) =>
+  page.evaluate((t) => {
+    const card = [...document.querySelectorAll(".mantine-Card-root")].find((c) =>
+      c.textContent.trim().startsWith(t),
+    );
+    return card ? card.getAttribute("draggable") === "true" : null;
+  }, title);
+
+/** 合成 HTML5 拖放：dragstart(卡) → dragover/drop(目标列)。 */
+const dragCardToColumn = (cardTitle, colTitle) =>
+  page.evaluate(
+    ({ card, col }) => {
+      const cardEl = [...document.querySelectorAll(".mantine-Card-root")].find((c) =>
+        c.textContent.trim().startsWith(card),
+      );
+      const header = [...document.querySelectorAll("input")].find((i) => i.value === col);
+      let colDiv = header ? header.parentElement : null;
+      while (colDiv && colDiv.querySelectorAll('input[placeholder="新卡片"]').length < 1) {
+        colDiv = colDiv.parentElement;
+      }
+      if (!cardEl || !colDiv) return false;
+      const dt = new DataTransfer();
+      cardEl.dispatchEvent(new DragEvent("dragstart", { dataTransfer: dt, bubbles: true, cancelable: true }));
+      colDiv.dispatchEvent(new DragEvent("dragover", { dataTransfer: dt, bubbles: true, cancelable: true }));
+      colDiv.dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true }));
+      return true;
+    },
+    { card: cardTitle, col: colTitle },
+  );
+
 const cardInColumn = (colTitle, cardTitle) =>
   page.evaluate(
     ({ col, card }) => {
@@ -213,10 +244,18 @@ try {
     await page.evaluate(() => (document.body.textContent ?? "").includes("已归档 1")),
   );
 
-  // 另一列再加一张卡（刷新断言用）
+  // 另一列再加一张卡（刷新/拖拽断言用）
   ok("KAN add card in 进行中", await fillNth("新卡片", 1, cardC));
   await page.keyboard.press("Enter");
   await sleep(800);
+
+  // 编辑模式：卡片不可拖（拖动 = 布局），并给出提示（Q6c/D29）
+  const draggableInEdit = await cardDraggable(cardC);
+  ok("KAN cards not draggable in edit mode", draggableInEdit === false, `draggable=${draggableInEdit}`);
+  ok(
+    "KAN edit-mode drag hint shown",
+    await page.evaluate(() => (document.body.textContent ?? "").includes("编辑模式：拖动 = 调整布局")),
+  );
 
   // ⑥ 刷新：看板选择（props）与数据保持
   await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
@@ -228,6 +267,14 @@ try {
     "KAN archived stays archived",
     await page.evaluate((t) => !(document.body.textContent ?? "").includes(t), cardB),
   );
+
+  // ⑦ 浏览模式卡片拖拽（HTML5 DnD，D29）：拖到 待办 列 = 跨列移动
+  const draggableInBrowse = await cardDraggable(cardC);
+  ok("KAN cards draggable in browse mode", draggableInBrowse === true, `draggable=${draggableInBrowse}`);
+  ok("KAN drag card to 待办", await dragCardToColumn(cardC, "待办"));
+  await sleep(1000);
+  ok("KAN dragged card landed in 待办", await cardInColumn("待办", cardC));
+  ok("KAN dragged card left 进行中", !(await cardInColumn("进行中", cardC)));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
