@@ -208,6 +208,14 @@
 - **影响**：启用插件按 manifest.type 动态注册进 components map / 组件选择器 / 配置表单（J8"新增组件不改核心"）；动作按 `permissions.actions` 白名单放行、未声明即拒绝；入口源码以 JSON 下发（不作 JS 资源伺服）。数据桥（capabilities.data）与凭证/权限执行、动作执行通道在 Q5d 随权限执行一并落地。
 - **被否备选**：Web Component + Shadow DOM（JS 同 realm，无隔离）；ShadowRealm（未标准化）；动态 import 进宿主 realm（等同 eval）；iframe 加 allow-same-origin（插件可摸宿主同源资源）；服务端执行插件代码（K7 明确最后考虑，最大攻击面）。
 
+## D26 · 插件数据桥与权限执行语义（widgets.data / credentialKinds / 数据源白名单）
+
+- **状态**：已决
+- **背景**：Q5d-2 落地 FR-W7 权限白名单**执行**与 FR-W3 数据桥。D25 已定沙箱（插件零网络），但"数据如何进沙箱、权限在哪个点把关"未冻结：`capabilities.data` 路由、`permissions.apis`/`credentialKinds` 的语义与执行点必须先定，否则插件数据面无法实现。
+- **决策**：① 插件数据一律走宿主统一数据通道（`POST /api/widgets/data`，`type` = 插件 type），服务端按 manifest 路由到宿主 connector —— v1 数据源仅 `http-connector` / `none`（插件 config 键沿用 http connector 约定：url/apiToken/authHeader/headers/method/body）；② `permissions.apis` 须含 `"widgets.data"` 才可取数（可访问 API = 显式白名单，未声明即拒绝）；③ `permissions.credentialKinds` 按凭证件 `kind` 逐个把关（SecretRef 解密**之前**校验，未声明的 kind → 403），凭证明文只在服务端 connector 内解密（SEC3 不变）；④ 禁用/未安装插件按"未知类型"400；权限拒绝统一 403 + 明确原因。
+- **影响**：PluginFrame 经 `usePluginData` 取数并把 data 经桥传入沙箱，取数报错在宿主侧可见横幅；workspace 数据源与动作执行通道留待后续（Q5d-3：动作按 `permissions.actions` 白名单 + 服务端执行 + 审计）。
+- **被否备选**：插件在沙箱内自取数据（违背 K7"宿主统一数据通道"，CSP 已禁网）；宿主把凭证明文塞进沙箱（破坏 SEC3）；按插件整体放行凭证（违背最小权限，须按 kind 白名单）；数据源映射做成可插拔插件（过度设计，v1 固定两类）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
