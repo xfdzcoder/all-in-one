@@ -5,7 +5,7 @@
 ## 工作方式（本项目硬约束）
 
 - **阶段门控**：需求分析 → 产品定义 → 技术方案设计 → MVP 定义 → 实施。未经用户明确确认，不得进入下一阶段；文档先行于编码。不要擅自扩大需求范围。
-- **需求/决策变更**：更新 `docs/feature-plan/01-requirements.md`，并向 `docs/feature-plan/02-decisions.md` 追加 `D#` 条目（ADR 风格，保留历史，不静默改写）。当前决策 D1–D15；MVP 里程碑与进度见 `05-mvp.md` / `README.md`。
+- **需求/决策变更**：更新 `docs/feature-plan/01-requirements.md`，并向 `docs/feature-plan/02-decisions.md` 追加 `D#` 条目（ADR 风格，保留历史，不静默改写）。当前决策 D1–D20；MVP 里程碑与进度见 `05-mvp.md` / `README.md`。
 - 非目标与排后组件（Kanban/邮件/监控/OpenCode、代码插件安装器、多用户/公网）见 `01-requirements.md` §1.2/§2.3，勿提前实现。新想法进 `06-roadmap.md` 待定清单。
 - 提交信息用英文 conventional commits；工作区只提交代码与文档，`.idea/`、`.mimocode/` 已 gitignore。
 
@@ -15,7 +15,7 @@
 - 根脚本（覆盖三包）：`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test` / `pnpm typecheck`
 - 分包：`pnpm dev:web`、`pnpm dev:server`；`pnpm --filter @all-in-one/web build` 等
 - 测试：尚无 runner（计划 M2 Vitest 契约测试、M3 Playwright J1–J4）；`test` 脚本目前为占位。UI 行为验证可用系统 Chrome（`/usr/bin/google-chrome`）+ puppeteer-core 驱动（M0 spike 即如此做的拖拽/缩放/断点验证）。
-- `apps/server`：M1-② 已接 Fastify + Drizzle + libsql(`file:` SQLite WAL)（D16）；schema 见 `apps/server/src/db/schema.ts`。入口 `src/index.ts`（Node 26 直跑 TS，相对 import 用 `.ts`）。
+- `apps/server`：M1 已完成（Fastify + Drizzle + libsql(`file:` SQLite WAL, D16) + 鉴权 + Dashboard CRUD + zod/OpenAPI）。schema 见 `apps/server/src/db/schema.ts`，**迁移由 drizzle-kit 生成**（D18：`pnpm --filter @all-in-one/server exec drizzle-kit generate`，启动时自动 apply；改 schema 必须重新 generate，勿手写 DDL）。入口 `src/index.ts`（Node 26 直跑 TS，相对 import 用 `.ts`）。**首启账号必须设 `ADMIN_PASSWORD` 环境变量**（D17，否则启动失败）；可选 `ADMIN_USERNAME`（默认 admin）、`COOKIE_SECURE=1`。
 
 ## Monorepo 边界
 
@@ -34,4 +34,7 @@
 - 从 `gridstack/dist/react` 导入（包无 `exports` 字段）；`useGridStack()` 必须在 `<GridStack>` 子树内使用——工具栏等 host UI 作为 children 传入，而不是放在组件外。
 - v14 API 变化：`mode: "float"` 取代 `float: true`；断点用 `columnOpts.breakpoints`，其中 `w` 是宽度**上界**（大→小排序匹配）。
 - 缩放手柄默认 autohide，hover 才显现；自动化测试需先 hover 到 item 再抓 SE 手柄中心。
+- **options 必须保持稳定**：wrapper 在 options 签名变化时调用 `updateOptions()` → `load(children)`，会重置未保存的布局改动。用 `useState(() => options)` 挂载期捕获一次；编辑模式切换用 `grid.enableMove/enableResize`，**不要**放进 options（如 `staticGrid`）。
+- **增删组件不触发 `onChange`**（gridstack 的 change 事件只含"位置变化"），必须同时接 `onAdded`/`onRemoved` 到保存逻辑。
+- **拖拽生效有 50% 碰撞规则**：移向相邻同类尺寸组件时需覆盖对方 50%+ 面积才会推挤/交换；测试拖拽用例应拖向空白区或拖够距离，否则 moveNodeCheck 返回 false（非 bug）。
 - 选型已冻结：gridstack 优先、react-grid-layout 仅作既定备选（切换需走决策记录），勿自研网格。

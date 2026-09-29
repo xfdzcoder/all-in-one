@@ -32,7 +32,7 @@
 | 交付物 | ① pnpm monorepo（`apps/web` / `apps/server` / `packages/widget-sdk` 占位）② Fastify + Drizzle + SQLite schema（`user` / `dashboard` / widget 布局 JSON + `schemaVersion` + 归属字段，对齐 NFR5）③ 账号初始化 + argon2id + Cookie 会话（SEC1/SEC2）④ Dashboard CRUD/排序 ⑤ 布局引擎接入（按 M0 结论）、编辑/浏览模式分离（FR-P8）、防抖自动保存、刷新恢复、默认布局兜底（FR-P4）⑥ 移动端隐藏编辑入口（FR-P7） |
 | 验收 | **J1**（部署→初始化→登录→默认首页）、**J2**（编辑→拖拽→保存→恢复）；组件暂用占位件验证框架 |
 | 对应需求 | FR-P1~P8、SEC1/2、NFR5 |
-| **状态** | 🔄 进行中：**M1-① ✅** 三包齐备；**M1-② ✅** Fastify+Drizzle+SQLite(WAL) schema（D16）；**M1-③ ✅**（2026-09-28）首启建账号 + argon2id + httpOnly Cookie 会话（`session` 表带 `user_id`，SEC1/SEC2）；**M1-④–⑥ 待做** |
+| **状态** | 🔄 进行中：**M1-① ✅** 三包齐备；**M1-② ✅** Fastify+Drizzle+SQLite(WAL) schema（D16）；**M1-③ ✅** 首启建账号 + argon2id + httpOnly Cookie 会话（SEC1/SEC2，口令改强制 ADMIN_PASSWORD 即 D17）；**M1-④ ✅** Dashboard CRUD + requireUser 门禁 + zod/OpenAPI + 默认首页 seed；**M1-⑤ ✅** 布局闭环（防抖自动保存/恢复/兜底，props 往返验证）；**M1-⑥ ✅** 移动端禁编辑（E2E 13/13：J1/J2/J2b/D10/多页切换） |
 
 ### M2 · Widget 契约 + 数据通道 + 首批组件
 

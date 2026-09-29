@@ -137,6 +137,38 @@
 
 ---
 
+## D17 · 初始账号口令：强制 ADMIN_PASSWORD 环境变量
+
+- **状态**：已决
+- **背景**：M1-③ 复盘发现一次性口令经 `console.log` 打印与 SEC3"凭证不入日志"冲突（Docker logs 留存泄漏面）。两方案：保留一次性打印（记风险）vs 强制环境变量。
+- **决策**：**强制 `ADMIN_PASSWORD` 环境变量**。首启无该变量则启动失败并给出明确报错；不再生成/打印随机口令。`ADMIN_USERNAME` 可选（默认 `admin`）。
+- **影响**：J1 交接方式变为"部署时注入环境变量"；`ensure-user.ts` 失败快（fail-fast）；SEC3 边界更干净。
+- **被否备选**：console.log 一次性口令（日志泄漏面）。
+
+## D18 · DB 迁移机制：drizzle-kit（单源）
+
+- **状态**：已决
+- **背景**：M1-② 用 Drizzle 表定义 + 手写 `SCHEMA_DDL` 双源人肉同步，且 `IF NOT EXISTS` 无迁移能力（改列不生效）。复盘定级 P1。
+- **决策**：引入 **drizzle-kit**：`schema.ts` 为唯一源，`drizzle-kit generate` 生成 SQL 迁移文件，启动时 `drizzle-orm/libsql/migrator` 应用。删除手写 `SCHEMA_DDL`。
+- **影响**：schema 演进（M2 Todo/RSS 等）走迁移文件，升级不丢数据；测试覆盖迁移可重复执行。
+- **被否备选**：继续手写 DDL + IF NOT EXISTS（无迁移能力）；ORM 自动 sync（不可控）。
+
+## D19 · 推进方式：手动批次（不恢复定时 loop）
+
+- **状态**：已决
+- **背景**：复盘发现定时任务静默消失、自动推进链断裂（详见复盘记录）。
+- **决策**：**不恢复自动 loop**，转为用户确认的手动批次推进；每批次完成后汇报，等确认再继续。
+- **影响**：推进节奏由用户控制；批次划分见复盘计划 A–D。
+
+## D20 · 开发期简决回写（会话/cookie/库路径）
+
+- **状态**：已决
+- **背景**：M1-②③ 若干开发期简决未按维护约定回写决策日志（复盘 P2）。
+- **决策**：统一补记：① 会话 TTL = 30 天；② Cookie `secure` 默认关、`COOKIE_SECURE=1` 开启（LAN/HTTP MVP，公网化随 SEC6 强制）；③ PRAGMA `journal_mode=WAL` + `foreign_keys=ON` 为启动必做（D16 附带）；④ 默认库路径 `file:./data/app.db`（相对 CWD，启动时解析为绝对路径）。
+- **影响**：消除"未记录简决"缺口；后续变更照常追加新 D#。
+
+---
+
 ## 命名约定（非编号决策，已确认）
 
 - 顶层概念 **Workspace（空间/工作台）**，其下 **Dashboard（页面）**，再下 **Widget（组件）**；文档统一用 Workspace 作顶层。

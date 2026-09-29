@@ -31,5 +31,6 @@
 | 3 | 邮件 connector 是否需要 Gmail API 专项（IMAP 是否够用） | 二期 connector 实现 | 邮件组件排期时 |
 | 4 | 服务器监控数据来源（node-exporter / agent / 后端直采） | 部署复杂度 | 监控组件排期时 |
 | 5 | 自定义 API 二期受限 JS 模板的安全边界 | 二期扩展 | 二期启动时 |
+| 6 | **Workspace 实体形态**（概念模型"Workspace 拥有数据"在 schema 中以 `user_id` 代位；M2 建 Todo/RSS/凭证表前需定：引入 `workspace` 表 vs 继续 `user_id` 代位） | M2 全部业务表的归属设计 | **M2 启动前（新增）** |
 
 > 维护约定：任何【待确认】项定论后，更新本表并在 [02-decisions.md](02-decisions.md) 追加决策条目。
