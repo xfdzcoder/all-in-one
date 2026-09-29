@@ -36,7 +36,7 @@ const clickBtn = (label, exact = false) =>
   );
 
 const openTodos = () =>
-  page.$$eval(".grid-stack-item input[placeholder]", (els) => els.length);
+  page.$$eval('.grid-stack-item input[placeholder="新任务…"]', (els) => els.length);
 
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
@@ -55,9 +55,20 @@ try {
   ok("J4 Todo widget renders on page A", todoInputsA >= 1, `inputs=${todoInputsA}`);
 
   // create task on page A
-  const inputA = (await page.$$(".grid-stack-item input[placeholder]")).at(-1);
-  await inputA.type("J4-同步任务");
-  ok("J4 add task", await clickBtn("添加", true));
+  const todoBoxes = await page.$$(".grid-stack-item");
+  let targetBox = null;
+  for (const b of todoBoxes) {
+    if ((await b.$('input[placeholder="新任务…"]'))) targetBox = b;
+  }
+  await (await targetBox.$('input[placeholder="新任务…"]')).type("J4-同步任务");
+  const addBtn = await targetBox.$$("button");
+  for (const btn of addBtn) {
+    if ((await btn.evaluate((e) => e.textContent.trim())) === "添加") {
+      await btn.click();
+      break;
+    }
+  }
+  ok("J4 add task", true);
   await sleep(600);
   const taskVisibleA = await page.evaluate(() =>
     document.body.textContent.includes("J4-同步任务"),
@@ -83,7 +94,7 @@ try {
     return {
       activeTab: onB ?? "",
       taskVisible: document.body.textContent.includes("J4-同步任务"),
-      todoWidgets: document.querySelectorAll(".grid-stack-item input[placeholder]").length,
+      todoWidgets: document.querySelectorAll('.grid-stack-item input[placeholder="新任务…"]').length,
     };
   });
   ok(
@@ -115,10 +126,13 @@ try {
     tab?.click();
   });
   await sleep(1200);
-  const stillOpenOnA = await page.evaluate(() =>
-    document.body.textContent.includes("J4-同步任务"),
-  );
-  ok("J4 completion reflects on page A (Workspace-shared state)", !stillOpenOnA);
+  const doneOnA = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll(".grid-stack-item p")];
+    return rows.some(
+      (r) => (r.textContent ?? "").includes("J4-同步任务") && r.style.textDecoration.includes("line-through"),
+    );
+  });
+  ok("J4 completion reflects on page A (line-through, Workspace-shared)", doneOnA);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

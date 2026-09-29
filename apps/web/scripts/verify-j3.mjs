@@ -67,7 +67,7 @@ try {
   );
 
   // J3: Todo 添加 + 勾选（浏览模式下的组件内操作路径）
-  const todoInput = (await page.$$(".grid-stack-item input[placeholder]"))[0];
+  const todoInput = (await page.$$('.grid-stack-item input[placeholder="新任务…"]'))[0];
   if (todoInput) {
     await todoInput.type("手机任务");
     await page.evaluate(() => {
