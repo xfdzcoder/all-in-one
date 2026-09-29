@@ -166,10 +166,9 @@ export const iframeManifest: WidgetManifest = {
   configSchema: [
     { key: "url", label: "页面地址", type: "text", required: true, placeholder: "http://192.168.31.133:9000" },
     { key: "sandbox", label: "沙箱能力", type: "text", placeholder: "默认 allow-scripts（可加 allow-same-origin）" },
-    { key: "timeoutSec", label: "禁嵌提示超时(秒)", type: "number", default: 8 },
   ],
   capabilities: {
-    data: { source: "none" },
+    data: { source: "http-connector" },
   },
 };
 

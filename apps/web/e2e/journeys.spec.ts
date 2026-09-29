@@ -167,9 +167,9 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   // 切回页面 A：完成态同步（同一 Workspace 数据 —— 任务带删除线显示）
   await page.getByRole("tab", { name: "首页" }).click();
   await page.waitForTimeout(800);
-  const doneOnA = await page.evaluate(() => {
+  const doneOnA = await page.evaluate((t: string) => {
     const rows = [...document.querySelectorAll(".grid-stack-item p")];
-    return rows.some((r) => (r.textContent ?? "").includes("J4-") && r.style.textDecoration.includes("line-through"));
-  });
+    return rows.some((r) => (r.textContent ?? "").includes(t) && r.style.textDecoration.includes("line-through"));
+  }, title);
   expect(doneOnA).toBe(true);
 });

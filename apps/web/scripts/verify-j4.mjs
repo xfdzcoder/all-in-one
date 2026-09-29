@@ -63,13 +63,14 @@ try {
   const todoInputsA = await openTodos();
   ok("J4 Todo widget renders on page A", todoInputsA >= 1, `inputs=${todoInputsA}`);
 
-  // create task on page A
+  // create task on page A（标题按轮唯一 —— 任务归 Workspace 且跨轮累积）
+  const title = `J4-${Date.now().toString(36)}`;
   const todoBoxes = await page.$$(".grid-stack-item");
   let targetBox = null;
   for (const b of todoBoxes) {
     if ((await b.$('input[placeholder="新任务…"]'))) targetBox = b;
   }
-  await (await targetBox.$('input[placeholder="新任务…"]')).type("J4-同步任务");
+  await (await targetBox.$('input[placeholder="新任务…"]')).type(title);
   const addBtn = await targetBox.$$("button");
   for (const btn of addBtn) {
     if ((await btn.evaluate((e) => e.textContent.trim())) === "添加") {
@@ -79,9 +80,7 @@ try {
   }
   ok("J4 add task", true);
   await sleep(600);
-  const taskVisibleA = await page.evaluate(() =>
-    document.body.textContent.includes("J4-同步任务"),
-  );
+  const taskVisibleA = await page.evaluate((t) => document.body.textContent.includes(t), title);
   ok("J4 task visible on page A", taskVisibleA);
 
   // create page B with its own Todo widget
@@ -96,16 +95,16 @@ try {
   await sleep(1500); // portal render + SSE round-trip
 
   // task created on A must appear on B WITHOUT reload (SSE invalidation + query)
-  const state = await page.evaluate(() => {
+  const state = await page.evaluate((t) => {
     const onB = [...document.querySelectorAll('[role="tab"]')].find(
-      (t) => t.getAttribute("aria-selected") === "true",
+      (tab) => tab.getAttribute("aria-selected") === "true",
     )?.textContent;
     return {
       activeTab: onB ?? "",
-      taskVisible: document.body.textContent.includes("J4-同步任务"),
+      taskVisible: document.body.textContent.includes(t),
       todoWidgets: document.querySelectorAll('.grid-stack-item input[placeholder="新任务…"]').length,
     };
-  });
+  }, title);
   ok(
     "J4 task syncs to page B (data/view separation)",
     state.taskVisible && state.activeTab.startsWith("J4-") && state.todoWidgets >= 1,
@@ -116,15 +115,18 @@ try {
   // disappear from the list (assert state CHANGED, not a vacuous checkbox scan)
   const hasCheckbox = await page.$('.grid-stack-item input[type="checkbox"]');
   if (hasCheckbox) {
-    await page.evaluate(() => {
-      const boxes = [...document.querySelectorAll('.grid-stack-item input[type="checkbox"]')];
-      boxes[0]?.click();
-    });
+    // 勾选目标任务所在行（Workspace 里还有其它任务，不能盲点第一个 checkbox）
+    const toggled = await page.evaluate((t) => {
+      const row = [...document.querySelectorAll(".grid-stack-item li")].find((r) =>
+        (r.textContent ?? "").includes(t),
+      );
+      const box = row?.querySelector('input[type="checkbox"]');
+      box?.click();
+      return Boolean(box);
+    }, title);
     await sleep(1000);
-    const stillOpenOnB = await page.evaluate(() =>
-      document.body.textContent.includes("J4-同步任务"),
-    );
-    ok("J4 toggle done on page B (task leaves open list)", !stillOpenOnB);
+    const stillOpenOnB = await page.evaluate((t) => document.body.textContent.includes(t), title);
+    ok("J4 toggle done on page B (task leaves open list)", toggled && !stillOpenOnB, `toggled=${toggled}`);
   } else {
     ok("J4 toggle done on page B", false, "no checkbox found");
   }
@@ -135,12 +137,12 @@ try {
     tab?.click();
   });
   await sleep(1200);
-  const doneOnA = await page.evaluate(() => {
+  const doneOnA = await page.evaluate((t) => {
     const rows = [...document.querySelectorAll(".grid-stack-item p")];
     return rows.some(
-      (r) => (r.textContent ?? "").includes("J4-同步任务") && r.style.textDecoration.includes("line-through"),
+      (r) => (r.textContent ?? "").includes(t) && r.style.textDecoration.includes("line-through"),
     );
-  });
+  }, title);
   ok("J4 completion reflects on page A (line-through, Workspace-shared)", doneOnA);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));

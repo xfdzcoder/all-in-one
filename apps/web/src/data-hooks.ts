@@ -104,6 +104,21 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>) {
   };
 }
 
+export type EmbedCheck = { embeddable: boolean; reason: string; verified: boolean };
+
+/** iframe 禁嵌检测（iframe-embed connector 读响应头判定 —— 浏览器禁嵌时 iframe 的
+ *  load 事件照常触发，前端无法自判，见 connector/iframe.ts）。 */
+export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
+  const query = useQuery({
+    queryKey: ["iframe-embed", url],
+    queryFn: () =>
+      api.widgetData("iframe-embed", { url, parentOrigin: window.location.origin }) as Promise<EmbedCheck>,
+    enabled: Boolean(url),
+    staleTime: 300_000,
+  });
+  return query.data;
+}
+
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
 export function useFeeds(limit: number) {
   const query = useQuery({

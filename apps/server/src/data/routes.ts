@@ -17,6 +17,7 @@ import { todoConnector } from "../todo/connector.ts";
 import { httpConnector } from "../connector/http.ts";
 import { rssConnector } from "../feed/connector.ts";
 import { appLauncherConnector } from "../connector/launcher.ts";
+import { iframeEmbedConnector } from "../connector/iframe.ts";
 
 const queryBody = z.object({
   type: z.string().min(1).max(64),
@@ -35,13 +36,14 @@ export function createDataChannel(deps: DataChannelDeps): DataChannelDeps {
   return deps;
 }
 
-/** 默认数据通道（todo connector 内置；M2-⑤ 注册 http）。 */
+/** 默认数据通道（todo connector 内置；M2-⑤ 注册 http；M3 注册 rss/launcher/iframe-embed）。 */
 export function defaultDataChannel(): DataChannelDeps {
   const registry = createConnectorRegistry();
   registry.register(todoConnector);
   registry.register(httpConnector);
   registry.register(rssConnector);
   registry.register(appLauncherConnector);
+  registry.register(iframeEmbedConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),
