@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 21 轮完成 · Q14b ✅ 手动刷新统一与回源语义 —— **FR-I2/I3 全部收口**；下一项 Q15 FR-I4 详情抽屉） |
+| 最近更新 | 2026-09-29（第 22 轮完成 · Q15 ✅ FR-I4 详情弹层；下一项 Q16 页面级设置 + 轮询兜底） |
 
 ## 迭代队列
 
@@ -41,7 +41,8 @@
 - [ ] Q14 · FR-I2/I3 收口【必须】（**拆分为 Q14a–Q14b**）
   - [x] Q14a · 标准刷新频率配置（capabilities.refresh → 表单通用字段 → props.refreshSec）+ 定时刷新（refetchInterval，配置值优先/默认值兜底）**✅ 2026-09-29**
   - [x] Q14b · 手动刷新按钮统一（todo/rss/custom-api/launcher/kanban 补齐 + force 回源语义）+ 状态审计（加载态补 kanban）**✅ 2026-09-29**
-- [ ] Q15 · FR-I4 组件内查看详情（抽屉/弹层；capabilities.detail 已声明无宿主 UI）【应该】
+- [x] Q15 · FR-I4 组件内查看详情（抽屉/弹层）——信息流/Todo/自定义 API/OpenCode 四处弹层（capabilities.detail 全部兑现）**✅ 2026-09-29**
+- [ ] Q17 · D31 一致性扫尾：清单内「×删除」等破坏点未过二次确认（Todo 任务删除等）——统一或明确豁免原则
 - [ ] Q16 · FR-P9 页面级设置（图标/背景/列密度）+ FR-I6 轮询兜底（SSE 断线时）【应该】
 
 ## 历轮记录
@@ -69,6 +70,7 @@
 | 19 | 2026-09-29 | **Q13 FR-P1 完整化（页面重命名 + 排序）**：对 01 冻结 FR 做覆盖审计，发现【必须】缺口 FR-P1（重命名/排序无 UI）、FR-I2/I3（刷新频率不可配、无定时刷新）——Q13 本轮完成：重命名弹窗（条件挂载，Enter 提交）+ 上移/下移（移动后 sortOrder 统一重编号，规避全 0 交换无效）；`patchDashboard` 类型对齐服务端（title/icon/sortOrder/layoutJson）。审计结论补录 Q14–Q16（FR-I2/I3 刷新收口、FR-I4 详情抽屉、FR-P9+FR-I6）。**事故复盘**：清理步骤在 reload 后误删首页（活动 tab 重置为第一个）——脚本改为先选中目标 tab + 确认弹窗必须点名目标页 + 断言首页幸存 | verify-m1 35/35（含 P1 重命名/排序/刷新持久化 14 项）✅；全量 15 脚本 277 项 ✅；Playwright 5/5 ✅；Vitest 122/122 ✅；typecheck/lint ✅ | `703a962` |
 | 20 | 2026-09-29 | **Q14a 刷新频率配置 + 定时刷新（FR-I2/I3）**：`ConfigForm` 在 manifest 声明 `capabilities.refresh` 时渲染标准「刷新频率（秒）」字段（选择器添加表单 + 配置编辑表单通用，存 `props.refreshSec`，下限= minRefreshSec）；全部数据 hooks 接 `refetchInterval`（配置值优先，否则组件 manifest 默认：todo/kanban 60s、launcher 120s、custom-api/rss/mail 300s、opencode 60s；Workspace 组件另有 SSE 同步）。verify-opc 新增 3 项（刷新频率持久化、定时刷新产生数据通道流量且无需手动、双组件分离保证手动刷新断言确定性） | verify-opc 15/15（连跑两轮）✅；全量 15 脚本 280 项 ✅；Playwright 5/5 ✅；Vitest 122/122 ✅；typecheck/lint ✅ | `3dfd187` |
 | 21 | 2026-09-29 | **Q14b 手动刷新统一 + 回源语义（FR-I3 收口）**：todo/rss/custom-api/launcher/kanban 补「刷新」按钮（浏览模式可用；custom-api 的可点 Badge 规范为 Button）；**force 回源语义**——通道型（custom-api/launcher/rss）手动刷新带 force 穿透服务端 TTL，邮件加 `force=1` 穿透列表缓存（服务端 + 单测），REST 型直接重取；kanban 补加载态。verify-fr3 27/27（五按钮存在+可点、todo/kanban 请求计数、custom-api/launcher 刷新达上游 mock = 缓存穿透实证）。**测试竞态修复**：verify-mail 的消息夹具改为从一开始就拦截（真实 IMAP 尝试迟到覆盖查询缓存），首个响应为空保留空态断言；verify-mail/verify-opc 的刷新点击改为组件内定位（新增的共享按钮遮蔽了全文档匹配） | 全量 16 脚本 307 项 ✅；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `0696b8b` |
+| 22 | 2026-09-29 | **Q15 FR-I4 组件内详情（弹层）**：声明 `capabilities.detail` 的四个组件全部兑现——信息流（条目点击→弹层：标题/来源/摘要沙箱渲染+阅读原文；顺带标记已读，S6）、Todo（任务点击→标题/清单/状态/时间）、自定义 API（「详情」→完整响应 JSON，超出模板投影）、OpenCode（会话→ID/创建/更新/耗时）；摘要沙箱抽为共享 `html-sandbox.tsx`（与邮件共用）。verify-i4 21/21（四弹层内容断言 + 摘要注入脚本零执行实证） | 全量 17 脚本 328 项 ✅；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `c924850` |
 
 ## 待用户确认
 
