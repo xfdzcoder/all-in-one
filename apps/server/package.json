@@ -7,19 +7,23 @@
     "dev": "node --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "lint": "oxlint",
-    "test": "echo \"no tests yet (Vitest arrives with M2-⑦)\" && exit 0",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "drizzle-kit": "^0.31.11",
     "oxlint": "^1.81.0",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.2"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
     "@libsql/client": "^0.15.15",
     "@node-rs/argon2": "^2.2.1",
     "drizzle-orm": "^0.45.3",
-    "fastify": "^5.12.5"
+    "fastify": "^5.12.5",
+    "zod": "^4.6.5"
   }
 }

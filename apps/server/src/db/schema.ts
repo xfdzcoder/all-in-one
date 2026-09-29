@@ -13,7 +13,7 @@ import {
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   username: text("username").notNull().unique(),
-  /** argon2id hash — populated in M1-③; empty until then. */
+  /** argon2id hash (D17: populated from ADMIN_PASSWORD at first boot). */
   passwordHash: text("password_hash").notNull().default(""),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -64,37 +64,3 @@ export type Dashboard = typeof dashboard.$inferSelect;
 export type NewDashboard = typeof dashboard.$inferInsert;
 export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
-
-/** DDL kept in sync with the Drizzle tables above (boot-time ensure). */
-export const SCHEMA_DDL = `
-CREATE TABLE IF NOT EXISTS user (
-  id            TEXT PRIMARY KEY,
-  username      TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL DEFAULT '',
-  created_at    INTEGER NOT NULL,
-  updated_at    INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS dashboard (
-  id             TEXT PRIMARY KEY,
-  user_id        TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-  title          TEXT NOT NULL,
-  icon           TEXT,
-  sort_order     INTEGER NOT NULL DEFAULT 0,
-  layout_json    TEXT NOT NULL DEFAULT '[]',
-  schema_version INTEGER NOT NULL DEFAULT 1,
-  created_at     INTEGER NOT NULL,
-  updated_at     INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS dashboard_user_id_idx ON dashboard (user_id);
-
-CREATE TABLE IF NOT EXISTS session (
-  id         TEXT PRIMARY KEY,
-  user_id    TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-  expires_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS session_user_id_idx ON session (user_id);
-`;

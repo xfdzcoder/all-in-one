@@ -1,29 +1,3 @@
-#app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 12px;
-}
-
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.toolbar button {
-  padding: 8px 14px;
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.toolbar textarea {
-  flex: 1 1 100%;
-  font-family: monospace;
-  font-size: 12px;
-}
-
 .ph,
 .stat {
   width: 100%;

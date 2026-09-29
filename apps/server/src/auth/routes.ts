@@ -11,6 +11,11 @@ import {
   revokeSession,
 } from "./session.ts";
 
+/** argon2id hash of a random secret — verify() against it when user is missing,
+ *  so login latency does not reveal whether an account exists. */
+const DUMMY_HASH =
+  "$argon2id$v=19$m=19456,t=2,p=1$GfJvhy9EvNvZNOoiuHDeJw$eiVfcKna69BaodK59wdxgzKGKrKe+dvUl8LgvwBO2t4";
+
 function setSessionCookie(
   reply: FastifyReply,
   token: string,
@@ -60,10 +65,13 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       .where(eq(user.username, username))
       .limit(1);
     const account = rows[0];
-    const ok =
-      account &&
-      (await verifyPassword(account.passwordHash, password));
-    if (!ok) {
+    // Anti timing-enumeration: always run an argon2 verify, even when no user
+    // exists (use a dummy hash of the same shape).
+    const ok = await verifyPassword(
+      account?.passwordHash ?? DUMMY_HASH,
+      password,
+    );
+    if (!ok || !account) {
       return reply.code(401).send({ error: "invalid credentials" });
     }
 
