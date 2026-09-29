@@ -100,6 +100,27 @@ function BoardToolbar({
           >
             添加信息流
           </Button>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => {
+              addWidget({
+                id: nextId("l"),
+                x: 0,
+                y: 100,
+                w: 6,
+                h: 3,
+                component: "app-launcher",
+                props: {
+                  itemsJson: JSON.stringify([
+                    { name: "示例服务", url: "http://192.168.31.133:9000", probe: "http" },
+                  ]),
+                },
+              });
+            }}
+          >
+            添加应用入口
+          </Button>
           <Button size="xs" variant="light" onClick={() => setConfigOpen(true)}>
             配置 API 组件
           </Button>

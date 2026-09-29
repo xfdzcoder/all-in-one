@@ -4,6 +4,7 @@ import { Placeholder, StatBox } from "./widgets";
 import { TodoWidget } from "./todo-widget";
 import { CustomApiWidget } from "./custom-api-widget";
 import { RssWidget } from "./rss-widget";
+import { LauncherWidget } from "./launcher-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -130,10 +131,34 @@ export const rssManifest: WidgetManifest = {
   },
 };
 
+export const launcherManifest: WidgetManifest = {
+  type: "app-launcher",
+  name: "应用入口",
+  description: "服务聚合入口，HTTP/TCP 存活探测（内网服务，D22）",
+  icon: "apps",
+  category: "服务",
+  defaultSize: { w: 6, h: 3 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    {
+      key: "itemsJson",
+      label: "服务列表 JSON",
+      type: "json",
+      required: true,
+      help: '[{"name":"Portainer","url":"http://192.168.31.133:9000","probe":"http"}]；probe: http|tcp',
+    },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+  },
+};
+
 /** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
   rss: RssWidget,
+  "app-launcher": LauncherWidget,
   "custom-api": CustomApiWidget,
   Placeholder,
   StatBox,
@@ -143,6 +168,7 @@ export const widgetComponents = {
 export const builtinManifests: WidgetManifest[] = [
   todoManifest,
   rssManifest,
+  launcherManifest,
   customApiManifest,
   placeholderManifest,
   statBoxManifest,

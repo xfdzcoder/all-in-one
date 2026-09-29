@@ -84,6 +84,26 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
   };
 }
 
+/** 应用入口探活数据（app-launcher connector —— 内网服务探活，D22）。 */
+export function useAppLauncher(items: Array<{ name: string; url: string }>) {
+  const query = useQuery({
+    queryKey: ["launcher", JSON.stringify(items)],
+    queryFn: () =>
+      api.widgetData("app-launcher", { items }) as Promise<{
+        items: Array<{ name: string; url: string; alive: boolean }>;
+        up: number;
+        total: number;
+      }>,
+    enabled: items.length > 0,
+    staleTime: 30_000,
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
 export function useFeeds(limit: number) {
   const query = useQuery({
