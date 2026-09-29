@@ -14,6 +14,12 @@ dist/
 .idea/
 .mimocode/
 
+# opencode loop 运行时状态（任务/日志/checkpoint）
+.opencode/opencode-loop/
+
+# 会话导出备份
+ses_*.json
+
 # test artifacts
 apps/web/test-results/
 apps/web/playwright-report/

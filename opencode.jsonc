@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // 权限：自主迭代 loop（D22）无人值守所需。
+  // 规则有序、后匹配优先：默认 shell 转人工确认 → 放行日常链路 → 硬禁令兜底。
+  "permissions": [
+    // 默认：shell 一律人工确认（覆盖基础策略的全放行）
+    { "action": "shell", "resource": "*", "effect": "ask" },
+
+    // 只读检查
+    { "action": "shell", "resource": "git status *", "effect": "allow" },
+    { "action": "shell", "resource": "git diff *", "effect": "allow" },
+    { "action": "shell", "resource": "git log *", "effect": "allow" },
+    { "action": "shell", "resource": "git show *", "effect": "allow" },
+    { "action": "shell", "resource": "git branch *", "effect": "allow" },
+    { "action": "shell", "resource": "git rev-parse *", "effect": "allow" },
+
+    // 测试 / 构建 / 校验工具链（含 drizzle-kit generate 等 pnpm --filter 子命令）
+    { "action": "shell", "resource": "pnpm *", "effect": "allow" },
+    { "action": "shell", "resource": "node apps/web/scripts/*", "effect": "allow" },
+    { "action": "shell", "resource": "node apps/server/scripts/*", "effect": "allow" },
+
+    // 本地提交（D22 允许；每批次一条，不 push）
+    { "action": "shell", "resource": "git add *", "effect": "allow" },
+    { "action": "shell", "resource": "git commit *", "effect": "allow" },
+
+    // 本地构建与部署验证（D22 允许）
+    { "action": "shell", "resource": "docker build *", "effect": "allow" },
+    { "action": "shell", "resource": "docker compose *", "effect": "allow" },
+    { "action": "shell", "resource": "docker image *", "effect": "allow" },
+    { "action": "shell", "resource": "docker ps *", "effect": "allow" },
+
+    // 破坏性 / 外发：收紧
+    { "action": "shell", "resource": "rm *", "effect": "ask" },
+    { "action": "shell", "resource": "npx *", "effect": "ask" },
+    { "action": "shell", "resource": "curl *", "effect": "ask" },
+    { "action": "shell", "resource": "git push *", "effect": "deny" },
+    { "action": "shell", "resource": "sudo *", "effect": "deny" }
+  ]
+}

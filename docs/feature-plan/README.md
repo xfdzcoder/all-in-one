@@ -12,6 +12,7 @@
 | [04-tech-stack.md](04-tech-stack.md) | 技术方案选型与总体架构（已冻结） | 冻结 |
 | [05-mvp.md](05-mvp.md) | MVP 定义与里程碑切分（M0–M3、验收映射、出口标准） | 定稿 |
 | [06-roadmap.md](06-roadmap.md) | Roadmap、排后需求与遗留待定项 | 随迭代更新 |
+| [07-iteration-progress.md](07-iteration-progress.md) | 自主迭代 loop 状态落盘（迭代队列/历轮记录/待确认/停止恢复，D22） | 随迭代更新 |
 
 ## 阶段进度
 
@@ -26,7 +27,7 @@
 | 开发 | ✅ MVP 完成（M0–M3 全绿，J1–J8 出口达成） | — |
 | 测试 | 🔄 随里程碑进行（Vitest 70 项 + Playwright J1–J4 + verify 脚本） | — |
 | 部署 | ✅ Docker 单镜像 + compose + 备份文档 | docs/deploy.md |
-| 迭代 | ⬜ 未开始 | 06-roadmap |
+| 迭代 | 🔄 自主迭代 loop（D22，授权自主推进） | 07-iteration-progress |
 
 ## 维护约定
 

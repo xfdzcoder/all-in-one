@@ -175,6 +175,15 @@
 - **影响**：概念模型不变（数据归 Workspace / 布局归 Dashboard / Widget 只引用数据）；未来多用户时为 user 建默认 workspace 并把 `user_id` 迁移为 `workspace_id` 或加映射表即可，属机械迁移。M2 Todo 表直接落 `user_id`。
 - **被否备选**：现在引入 `workspace`/`workspace_member` 表（单用户下纯属空转，违背 D9 仅架构可扩展与避免过度设计）。
 
+## D22 · 迭代推进方式：自主迭代 loop（授权与边界，取代 D19 的"不恢复 loop"）
+
+- **状态**：已决
+- **背景**：MVP（M0–M3）与部署完成后进入迭代阶段（06-roadmap）。用户明确要求开启**长期可自我迭代**的推进会话、直至收到停止指令，这推翻了 D19"不恢复定时 loop、手动批次推进"的约定。自主模式与 AGENTS.md"未经确认不进入下一阶段"的门控冲突，需要明确授权与边界。停止方式否决 `--until` 文本条件（该机制会全仓扫描 .md/.txt，易误命中关键词）。
+- **决策**：采用 **`@bybrawe/opencode-loop` 插件**驱动自主迭代 loop：新开专门迭代会话（不续用旧会话，上下文由 docs/feature-plan 承接），`/loop` idle 自动续跑，`--progress-file docs/feature-plan/07-iteration-progress.md`、`--prompt-file .opencode/loop-prompt.md`、`--stop-file .opencode/opencode-loop/STOP`、`--verify "pnpm test" --pause-on-verify-fail`、`--batch 1`。**授权范围**：① 实现代码 + 自测 + 本地 `git commit`（每批次单独一条，英文 conventional commits）；② 自主选择并推进 06-roadmap 迭代项（仅在迭代阶段内豁免"未经确认不进入下一阶段"门控）；③ 按维护约定更新 01/02/06/07 文档；④ 本地构建与 Docker 部署验证。**禁止**：`git push` 及任何远端外发（`opencode.jsonc` permissions 显式 deny）、凭证入日志/前端明文、实现 01-requirements §1.2/§2.3 非目标、破坏性 shell 操作。
+- **停止与恢复**：会话内发「停止」类指令（agent 按协议写 stop-file 暂停），或直接 `/loop-stop`、`/loop-pause`（`/loop-resume` 恢复）、`/loop-clear`（清除）。停止后由用户决定是否继续。
+- **影响**：迭代阶段由 loop 自动驱动，每轮产出落盘 07-iteration-progress.md 供人工审计；权限基线见项目 `opencode.jsonc`；需求/决策变更仍走维护约定（追加 D#，不改写历史）。D19 保留原文，其"不恢复 loop"部分自本条起被取代。
+- **被否备选**：维持 D19 手动批次（不满足长期自主诉求）；`--until` 文本条件停止（全仓扫描易误命中）；外部脚本循环调 `opencode run`（无 idle 感知/verify/checkpoint 等能力）；`@bojackduy/opencode-loopd` 目标引擎（形态过重，引入独立子代理体系）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
