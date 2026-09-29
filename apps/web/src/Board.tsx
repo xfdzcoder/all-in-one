@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import { GridStack, useGridStack } from "gridstack/dist/react";
 import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/dist/react";
 import { Utils } from "gridstack";
-import type { ConfigValues, WidgetManifest } from "@all-in-one/widget-sdk";
+import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/widget-sdk";
 import { Alert, Button, Group, Modal, Text } from "@mantine/core";
 
 import { api } from "./api";
@@ -12,6 +12,8 @@ import { WidgetEditContext } from "./widget-edit-context";
 import { withWidgetChrome } from "./widget-chrome";
 import { WidgetPicker } from "./WidgetPicker";
 import { ConfigForm } from "./ConfigForm";
+import { PluginFrame } from "./plugin-frame";
+import { usePlugins } from "./data-hooks";
 import { propsWithSecretRefs } from "./config-form-utils";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -23,6 +25,15 @@ const chromeComponents: ComponentMap = Object.fromEntries(
     withWidgetChrome(Comp as ComponentType<Record<string, unknown>>),
   ]),
 );
+
+/** 启用中的插件绑定（组件 key = manifest.type，与内置组件同一注册路径）。 */
+interface PluginBinding {
+  id: string;
+  manifest: PluginManifest;
+}
+
+/** 插件组件实例缓存（模块级）：列表刷新不重建组件 → 沙箱框不重挂载。 */
+const pluginComponentCache = new Map<string, ComponentType<Record<string, unknown>>>();
 
 /** gridstack 节点上的扩展字段（component/props 由 react 层透传，类型未声明）。 */
 type NodeEx = GridStackWidget & { component?: string; props?: ConfigValues };
@@ -46,11 +57,14 @@ function BoardToolbar({
   editMode,
   canEdit,
   dirty,
+  pluginManifests,
   onToggleEdit,
 }: {
   editMode: boolean;
   canEdit: boolean;
   dirty: boolean;
+  /** 启用中的插件 manifest（选择器清单动态合并，J8）。 */
+  pluginManifests: WidgetManifest[];
   onToggleEdit: () => void;
 }) {
   const { grid, addWidget, removeWidget } = useGridStack();
@@ -87,6 +101,7 @@ function BoardToolbar({
           <WidgetPicker
             opened={pickerOpen}
             onClose={() => setPickerOpen(false)}
+            extraManifests={pluginManifests}
             onAdd={async (manifest, values) => {
               // SEC3：secret 字段的明文先入凭证库，props 只保存引用
               const props = await propsWithSecretRefs(manifest.configSchema, values, (name, secret) =>
@@ -135,6 +150,45 @@ export function Board({
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 启用中的插件 → 动态组件注册（组件 key = manifest.type，J8"新增组件不改核心"）
+  const { plugins } = usePlugins();
+  const pluginBindings = useMemo<PluginBinding[]>(
+    () =>
+      plugins
+        .filter((p) => p.status === "enabled")
+        .flatMap((p) => {
+          try {
+            return [{ id: p.id, manifest: JSON.parse(p.manifestJson) as PluginManifest }];
+          } catch {
+            return [];
+          }
+        }),
+    [plugins],
+  );
+  const components = useMemo(() => {
+    const map: ComponentMap = { ...chromeComponents };
+    for (const b of pluginBindings) {
+      // 每插件一个稳定组件实例（模块级缓存）——列表刷新不重挂载沙箱框
+      let comp = pluginComponentCache.get(b.id);
+      if (!comp) {
+        const binding = b;
+        comp = withWidgetChrome((props: Record<string, unknown>) => (
+          <PluginFrame pluginId={binding.id} manifest={binding.manifest} config={props} />
+        ));
+        pluginComponentCache.set(b.id, comp);
+      }
+      map[b.manifest.type] = comp;
+    }
+    return map;
+  }, [pluginBindings]);
+
+  const manifestFor = useCallback(
+    (component: string): WidgetManifest | undefined =>
+      manifestForComponent(component) ??
+      pluginBindings.find((b) => b.manifest.type === component)?.manifest,
+    [pluginBindings],
+  );
   const pendingJson = useRef<string | null>(null);
 
   const effectiveEditMode = canEdit && editMode;
@@ -219,17 +273,20 @@ export function Board({
   const [configOriginal, setConfigOriginal] = useState<ConfigValues>({});
   const [configError, setConfigError] = useState<string | null>(null);
 
-  const openConfig = useCallback((id: string) => {
-    const grid = gridRef.current?.getGrid();
-    const node = grid ? findNode(grid, id) : undefined;
-    const manifest = node ? manifestForComponent(String(node.component ?? "")) : undefined;
-    if (!grid || !node || !manifest) return;
-    setConfigureId(id);
-    setConfigManifest(manifest);
-    setConfigValues({ ...(node.props ?? {}) });
-    setConfigOriginal({ ...(node.props ?? {}) });
-    setConfigError(null);
-  }, []);
+  const openConfig = useCallback(
+    (id: string) => {
+      const grid = gridRef.current?.getGrid();
+      const node = grid ? findNode(grid, id) : undefined;
+      const manifest = node ? manifestFor(String(node.component ?? "")) : undefined;
+      if (!grid || !node || !manifest) return;
+      setConfigureId(id);
+      setConfigManifest(manifest);
+      setConfigValues({ ...(node.props ?? {}) });
+      setConfigOriginal({ ...(node.props ?? {}) });
+      setConfigError(null);
+    },
+    [manifestFor],
+  );
 
   const saveConfig = useCallback(
     (values: ConfigValues) => {
@@ -269,7 +326,7 @@ export function Board({
           ref={gridRef}
           key={dashboardId}
           options={options}
-          components={chromeComponents}
+          components={components}
         onChange={scheduleSave}
         onAdded={scheduleSave}
         onRemoved={scheduleSave}
@@ -278,6 +335,7 @@ export function Board({
           editMode={effectiveEditMode}
           canEdit={canEdit}
           dirty={dirty}
+          pluginManifests={pluginBindings.map((b) => b.manifest)}
           onToggleEdit={() => {
             setEditMode((v) => {
               const next = !v;

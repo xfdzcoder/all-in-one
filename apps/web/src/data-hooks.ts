@@ -106,6 +106,21 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>) {
 
 export type EmbedCheck = { embeddable: boolean; reason: string; verified: boolean };
 
+/** 已安装插件列表（FR-W6；宿主据 status=enabled 动态注册组件 —— J8 新增组件不改核心）。 */
+export function usePlugins() {
+  const query = useQuery({
+    queryKey: ["plugins"],
+    queryFn: () => api.listPlugins(),
+    staleTime: 60_000,
+  });
+  return {
+    plugins: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
 /** iframe 禁嵌检测（iframe-embed connector 读响应头判定 —— 浏览器禁嵌时 iframe 的
  *  load 事件照常触发，前端无法自判，见 connector/iframe.ts）。 */
 export function useEmbedCheck(url: string): EmbedCheck | null | undefined {

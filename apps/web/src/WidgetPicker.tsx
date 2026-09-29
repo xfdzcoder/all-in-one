@@ -16,10 +16,13 @@ export function WidgetPicker({
   opened,
   onClose,
   onAdd,
+  extraManifests = [],
 }: {
   opened: boolean;
   onClose: () => void;
   onAdd: (manifest: WidgetManifest, values: ConfigValues) => Promise<void> | void;
+  /** 启用中的插件 manifest（与内置清单合并展示，J8：清单由 manifest 驱动）。 */
+  extraManifests?: WidgetManifest[];
 }) {
   const [selected, setSelected] = useState<WidgetManifest | null>(null);
   const [values, setValues] = useState<ConfigValues>({});
@@ -42,7 +45,7 @@ export function WidgetPicker({
     <Modal opened={opened} onClose={close} title={selected ? `添加组件 · ${selected.name}` : "添加组件"} size="lg">
       {!selected && (
         <SimpleGrid cols={2} spacing="xs">
-          {builtinManifests.map((m) => (
+          {[...builtinManifests, ...extraManifests].map((m) => (
             <Button
               key={m.type}
               variant="light"

@@ -45,6 +45,16 @@ export type FeedAgg = {
   errors: Array<{ title: string; error: string }>;
 };
 
+/** 插件登记行（FR-W6；manifestJson = D24 PluginManifest）。 */
+export type PluginRow = {
+  id: string;
+  type: string;
+  name: string;
+  manifestJson: string;
+  status: string;
+  createdAt: string;
+};
+
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -93,4 +103,11 @@ export const api = {
   createFeed: (title: string, url: string) => req<FeedSource>("POST", "/api/feeds", { title, url }),
   deleteFeed: (id: string) => req<{ ok: boolean }>("DELETE", `/api/feeds/${id}`),
   markFeedRead: (itemKey: string) => req<{ ok: boolean }>("POST", "/api/feeds/read", { itemKey }),
+  listPlugins: () => req<PluginRow[]>("GET", "/api/plugins"),
+  installPlugin: (packageBase64: string) => req<PluginRow>("POST", "/api/plugins", { packageBase64 }),
+  uninstallPlugin: (id: string) => req<{ ok: boolean }>("DELETE", `/api/plugins/${id}`),
+  setPluginStatus: (id: string, enabled: boolean) =>
+    req<PluginRow>("POST", `/api/plugins/${id}/${enabled ? "enable" : "disable"}`),
+  getPluginEntry: (id: string) =>
+    req<{ manifest: unknown; code: string }>("GET", `/api/plugins/${id}/entry`),
 };

@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
@@ -10,13 +10,16 @@ import {
   getPlugin,
   installPlugin,
   listPlugins,
+  readPluginEntry,
+  setPluginStatus,
   uninstallPlugin,
 } from "./install.ts";
 import { PluginPackageError } from "./package.ts";
 
 /**
- * 插件管理 API（FR-W6）：上传安装 / 列表 / 详情 / 卸载（启用/禁用随运行时加载实现）。
+ * 插件管理 API（FR-W6）：上传安装 / 列表 / 详情 / 启用 / 禁用 / 卸载 / 入口源码。
  * 插件包为 zip（D24），经 base64 传输（≤1.5MB，bodyLimit 放宽）；manifest 属公开元数据。
+ * 入口源码以 JSON 下发给宿主沙箱加载器（D25：iframe CSP 隔离），不作 JS 资源伺服。
  */
 
 const uploadBody = z.object({ packageBase64: z.string().min(1).max(2_000_000) });
@@ -51,6 +54,36 @@ export function registerPluginRoutes(app: FastifyInstance): void {
     if (!row) return reply.code(404).send({ error: "not found" });
     return row;
   });
+
+  /** 入口模块源码 + manifest（宿主沙箱加载器消费，D25）。 */
+  app.get("/api/plugins/:id/entry", { preHandler: authGuard }, async (req, reply) => {
+    const params = idParams.safeParse(req.params);
+    if (!params.success) return reply.code(400).send({ error: "invalid request" });
+    const row = await getPlugin(app.db, req.user!.id, params.data.id);
+    if (!row) return reply.code(404).send({ error: "not found" });
+    try {
+      return readPluginEntry(row, { pluginsRoot: pluginsRoot() });
+    } catch {
+      return reply.code(404).send({ error: "entry not readable" });
+    }
+  });
+
+  const statusHandler = (status: "enabled" | "disabled") =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const params = idParams.safeParse(req.params);
+      if (!params.success) return reply.code(400).send({ error: "invalid request" });
+      try {
+        const row = await setPluginStatus(app.db, req.user!.id, params.data.id, status);
+        if (!row) return reply.code(404).send({ error: "not found" });
+        return row;
+      } catch (e) {
+        if (e instanceof PluginInstallError) return reply.code(e.status).send({ error: e.message });
+        throw e;
+      }
+    };
+
+  app.post("/api/plugins/:id/enable", { preHandler: authGuard }, statusHandler("enabled"));
+  app.post("/api/plugins/:id/disable", { preHandler: authGuard }, statusHandler("disabled"));
 
   app.delete("/api/plugins/:id", { preHandler: authGuard }, async (req, reply) => {
     const params = idParams.safeParse(req.params);

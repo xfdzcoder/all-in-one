@@ -1,8 +1,8 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { and, eq } from "drizzle-orm";
-import { HOST_API_VERSION } from "@all-in-one/widget-sdk";
+import { HOST_API_VERSION, type PluginManifest } from "@all-in-one/widget-sdk";
 
 import type { Db } from "../db/client.ts";
 import { plugin as pluginTable, type Plugin } from "../db/schema.ts";
@@ -114,6 +114,28 @@ export async function getPlugin(db: Db, userId: string, id: string): Promise<Plu
   return rows[0] ?? null;
 }
 
+/** 启用 / 禁用（FR-W6）。启用时复核 apiVersion 主版本（D24：不一致拒绝启用）。 */
+export async function setPluginStatus(
+  db: Db,
+  userId: string,
+  id: string,
+  status: "enabled" | "disabled",
+): Promise<Plugin | null> {
+  const row = await getPlugin(db, userId, id);
+  if (!row) return null;
+  if (status === "enabled") {
+    const manifest = JSON.parse(row.manifestJson) as PluginManifest;
+    if (majorOf(manifest.plugin.apiVersion) !== majorOf(HOST_API_VERSION)) {
+      throw new PluginInstallError(
+        `plugin.apiVersion ${manifest.plugin.apiVersion} incompatible with host ${HOST_API_VERSION}`,
+      );
+    }
+  }
+  await db.update(pluginTable).set({ status }).where(eq(pluginTable.id, id));
+  const rows = await db.select().from(pluginTable).where(eq(pluginTable.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
 /** 卸载（FR-W6）：删安装目录 + 删登记行。返回 false = 不存在/非本人。 */
 export async function uninstallPlugin(
   db: Db,
@@ -126,4 +148,18 @@ export async function uninstallPlugin(
   rmSync(resolvePluginDir(opts.pluginsRoot, row.dir), { recursive: true, force: true });
   await db.delete(pluginTable).where(eq(pluginTable.id, id));
   return true;
+}
+
+/**
+ * 读取插件入口模块源码 + manifest（供宿主沙箱加载器注入，D25）。
+ * 源码以 JSON 数据形式返回（绝不以 JS 内容型下发，避免被浏览器当作可执行资源）。
+ */
+export function readPluginEntry(
+  row: Plugin,
+  opts: PluginInstallOptions,
+): { manifest: PluginManifest; code: string } {
+  const manifest = JSON.parse(row.manifestJson) as PluginManifest;
+  const dir = resolvePluginDir(opts.pluginsRoot, row.dir);
+  const code = readFileSync(resolvePluginDir(dir, manifest.plugin.entry), "utf8");
+  return { manifest, code };
 }

@@ -158,6 +158,33 @@ describe("plugins API (FR-W6 install/uninstall)", () => {
     expect(res.json().error).toContain("unsafe entry path");
   });
 
+  it("returns entry code and toggles enable/disable (FR-W6)", async () => {
+    const entry = await app.inject({
+      method: "GET",
+      url: `/api/plugins/${pluginId}/entry`,
+      cookies: { sid },
+    });
+    expect(entry.statusCode).toBe(200);
+    expect(entry.json().code).toContain("export default");
+    expect(entry.json().manifest.plugin.entry).toBe("widget.js");
+
+    const enabled = await app.inject({
+      method: "POST",
+      url: `/api/plugins/${pluginId}/enable`,
+      cookies: { sid },
+    });
+    expect(enabled.statusCode).toBe(200);
+    expect(enabled.json().status).toBe("enabled");
+
+    const disabled = await app.inject({
+      method: "POST",
+      url: `/api/plugins/${pluginId}/disable`,
+      cookies: { sid },
+    });
+    expect(disabled.statusCode).toBe(200);
+    expect(disabled.json().status).toBe("disabled");
+  });
+
   it("lists and uninstalls (files + row removed)", async () => {
     const list = await app.inject({ method: "GET", url: "/api/plugins", cookies: { sid } });
     expect(list.json().map((p: { type: string }) => p.type)).toContain("hello-plugin");
