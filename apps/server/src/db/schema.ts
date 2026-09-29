@@ -58,9 +58,30 @@ export const session = sqliteTable(
 /** Current layoutJson document version written by this build. */
 export const LAYOUT_SCHEMA_VERSION = 1;
 
+export const credential = sqliteTable(
+  "credential",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (NFR5) — Workspace-scoped secrets. */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Secret kind hint for connector use (e.g. "http-header", "basic-auth"). */
+    kind: text("kind").notNull().default("generic"),
+    /** AES-256-GCM ciphertext (SEC3) — plaintext never stored or returned. */
+    cipherText: text("cipher_text").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("credential_user_id_idx").on(t.userId)],
+);
+
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Dashboard = typeof dashboard.$inferSelect;
 export type NewDashboard = typeof dashboard.$inferInsert;
 export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
+export type Credential = typeof credential.$inferSelect;
+export type NewCredential = typeof credential.$inferInsert;
