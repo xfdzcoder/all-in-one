@@ -1,0 +1,291 @@
+import { useContext, useState } from "react";
+import {
+  Button,
+  Card,
+  Group,
+  Modal,
+  Select,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from "@mantine/core";
+import { useGridStack, useGridStackItem } from "gridstack/dist/react";
+import type { GridStackWidget } from "gridstack/dist/react";
+
+import type { KanbanCardRow } from "./api";
+import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
+import { WidgetEditContext } from "./widget-edit-context";
+
+/**
+ * Kanban 组件（二期 Q6b）：多项目看板、列与卡片、卡片操作（编辑/移动/归档/删除）。
+ * 数据归 Workspace（D21），看板树经 REST 取数 + SSE 跨组件同步（FR-I6）。
+ * 看板选择即组件配置：写回布局 props（FR-W4 配置变更路径）+ requestSave 持久化。
+ * 卡片拖拽/嵌套手势见 Q6c（拖拽 vs 布局拖拽的冲突方案单独设计）。
+ */
+
+type NodeLike = { el?: HTMLElement; props?: Record<string, unknown> };
+
+export function KanbanWidget({ boardId }: { boardId?: string }) {
+  const { requestSave } = useContext(WidgetEditContext);
+  const { grid } = useGridStack();
+  const { node } = useGridStackItem();
+  const { boards, refresh: refreshBoards } = useKanbanBoards();
+  const { tree, error } = useKanbanTree(boardId);
+  const m = useKanbanMutations(boardId);
+  const [newBoard, setNewBoard] = useState("");
+  const [newColumn, setNewColumn] = useState("");
+  const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
+  const [editing, setEditing] = useState<KanbanCardRow | null>(null);
+
+  /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
+  const selectBoard = (id: string) => {
+    const n = node as NodeLike | undefined;
+    if (grid && n?.el) {
+      grid.update(n.el, { props: { ...(n.props ?? {}), boardId: id } } as GridStackWidget);
+    }
+    requestSave();
+  };
+
+  const createBoardAndSelect = async () => {
+    const title = newBoard.trim();
+    if (!title) return;
+    const row = await m.createBoard(title);
+    setNewBoard("");
+    refreshBoards();
+    selectBoard(row.id);
+  };
+
+  const cardsOf = (columnId: string) =>
+    (tree?.cards ?? []).filter((c) => c.columnId === columnId && !c.archived);
+  const archivedCount = (tree?.cards ?? []).filter((c) => c.archived).length;
+
+  return (
+    <Stack gap={6} style={{ height: "100%", overflow: "hidden" }}>
+      <Group gap={6} wrap="nowrap">
+        <Select
+          size="compact-xs"
+          placeholder="选择看板"
+          data={boards.map((b) => ({ value: b.id, label: b.title }))}
+          value={boardId ?? null}
+          onChange={(v) => v && selectBoard(v)}
+          nothingFoundMessage="暂无看板"
+          style={{ width: 150 }}
+          aria-label="看板选择"
+        />
+        <TextInput
+          size="compact-xs"
+          placeholder="新看板名"
+          value={newBoard}
+          onChange={(e) => setNewBoard(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void createBoardAndSelect();
+          }}
+          style={{ width: 110 }}
+        />
+        <Button size="compact-xs" variant="light" onClick={() => void createBoardAndSelect()}>
+          新建看板
+        </Button>
+        {archivedCount > 0 && (
+          <Text size="xs" c="dimmed">
+            已归档 {archivedCount}
+          </Text>
+        )}
+      </Group>
+
+      {!boardId && (
+        <Text size="xs" c="dimmed">
+          选择或新建看板后显示列与卡片
+        </Text>
+      )}
+      {error && (
+        <Text size="xs" c="red">
+          {error}
+        </Text>
+      )}
+
+      {boardId && (
+        <Group gap="xs" align="flex-start" wrap="nowrap" style={{ flex: 1, overflow: "auto" }}>
+          {(tree?.columns ?? []).map((col) => (
+            <div
+              key={col.id}
+              style={{
+                width: 190,
+                flexShrink: 0,
+                background: "rgba(255,255,255,0.04)",
+                borderRadius: 8,
+                padding: 6,
+              }}
+            >
+              <Group gap={4} wrap="nowrap" mb={4}>
+                <TextInput
+                  size="compact-xs"
+                  defaultValue={col.title}
+                  style={{ flex: 1 }}
+                  onBlur={(e) => {
+                    const t = e.currentTarget.value.trim();
+                    if (t && t !== col.title) void m.renameColumn(col.id, t);
+                  }}
+                />
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => void m.deleteColumn(col.id)}
+                  title="删除列"
+                >
+                  ×
+                </Button>
+              </Group>
+              <Stack gap={4}>
+                {cardsOf(col.id).map((card) => (
+                  <Card
+                    key={card.id}
+                    withBorder
+                    padding={6}
+                    radius={6}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setEditing(card)}
+                  >
+                    <Text size="xs">{card.title}</Text>
+                    {card.body && (
+                      <Text size="xs" c="dimmed" lineClamp={2}>
+                        {card.body}
+                      </Text>
+                    )}
+                  </Card>
+                ))}
+                <Group gap={4} wrap="nowrap">
+                  <TextInput
+                    size="compact-xs"
+                    placeholder="新卡片"
+                    style={{ flex: 1 }}
+                    value={cardDrafts[col.id] ?? ""}
+                    onChange={(e) => {
+                      // 注意：updater 会在渲染期被重放 —— 事件属性要先取值（currentTarget 事后为 null）
+                      const v = e.currentTarget.value;
+                      setCardDrafts((d) => ({ ...d, [col.id]: v }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const t = (cardDrafts[col.id] ?? "").trim();
+                        if (t) {
+                          void m.createCard(col.id, t);
+                          setCardDrafts((d) => ({ ...d, [col.id]: "" }));
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    size="compact-xs"
+                    variant="light"
+                    onClick={() => {
+                      const t = (cardDrafts[col.id] ?? "").trim();
+                      if (t) {
+                        void m.createCard(col.id, t);
+                        setCardDrafts((d) => ({ ...d, [col.id]: "" }));
+                      }
+                    }}
+                  >
+                    +
+                  </Button>
+                </Group>
+              </Stack>
+            </div>
+          ))}
+          <div style={{ width: 190, flexShrink: 0 }}>
+            <Group gap={4} wrap="nowrap">
+              <TextInput
+                size="compact-xs"
+                placeholder="新列名"
+                style={{ flex: 1 }}
+                value={newColumn}
+                onChange={(e) => setNewColumn(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newColumn.trim()) {
+                    void m.createColumn(newColumn.trim());
+                    setNewColumn("");
+                  }
+                }}
+              />
+              <Button
+                size="compact-xs"
+                variant="light"
+                onClick={() => {
+                  const t = newColumn.trim();
+                  if (t) {
+                    void m.createColumn(t);
+                    setNewColumn("");
+                  }
+                }}
+              >
+                +
+              </Button>
+            </Group>
+          </div>
+        </Group>
+      )}
+
+      <Modal opened={editing !== null} onClose={() => setEditing(null)} title="卡片">
+        {editing && (
+          <Stack gap="xs">
+            <TextInput
+              label="标题"
+              value={editing.title}
+              onChange={(e) => setEditing({ ...editing, title: e.currentTarget.value })}
+            />
+            <Textarea
+              label="描述"
+              minRows={3}
+              value={editing.body}
+              onChange={(e) => setEditing({ ...editing, body: e.currentTarget.value })}
+            />
+            <Select
+              label="移动到"
+              data={(tree?.columns ?? []).map((c) => ({ value: c.id, label: c.title }))}
+              value={editing.columnId}
+              onChange={(v) => {
+                if (v && v !== editing.columnId) {
+                  void m.patchCard(editing.id, { columnId: v, sortOrder: 0 });
+                  setEditing(null);
+                }
+              }}
+            />
+            <Group gap="xs">
+              <Button
+                size="xs"
+                onClick={() => {
+                  void m.patchCard(editing.id, { title: editing.title, body: editing.body });
+                  setEditing(null);
+                }}
+              >
+                保存
+              </Button>
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => {
+                  void m.patchCard(editing.id, { archived: !editing.archived });
+                  setEditing(null);
+                }}
+              >
+                {editing.archived ? "取消归档" : "归档"}
+              </Button>
+              <Button
+                size="xs"
+                color="red"
+                variant="light"
+                onClick={() => {
+                  void m.deleteCard(editing.id);
+                  setEditing(null);
+                }}
+              >
+                删除
+              </Button>
+            </Group>
+          </Stack>
+        )}
+      </Modal>
+    </Stack>
+  );
+}

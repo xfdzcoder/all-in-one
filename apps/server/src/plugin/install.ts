@@ -17,6 +17,7 @@ import { readPluginPackage } from "./package.ts";
 const BUILTIN_TYPES = new Set([
   "todo",
   "rss",
+  "kanban",
   "app-launcher",
   "iframe",
   "custom-api",

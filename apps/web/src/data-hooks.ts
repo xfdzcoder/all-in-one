@@ -14,13 +14,23 @@ export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
-/** SSE 失效订阅（FR-I6）：任意端发布 invalidation → 重取 todo。 */
+/** SSE 失效订阅（FR-I6）：按 topic 失效对应查询（todo / rss / kanban）。 */
 export function useSseInvalidation(): void {
   const qc = useQueryClient();
   useEffect(() => {
     const es = new EventSource("/api/events");
-    es.addEventListener("invalidation", () => {
-      void qc.invalidateQueries({ queryKey: ["todos"] });
+    es.addEventListener("invalidation", (e: MessageEvent<string>) => {
+      let topic = "todo";
+      try {
+        topic = String((JSON.parse(e.data) as { topic?: string }).topic ?? "todo");
+      } catch {
+        /* 保持默认 */
+      }
+      if (topic === "rss") void qc.invalidateQueries({ queryKey: ["feeds"] });
+      else if (topic === "kanban") {
+        void qc.invalidateQueries({ queryKey: ["kanban"] });
+        void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
+      } else void qc.invalidateQueries({ queryKey: ["todos"] });
     });
     return () => es.close();
   }, [qc]);
@@ -118,6 +128,58 @@ export function usePlugins() {
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: () => void query.refetch(),
+  };
+}
+
+/** Kanban 看板树（Q6b：列/卡渲染 + SSE 同步）。 */
+export function useKanbanTree(boardId: string | undefined) {
+  const query = useQuery({
+    queryKey: ["kanban", boardId ?? ""],
+    queryFn: () => api.getBoardTree(boardId!),
+    enabled: Boolean(boardId),
+  });
+  return {
+    tree: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
+/** 看板清单（组件内选择器用）。 */
+export function useKanbanBoards() {
+  const query = useQuery({
+    queryKey: ["kanban-boards"],
+    queryFn: () => api.listBoards(),
+  });
+  return {
+    boards: query.data ?? [],
+    refresh: () => void query.refetch(),
+  };
+}
+
+/** Kanban 写操作后统一失效（SSE 另有跨组件同步）。 */
+export function useKanbanMutations(boardId: string | undefined) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["kanban"] });
+    void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
+  };
+  return {
+    createBoard: (title: string) => api.createBoard(title).then((r) => (invalidate(), r)),
+    renameBoard: (id: string, title: string) => api.renameBoard(id, title).then((r) => (invalidate(), r)),
+    deleteBoard: (id: string) => api.deleteBoard(id).then((r) => (invalidate(), r)),
+    createColumn: (title: string) =>
+      api.createColumn(boardId!, title).then((r) => (invalidate(), r)),
+    renameColumn: (id: string, title: string) => api.renameColumn(id, title).then((r) => (invalidate(), r)),
+    deleteColumn: (id: string) => api.deleteColumn(id).then((r) => (invalidate(), r)),
+    createCard: (columnId: string, title: string) =>
+      api.createCard(columnId, title).then((r) => (invalidate(), r)),
+    patchCard: (
+      id: string,
+      patch: Parameters<typeof api.patchCard>[1],
+    ) => api.patchCard(id, patch).then((r) => (invalidate(), r)),
+    deleteCard: (id: string) => api.deleteCard(id).then((r) => (invalidate(), r)),
   };
 }
 

@@ -55,6 +55,29 @@ export type PluginRow = {
   createdAt: string;
 };
 
+/** Kanban（Q6）：看板/列/卡，数据归 Workspace（D21）。 */
+export type KanbanBoardRow = { id: string; title: string };
+export type KanbanColumnRow = {
+  id: string;
+  boardId: string;
+  title: string;
+  sortOrder: number;
+};
+export type KanbanCardRow = {
+  id: string;
+  boardId: string;
+  columnId: string;
+  title: string;
+  body: string;
+  archived: boolean;
+  sortOrder: number;
+};
+export type KanbanTree = {
+  board: KanbanBoardRow;
+  columns: KanbanColumnRow[];
+  cards: KanbanCardRow[];
+};
+
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -112,4 +135,20 @@ export const api = {
     req<{ ok: boolean; result: unknown }>("POST", `/api/plugins/${id}/actions`, { name, params }),
   getPluginEntry: (id: string) =>
     req<{ manifest: unknown; code: string }>("GET", `/api/plugins/${id}/entry`),
+  listBoards: () => req<KanbanBoardRow[]>("GET", "/api/kanban/boards"),
+  getBoardTree: (id: string) => req<KanbanTree>("GET", `/api/kanban/boards/${id}`),
+  createBoard: (title: string) => req<KanbanBoardRow>("POST", "/api/kanban/boards", { title }),
+  renameBoard: (id: string, title: string) =>
+    req<KanbanBoardRow>("PATCH", `/api/kanban/boards/${id}`, { title }),
+  deleteBoard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/kanban/boards/${id}`),
+  createColumn: (boardId: string, title: string) =>
+    req<KanbanColumnRow>("POST", "/api/kanban/columns", { boardId, title }),
+  renameColumn: (id: string, title: string) =>
+    req<KanbanColumnRow>("PATCH", `/api/kanban/columns/${id}`, { title }),
+  deleteColumn: (id: string) => req<{ ok: boolean }>("DELETE", `/api/kanban/columns/${id}`),
+  createCard: (columnId: string, title: string) =>
+    req<KanbanCardRow>("POST", "/api/kanban/cards", { columnId, title }),
+  patchCard: (id: string, patch: Partial<Pick<KanbanCardRow, "title" | "body" | "columnId" | "sortOrder" | "archived">>) =>
+    req<KanbanCardRow>("PATCH", `/api/kanban/cards/${id}`, patch),
+  deleteCard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/kanban/cards/${id}`),
 };

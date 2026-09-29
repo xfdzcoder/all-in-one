@@ -321,7 +321,9 @@ export function Board({
           {saveError}
         </Alert>
       )}
-      <WidgetEditContext.Provider value={{ editMode: effectiveEditMode, onConfigure: openConfig }}>
+      <WidgetEditContext.Provider
+        value={{ editMode: effectiveEditMode, onConfigure: openConfig, requestSave: scheduleSave }}
+      >
         <GridStack
           ref={gridRef}
           key={dashboardId}

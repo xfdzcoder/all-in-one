@@ -6,6 +6,7 @@ import { CustomApiWidget } from "./custom-api-widget";
 import { RssWidget } from "./rss-widget";
 import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
+import { KanbanWidget } from "./kanban-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -172,10 +173,27 @@ export const iframeManifest: WidgetManifest = {
   },
 };
 
+/** 看板组件（Q6b）：多项目看板，Workspace 数据（D21），配置看板经组件内选择器写回 props。 */
+export const kanbanManifest: WidgetManifest = {
+  type: "kanban",
+  name: "看板",
+  description: "多项目看板：列与卡片、卡片操作（编辑/移动/归档/删除）",
+  category: "数据",
+  defaultSize: { w: 8, h: 5 },
+  minSize: { w: 4, h: 3 },
+  configSchema: [],
+  capabilities: {
+    data: { source: "workspace", resource: "kanban" },
+    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
 /** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
   rss: RssWidget,
+  kanban: KanbanWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -191,6 +209,7 @@ export const widgetComponents = {
 const manifestsByComponent: Record<string, WidgetManifest> = {
   todo: todoManifest,
   rss: rssManifest,
+  kanban: kanbanManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -208,6 +227,7 @@ export function manifestForComponent(component: string): WidgetManifest | undefi
 export const builtinManifests: WidgetManifest[] = [
   todoManifest,
   rssManifest,
+  kanbanManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,
