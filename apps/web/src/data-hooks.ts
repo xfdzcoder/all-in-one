@@ -121,6 +121,26 @@ export function usePlugins() {
   };
 }
 
+/** 插件数据桥（FR-W3：宿主统一取数 → 沙箱；权限在服务端按白名单把关，D26）。 */
+export function usePluginData(
+  type: string,
+  source: string | undefined,
+  config: Record<string, unknown>,
+) {
+  const enabled = Boolean(source) && source !== "none";
+  const query = useQuery({
+    queryKey: ["plugin-data", type, JSON.stringify(config)],
+    queryFn: () => api.widgetData(type, config),
+    enabled,
+    staleTime: 60_000,
+  });
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
 /** iframe 禁嵌检测（iframe-embed connector 读响应头判定 —— 浏览器禁嵌时 iframe 的
  *  load 事件照常触发，前端无法自判，见 connector/iframe.ts）。 */
 export function useEmbedCheck(url: string): EmbedCheck | null | undefined {

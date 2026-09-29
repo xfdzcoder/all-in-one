@@ -3,6 +3,7 @@ import { Alert, Text } from "@mantine/core";
 import type { ConfigValues, PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api } from "./api";
+import { usePluginData } from "./data-hooks";
 
 /**
  * 插件沙箱宿主（FR-W7 / **D25**：iframe CSP 隔离，否决 Web Component 方案）。
@@ -85,16 +86,20 @@ export function PluginFrame({
   pluginId,
   manifest,
   config,
-  data = null,
 }: {
   pluginId: string;
   manifest: PluginManifest;
   config: ConfigValues;
-  data?: unknown;
 }) {
   const [code, setCode] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  // 数据桥：宿主统一取数（FR-W3），权限由服务端按白名单把关（D26）
+  const { data, error: dataError } = usePluginData(
+    manifest.type,
+    manifest.capabilities?.data?.source,
+    config,
+  );
   const frameRef = useRef<HTMLIFrameElement>(null);
   const propsRef = useRef<PluginRuntimeProps>({ config, data });
   propsRef.current = { config, data };
@@ -178,6 +183,11 @@ export function PluginFrame({
       {runtimeError && (
         <Alert color="red" mb={4}>
           {runtimeError}
+        </Alert>
+      )}
+      {dataError && (
+        <Alert color="red" mb={4}>
+          数据获取失败：{dataError}
         </Alert>
       )}
       {code !== null && (

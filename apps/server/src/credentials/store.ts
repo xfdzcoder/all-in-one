@@ -53,6 +53,19 @@ export async function listCredentials(db: Db, userId: string): Promise<Credentia
   return rows.map(toView);
 }
 
+/** 凭证件元数据（id/kind，不含密文）——插件 credentialKinds 白名单把关用（FR-W7）。 */
+export async function getCredentialMeta(
+  db: Db,
+  userId: string,
+  credentialId: string,
+): Promise<{ id: string; kind: string } | null> {
+  const rows = await db
+    .select({ id: credential.id, kind: credential.kind })
+    .from(credential)
+    .where(and(eq(credential.id, credentialId), eq(credential.userId, userId)));
+  return rows[0] ?? null;
+}
+
 /** 解密读取明文 —— 仅供服务端 connector 调用，严禁出现在 API 响应/日志。 */
 export async function readSecret(
   db: Db,

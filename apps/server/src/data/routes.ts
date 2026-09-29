@@ -18,6 +18,11 @@ import { httpConnector } from "../connector/http.ts";
 import { rssConnector } from "../feed/connector.ts";
 import { appLauncherConnector } from "../connector/launcher.ts";
 import { iframeEmbedConnector } from "../connector/iframe.ts";
+import {
+  PluginPermissionError,
+  fetchPluginData,
+  getEnabledPluginByType,
+} from "../plugin/data.ts";
 
 const queryBody = z.object({
   type: z.string().min(1).max(64),
@@ -59,8 +64,13 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
     const query: WidgetDataQuery = { type: parsed.data.type, config: parsed.data.config };
     const key = cacheKeyOf(query);
 
-    if (!deps.registry.has(query.type)) {
-      return reply.code(400).send({ error: `unknown widget type: ${query.type}` });
+    const isBuiltin = deps.registry.has(query.type);
+    if (!isBuiltin) {
+      // 插件查询（FR-W3 数据桥，D26）：仅已启用插件可取数，权限在 fetchPluginData 内把关
+      const pluginRow = await getEnabledPluginByType(app.db, req.user!.id, query.type);
+      if (!pluginRow) {
+        return reply.code(400).send({ error: `unknown widget type: ${query.type}` });
+      }
     }
 
     const cached = deps.cache.get(key);
@@ -80,11 +90,19 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
         readSecretSafe(app.db, req.user!.id, credentialId),
     };
     try {
-      const config = await resolveSecretRefs(query.config, ctx);
-      const data = await deps.registry.get(query.type).fetch({ ...query, config }, ctx);
+      // 插件查询不在此预解析 SecretRef —— fetchPluginData 先按 credentialKinds 把关再解密
+      const data = isBuiltin
+        ? await (async () => {
+            const config = await resolveSecretRefs(query.config, ctx);
+            return deps.registry.get(query.type).fetch({ ...query, config }, ctx);
+          })()
+        : await fetchPluginData(app.db, req.user!.id, query, ctx);
       const entry = deps.cache.set(key, data);
       return { data: entry.data, fetchedAt: entry.fetchedAt, cached: false };
     } catch (err) {
+      if (err instanceof PluginPermissionError) {
+        return reply.code(403).send({ error: err.message });
+      }
       const message = err instanceof Error ? err.message : "fetch failed";
       return reply.code(502).send({ error: message });
     }
