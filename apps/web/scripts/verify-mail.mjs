@@ -166,6 +166,9 @@ try {
     "MAIL empty state hint",
     await page.evaluate(() => (document.body.textContent ?? "").includes("先在「管理账号」添加邮箱账号")),
   );
+  // 编辑态组件内容惰性（FR-P8）：组件内操作在浏览模式进行
+  ok("MAIL exit edit to operate widget", await clickBtn("完成编辑"));
+  await sleep(400);
 
   // 账号管理（口令 → 凭证库）
   ok("MAIL open account manager", await clickBtn("管理账号"));

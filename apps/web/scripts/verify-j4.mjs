@@ -62,6 +62,9 @@ try {
   await sleep(1200); // portal render + hydration
   const todoInputsA = await openTodos();
   ok("J4 Todo widget renders on page A", todoInputsA >= 1, `inputs=${todoInputsA}`);
+  // 编辑态组件内容惰性（D35/FR-P8）：卡片操作在浏览模式进行
+  ok("J4 exit edit A (browse to operate cards)", await clickBtn("完成编辑"));
+  await sleep(400);
 
   // create task on page A（标题按轮唯一 —— 任务归 Workspace 且跨轮累积）
   const title = `J4-${Date.now().toString(36)}`;
@@ -93,6 +96,8 @@ try {
   await sleep(300);
   ok("J4 add Todo on page B", await addWidgetViaPicker("个人 Todo"));
   await sleep(1500); // portal render + SSE round-trip
+  ok("J4 exit edit B (browse to operate cards)", await clickBtn("完成编辑"));
+  await sleep(400);
 
   // task created on A must appear on B WITHOUT reload (SSE invalidation + query)
   const state = await page.evaluate((t) => {

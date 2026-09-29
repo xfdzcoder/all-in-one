@@ -131,6 +131,9 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   await page.getByRole("button", { name: "个人 Todo" }).click();
   await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(800);
+  // 编辑态组件内容惰性（FR-P8）：任务操作在浏览模式进行
+  await page.getByRole("button", { name: "完成编辑" }).click();
+  await page.waitForTimeout(400);
 
   const title = `J4-${Date.now().toString(36)}`;
   const todoA = page
@@ -152,6 +155,8 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   await page.getByRole("button", { name: "个人 Todo" }).click();
   await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "完成编辑" }).click();
+  await page.waitForTimeout(400);
   const todoB = page
     .locator(".grid-stack-item")
     .filter({ has: page.locator('input[placeholder="新任务…"]') })

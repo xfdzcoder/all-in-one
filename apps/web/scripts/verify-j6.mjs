@@ -127,6 +127,10 @@ try {
   ok("J6 per-item alive/dead badges differ (green vs red)", Boolean(state) && state.aliveColor !== state.deadColor && Boolean(state.aliveColor), `${state?.aliveColor} vs ${state?.deadColor}`);
   ok("J6 service entries listed with links", Boolean(state) && state.names && state.links);
 
+  // 组件内跳转属浏览模式操作（FR-P8：编辑态内容惰性）——退出编辑后点击
+  ok("J6 exit edit to operate widget", await clickBtn("完成编辑"));
+  await sleep(400);
+
   // 点击跳转：浏览器直接打开服务（target=_blank，不经服务端）
   const before = (await browser.targets()).length;
   const link = await page.$(`a[href="${aliveUrl}"]`);

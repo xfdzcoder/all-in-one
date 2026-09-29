@@ -18,7 +18,14 @@ export function WidgetChrome({ children }: { children: ReactNode }) {
 
   return (
     <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
-      {children}
+      {/* 编辑态组件内容整体惰性（inert + pointer-events）：拖动 = 调整布局，
+          禁止误操作卡片（FR-P8 编辑/浏览分离）；「配置」入口在外层保持可用 */}
+      <div
+        style={{ height: "100%", pointerEvents: editMode ? "none" : "auto" }}
+        inert={editMode || undefined}
+      >
+        {children}
+      </div>
       {editMode && (
         <Button
           size="compact-xs"

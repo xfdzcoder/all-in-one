@@ -190,6 +190,20 @@ try {
     "KAN empty-state hint",
     await page.evaluate(() => (document.body.textContent ?? "").includes("选择或新建看板后显示列与卡片")),
   );
+  // 编辑态组件内容惰性（FR-P8）：输入/点击均不生效 → 浏览模式才可操作
+  await page.evaluate(() => {
+    const input = [...document.querySelectorAll("input")].find((i) => i.placeholder === "新看板名");
+    input?.focus();
+    input?.click();
+  });
+  await page.keyboard.type("should-not-appear");
+  await sleep(300);
+  const inertValue = await page.evaluate(
+    () => [...document.querySelectorAll("input")].find((i) => i.placeholder === "新看板名")?.value ?? "MISSING",
+  );
+  ok("KAN typing inert in edit mode", inertValue === "", String(inertValue));
+  ok("KAN exit edit to operate cards", await clickBtn("完成编辑"));
+  await sleep(400);
 
   // ① 新建看板（组件内选择器 = 配置写回）
   const boardTitle = `kan-${uniq}`;
@@ -249,13 +263,17 @@ try {
   await page.keyboard.press("Enter");
   await sleep(800);
 
-  // 编辑模式：卡片不可拖（拖动 = 布局），并给出提示（Q6c/D29）
+  // 编辑模式：卡片不可拖（拖动 = 布局）+ 提示 + 内容惰性（Q6c/D29 + FR-P8）
+  ok("KAN re-enter edit", await clickBtn("编辑布局"));
+  await sleep(400);
   const draggableInEdit = await cardDraggable(cardC);
   ok("KAN cards not draggable in edit mode", draggableInEdit === false, `draggable=${draggableInEdit}`);
   ok(
     "KAN edit-mode drag hint shown",
     await page.evaluate(() => (document.body.textContent ?? "").includes("编辑模式：拖动 = 调整布局")),
   );
+  ok("KAN exit edit before reload checks", await clickBtn("完成编辑"));
+  await sleep(400);
 
   // ⑥ 刷新：看板选择（props）与数据保持
   await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
