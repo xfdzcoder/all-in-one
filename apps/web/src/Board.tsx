@@ -83,6 +83,23 @@ function BoardToolbar({
           >
             添加 Todo
           </Button>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => {
+              addWidget({
+                id: nextId("r"),
+                x: 0,
+                y: 100,
+                w: 4,
+                h: 4,
+                component: "rss",
+                props: { limit: 10, filter: "all" },
+              });
+            }}
+          >
+            添加信息流
+          </Button>
           <Button size="xs" variant="light" onClick={() => setConfigOpen(true)}>
             配置 API 组件
           </Button>

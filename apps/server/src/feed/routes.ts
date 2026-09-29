@@ -1,0 +1,97 @@
+import type { FastifyInstance } from "fastify";
+
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
+
+import { authGuard } from "../auth/guard.ts";
+import { feedRead, feedSource } from "../db/schema.ts";
+
+const createSource = z.object({
+  title: z.string().min(1).max(200),
+  url: z.string().url().max(2000),
+});
+const idParams = z.object({ id: z.string().min(1).max(64) });
+const readBody = z.object({ itemKey: z.string().min(1).max(128) });
+
+/** RSS 订阅源 + 已读标记（Workspace 级，D21）。 */
+export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void): void {
+  app.get("/api/feeds", { preHandler: authGuard }, async (req) => {
+    return app.db
+      .select()
+      .from(feedSource)
+      .where(eq(feedSource.userId, req.user!.id))
+      .orderBy(asc(feedSource.createdAt));
+  });
+
+  app.post("/api/feeds", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = createSource.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid body" });
+    const [row] = await app.db
+      .insert(feedSource)
+      .values({
+        id: crypto.randomUUID(),
+        userId: req.user!.id,
+        title: parsed.data.title,
+        url: parsed.data.url,
+        createdAt: new Date(),
+      })
+      .returning();
+    onChanged();
+    return reply.code(201).send(row);
+  });
+
+  app.delete("/api/feeds/:id", { preHandler: authGuard }, async (req, reply) => {
+    const params = idParams.safeParse(req.params);
+    if (!params.success) return reply.code(400).send({ error: "invalid request" });
+    const [row] = await app.db
+      .delete(feedSource)
+      .where(and(eq(feedSource.id, params.data.id), eq(feedSource.userId, req.user!.id)))
+      .returning();
+    if (!row) return reply.code(404).send({ error: "not found" });
+    onChanged();
+    return { ok: true };
+  });
+
+  /** 已读标记（任一组件标记 → SSE 通知其它组件同步）。 */
+  app.get("/api/feeds/read", { preHandler: authGuard }, async (req) => {
+    const rows = await app.db.select().from(feedRead).where(eq(feedRead.userId, req.user!.id));
+    return rows.map((r) => r.itemKey);
+  });
+
+  app.post("/api/feeds/read", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = readBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid body" });
+    const existing = await app.db
+      .select({ id: feedRead.id })
+      .from(feedRead)
+      .where(and(eq(feedRead.userId, req.user!.id), eq(feedRead.itemKey, parsed.data.itemKey)));
+    if (existing.length === 0) {
+      await app.db.insert(feedRead).values({
+        id: crypto.randomUUID(),
+        userId: req.user!.id,
+        itemKey: parsed.data.itemKey,
+        readAt: new Date(),
+      });
+    }
+    onChanged();
+    return { ok: true };
+  });
+
+  app.post("/api/feeds/read-batch", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = z.object({ itemKeys: z.array(z.string().min(1).max(128)).max(500) }).safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid body" });
+    const existing = await app.db
+      .select({ itemKey: feedRead.itemKey })
+      .from(feedRead)
+      .where(and(eq(feedRead.userId, req.user!.id), inArray(feedRead.itemKey, parsed.data.itemKeys)));
+    const have = new Set(existing.map((e) => e.itemKey));
+    const now = new Date();
+    await app.db.insert(feedRead).values(
+      parsed.data.itemKeys
+        .filter((k) => !have.has(k))
+        .map((k) => ({ id: crypto.randomUUID(), userId: req.user!.id, itemKey: k, readAt: now })),
+    );
+    onChanged();
+    return { ok: true };
+  });
+}

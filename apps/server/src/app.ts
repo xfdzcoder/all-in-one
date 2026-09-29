@@ -17,6 +17,7 @@ import { createDb, ensureSchema, type Db } from "./db/client.ts";
 import { LAYOUT_SCHEMA_VERSION, session } from "./db/schema.ts";
 import { registerCredentialRoutes } from "./credentials/routes.ts";
 import { registerTodoRoutes } from "./todo/routes.ts";
+import { registerFeedRoutes } from "./feed/routes.ts";
 
 export type AppDeps = {
   db: Db;
@@ -47,6 +48,11 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerTodoRoutes(app, () => {
     dataChannel.cache.clear();
     dataChannel.bus.publish("todo");
+  });
+  // RSS 变更（源管理/标已读）→ 失效缓存 + SSE（FR：任一组件标已读，其余同步）
+  registerFeedRoutes(app, () => {
+    dataChannel.cache.clear();
+    dataChannel.bus.publish("rss");
   });
   return app;
 }

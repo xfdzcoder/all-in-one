@@ -110,3 +110,47 @@ export type Credential = typeof credential.$inferSelect;
 export type NewCredential = typeof credential.$inferInsert;
 export type Todo = typeof todo.$inferSelect;
 export type NewTodo = typeof todo.$inferInsert;
+
+/**
+ * RSS 订阅源（Workspace 级数据，D21：user_id 代位）。
+ * 条目本身不落库——由 connector 现取 + 缓存；只有"已读"状态需要持久化。
+ */
+export const feedSource = sqliteTable(
+  "feed_source",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    url: text("url").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("feed_source_user_id_idx").on(t.userId)],
+);
+
+/**
+ * RSS 已读标记（FR：未读标记归 Workspace —— 任一组件标记已读，其它组件同步）。
+ * itemKey = 条目稳定标识（guid/link 的哈希）。
+ */
+export const feedRead = sqliteTable(
+  "feed_read",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    itemKey: text("item_key").notNull(),
+    readAt: integer("read_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("feed_read_user_id_idx").on(t.userId),
+    index("feed_read_user_item_idx").on(t.userId, t.itemKey),
+  ],
+);
+
+export type FeedSource = typeof feedSource.$inferSelect;
+export type NewFeedSource = typeof feedSource.$inferInsert;
+export type FeedRead = typeof feedRead.$inferSelect;
+export type NewFeedRead = typeof feedRead.$inferInsert;

@@ -21,6 +21,30 @@ export type TodoItem = {
   updatedAt: number | string;
 };
 
+export type FeedItem = {
+  title: string;
+  link: string;
+  summary: string;
+  date: string;
+  itemKey: string;
+  sourceTitle: string;
+  read: boolean;
+};
+
+export type FeedSource = {
+  id: string;
+  title: string;
+  url: string;
+  createdAt: number | string;
+};
+
+export type FeedAgg = {
+  items: FeedItem[];
+  unread: number;
+  sourceCount: number;
+  errors: Array<{ title: string; error: string }>;
+};
+
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -65,4 +89,8 @@ export const api = {
     req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
+  listFeeds: () => req<FeedSource[]>("GET", "/api/feeds"),
+  createFeed: (title: string, url: string) => req<FeedSource>("POST", "/api/feeds", { title, url }),
+  deleteFeed: (id: string) => req<{ ok: boolean }>("DELETE", `/api/feeds/${id}`),
+  markFeedRead: (itemKey: string) => req<{ ok: boolean }>("POST", "/api/feeds/read", { itemKey }),
 };

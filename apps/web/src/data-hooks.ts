@@ -83,3 +83,39 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
     refresh: () => void qc.invalidateQueries({ queryKey: ["custom-api"] }),
   };
 }
+
+/** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
+export function useFeeds(limit: number) {
+  const query = useQuery({
+    queryKey: ["feeds", limit],
+    queryFn: () => api.widgetData("rss", { limit }) as Promise<import("./api").FeedAgg>,
+    staleTime: 60_000,
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
+export function useFeedSources() {
+  return useQuery({ queryKey: ["feed-sources"], queryFn: () => api.listFeeds() });
+}
+
+/** RSS 变更（标已读/订阅/退订）→ 失效 feeds + sources（SSE 兜底其它组件）。 */
+export function useFeedMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["feeds"] });
+    void qc.invalidateQueries({ queryKey: ["feed-sources"] });
+    void qc.invalidateQueries({ queryKey: ["custom-api"] });
+  };
+  return {
+    markRead: useMutation({ mutationFn: (itemKey: string) => api.markFeedRead(itemKey), onSuccess: invalidate }),
+    addSource: useMutation({
+      mutationFn: (v: { title: string; url: string }) => api.createFeed(v.title, v.url),
+      onSuccess: invalidate,
+    }),
+    removeSource: useMutation({ mutationFn: (id: string) => api.deleteFeed(id), onSuccess: invalidate }),
+  };
+}

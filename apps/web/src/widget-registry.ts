@@ -3,6 +3,7 @@ import type { WidgetManifest } from "@all-in-one/widget-sdk";
 import { Placeholder, StatBox } from "./widgets";
 import { TodoWidget } from "./todo-widget";
 import { CustomApiWidget } from "./custom-api-widget";
+import { RssWidget } from "./rss-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -107,8 +108,32 @@ export const customApiManifest: WidgetManifest = {
 };
 
 /** gridstack components 映射（key = manifest.type）。 */
+export const rssManifest: WidgetManifest = {
+  type: "rss",
+  name: "信息流",
+  description: "多源 RSS/Atom 聚合，未读标记归 Workspace（跨组件同步）",
+  icon: "rss",
+  category: "信息流",
+  defaultSize: { w: 4, h: 4 },
+  minSize: { w: 2, h: 3 },
+  configSchema: [
+    { key: "limit", label: "条目数", type: "number", default: 10 },
+    { key: "filter", label: "显示", type: "select", default: "all", options: [
+      { value: "all", label: "全部" },
+      { value: "unread", label: "仅未读" },
+    ] },
+  ],
+  capabilities: {
+    data: { source: "workspace", resource: "rss" },
+    refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
+/** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
+  rss: RssWidget,
   "custom-api": CustomApiWidget,
   Placeholder,
   StatBox,
@@ -117,6 +142,7 @@ export const widgetComponents = {
 /** 内置 manifest 清单（供组件选择器 / 配置表单 / J8 验证）。 */
 export const builtinManifests: WidgetManifest[] = [
   todoManifest,
+  rssManifest,
   customApiManifest,
   placeholderManifest,
   statBoxManifest,

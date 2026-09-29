@@ -15,6 +15,7 @@ import { DataCache } from "./cache.ts";
 import { EventBus, type InvalidationEvent } from "./events.ts";
 import { todoConnector } from "../todo/connector.ts";
 import { httpConnector } from "../connector/http.ts";
+import { rssConnector } from "../feed/connector.ts";
 
 const queryBody = z.object({
   type: z.string().min(1).max(64),
@@ -38,6 +39,7 @@ export function defaultDataChannel(): DataChannelDeps {
   const registry = createConnectorRegistry();
   registry.register(todoConnector);
   registry.register(httpConnector);
+  registry.register(rssConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),
