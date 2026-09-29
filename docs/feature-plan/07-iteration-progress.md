@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 14 轮完成 · Q7a ✅ 邮件数据模型 + IMAP 聚合（D30）；下一项 Q7b 邮件组件 UI） |
+| 最近更新 | 2026-09-29（第 15 轮完成 · Q7b ✅ 邮件组件 UI —— **Q7 邮件全部完成**；下一项 Q8 OpenCode 组件） |
 
 ## 迭代队列
 
@@ -29,9 +29,10 @@
   - [x] Q6a · 数据模型 + REST（board/column/card 三层（D21 归属 + 级联删除）、卡片移动/归档、SSE kanban 主题）**✅ 2026-09-29**
   - [x] Q6b · KanbanWidget 组件（列/卡渲染、加列加卡、改卡/归档/删除、组件内选看板（配置写回，D28）、Workspace 数据 + SSE 同步）**✅ 2026-09-29**
   - [x] Q6c · 嵌套拖拽手势方案（**D29**：模式互斥——编辑态拖布局/浏览态 HTML5 DnD 拖卡片 + 「移动到」选择器触控/键盘备选）**✅ 2026-09-29**
-- [ ] Q7 · 二期：邮件组件（只读，IMAP connector；D3 只读边界不变；**拆分为 Q7a–Q7b 逐轮推进**）
+- [x] Q7 · 二期：邮件组件（只读，IMAP connector；D3 只读边界不变；Q7a–Q7b 全部完成）**✅ 2026-09-29**
   - [x] Q7a · 数据模型 + IMAP 聚合服务 + REST（mail_account（D21+凭证引用）、imapflow/mailparser 适配、多账号聚合/错误隔离/60s 缓存、正文体积截断、**D30**）**✅ 2026-09-29**
-  - [ ] Q7b · 邮件组件 UI（账号配置、聚合列表 + 正文沙箱渲染（D25 工具）、多账号过滤）
+  - [x] Q7b · 邮件组件 UI（账号管理（口令入凭证库）、聚合列表 + 逐账号错误、正文沙箱渲染（D25 工具）、账号过滤）**✅ 2026-09-29**
+- [ ] Q11 · 破坏性操作防误触（产品加固）：「删除此页」等无确认直接删除，误触即丢失布局 —— 加确认对话框（第 15 轮测试事故的根因之一）
 - [ ] Q8 · 二期：OpenCode 组件（薄封装官方 SDK，experimental API 风险）
 - [ ] Q9 · 二期：服务器监控组件（**阻塞：06 待定 #4 数据来源选型**，届时进"待用户确认"）
 - [ ] Q10 · 二期：自定义 API 受限 JS/JSX 模板（**阻塞：06 待定 #5 安全边界**，届时进"待用户确认"）
@@ -54,6 +55,7 @@
 | 12 | 2026-09-29 | **Q6b KanbanWidget 组件（D28）**：`kanban-widget.tsx`——组件内新建/切换看板（选择即配置写回 `grid.update(props)` + 宿主 `requestSave` 服务，**D28**）、列渲染与加列/删列/改名、加卡/改卡/移动到列/归档/删除（编辑弹窗）；SSE 失效改按 topic 分发（顺带修复 rss/kanban 事件只失效 todo 查询的隐患）；`WidgetEditContext` 升级为宿主服务上下文。**踩坑修复**：React setState updater 渲染期重放，`e.currentTarget` 在 updater 内读取 → null 崩溃（卡片输入框）；verify-kan 前置重置 seed 布局防组件累积歧义 | verify-kan 27/27（连跑两轮：建看板/列/卡、改卡、跨列移动、归档、刷新保持 props 往返）✅；全量回归（m1/j3–j8/w4/pl5–pl8）✅；Playwright 5/5 ✅；Vitest 111/111 ✅；typecheck/lint ✅ | `9baf261` |
 | 13 | 2026-09-29 | **Q6c 嵌套拖拽手势方案（D29）**：卡片拖拽 vs gridstack 布局拖拽冲突 = **模式互斥**——编辑态卡片 `draggable=false` + 提示（拖动=调整布局），浏览态 HTML5 DnD（卡片 dragstart → 列 drop），与 gridstack 指针路径完全解耦；移动语义=落目标列末尾（sortOrder=列内最大+1），与「移动到」选择器共用 `moveCardTo`（触控/键盘备选，移动端 D10 天然走选择器）。**Q6 Kanban（Q6a–Q6c）全部完成** | verify-kan 33/33（连跑两轮：新增编辑态不可拖+提示、浏览态合成拖放跨列移动断言）✅；全量回归（m1/j3–j8/w4/pl5–pl8）✅；Playwright 5/5 ✅；Vitest 111/111 ✅；typecheck/lint ✅ | `19226e7` |
 | 14 | 2026-09-29 | **Q7a 邮件数据模型 + IMAP 只读聚合（D30）**：`mail_account` 表（D21 归属 + 凭证引用，迁移 0006）；`mail/client.ts` 窄接口 + `imap.ts` imapflow/mailparser 薄适配（逐次连接/登出）+ `service.ts` 账号 CRUD/多账号聚合（逐账号错误隔离 + 60s TTL 缓存）/正文拉取与截断（text 100KB、html 200KB）；REST 账号 + 聚合列表 + 正文，**无任何写邮箱端点**（D3）；SEC4：IMAP 目标过 SSRF 基线；SEC3：密码只存凭证引用、连接期解密入内存。**D30**：IMAP-only（Gmail API 专项入待用户确认）、正文沙箱 iframe 渲染（Q7b 落地） | server 117/117（新增 6 项：聚合排序/挂掉与内网账号隔离/TTL 单次连接/密码不入响应/截断/404·400）✅；typecheck/lint ✅；verify-m1 冒烟 13/13 ✅ | `560cf0b` |
+| 15 | 2026-09-29 | **Q7b 邮件组件 UI**：`mail-widget.tsx`——组件内账号管理（口令走 `createCredential` 入凭证库、账号只存引用，SEC3；账号创建请求不携带口令）、聚合列表 + 逐账号错误横幅 + 账号过滤、正文**沙箱 iframe 渲染**（deny-all + CSP `script-src 'none'`、远程图禁；纯文本回退）；`mail` 注册进组件表/选择器/BUILTIN_TYPES。verify-mail 25/25（消息 API 用请求拦截夹具，IMAP 路径由服务层假客户端单测覆盖）。**测试事故与修复**：未限定范围的 `clickBtn("删除")` 命中「删除此页」误删活动看板（首页）——清理点击改弹窗内精确匹配、重建首页种子布局、清空 40 个脚本累积的测试页、verify-m1/j3 显式点「首页」tab（不再依赖 tab 顺序）；新增队列 Q11（破坏性操作加确认对话框）。**Q7 邮件（Q7a–Q7b）全部完成** | verify-mail 25/25（连跑两轮）✅；全量 14 个 verify 脚本 231 项全绿（m1/j3–j8/w4/kan/mail/pl5–pl8）✅；Playwright 5/5 ✅；Vitest 117/117 ✅；typecheck/lint ✅ | `0316a4c` |
 
 ## 待用户确认
 
