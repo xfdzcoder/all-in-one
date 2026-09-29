@@ -12,6 +12,7 @@ import {
 import type { PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api, type PluginRow } from "./api";
+import { ConfirmAction } from "./confirm";
 import { queryClient, usePlugins } from "./data-hooks";
 
 /**
@@ -191,9 +192,12 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
                         启用
                       </Button>
                     )}
-                    <Button size="compact-xs" color="red" variant="light" disabled={busy} onClick={() => void uninstall(row)}>
-                      卸载
-                    </Button>
+                    <ConfirmAction
+                      label="卸载"
+                      size="compact-xs"
+                      message={`确认卸载插件「${row.name}」？（删除安装文件与登记；已添加的插件组件将失效）`}
+                      onConfirm={() => void uninstall(row)}
+                    />
                   </Group>
                 </Group>
               </List.Item>

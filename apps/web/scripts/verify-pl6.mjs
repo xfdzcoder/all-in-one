@@ -153,6 +153,8 @@ try {
   const disabledText = await adminText();
   ok("PL6 status becomes 已禁用", disabledText.includes("已禁用"), disabledText.slice(0, 120));
   ok("PL6 uninstall plugin", await clickBtn("卸载"));
+  await sleep(400);
+  ok("PL6 uninstall requires confirm (D31)", await clickBtn("确认", true));
   await sleep(800);
   const afterText = await adminText();
   // 成功提示含插件名，行内容含 type —— 以 type 判定行已移除

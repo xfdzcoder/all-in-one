@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
+import { ConfirmAction } from "./confirm";
 import {
   useMailAccounts,
   useMailMessage,
@@ -234,14 +235,12 @@ export function MailWidget({ limit = 20 }: { limit?: number }) {
                 <Text size="xs">
                   {a.name} · {a.username}@{a.host}:{a.port} · {a.folder}
                 </Text>
-                <Button
+                <ConfirmAction
+                  label="删除"
                   size="compact-xs"
-                  color="red"
-                  variant="light"
-                  onClick={() => void m.deleteAccount(a.id).then(() => refreshAccounts())}
-                >
-                  删除
-                </Button>
+                  message={`确认删除邮件账号「${a.name}」？（仅移除账号配置与凭证引用，邮件保留在邮件服务器）`}
+                  onConfirm={() => void m.deleteAccount(a.id).then(() => refreshAccounts())}
+                />
               </Group>
             ))}
             {accounts.length === 0 && (

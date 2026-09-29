@@ -176,6 +176,32 @@ try {
   await sleep(600);
   const countHome2 = await page.$$eval(".grid-stack-item", (els) => els.length);
   ok("multi-dashboard switch keeps widgets", countHome2 >= countBefore, `new page=${countHome} home=${countHome2}`);
+
+  // D31：破坏性操作二次确认 —— 删除此页（误触不丢布局）
+  const delName = `删除-${Date.now().toString(36).slice(-4)}`;
+  await page.type('input[placeholder="新页面名"]', delName);
+  ok("D31 create page for delete", await clickBtn("新建页面"));
+  await sleep(800);
+  ok("D31 open delete confirm", await clickBtn("删除此页"));
+  await sleep(400);
+  ok(
+    "D31 confirm dialog explains data boundary",
+    await page.evaluate(() => (document.body.textContent ?? "").includes("业务数据")),
+  );
+  ok("D31 cancel keeps page", await clickBtn("取消", true));
+  await sleep(600);
+  ok(
+    "D31 page survives cancel",
+    await page.evaluate((n) => [...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
+  );
+  ok("D31 reopen delete confirm", await clickBtn("删除此页"));
+  await sleep(400);
+  ok("D31 confirm delete", await clickBtn("确认", true));
+  await sleep(1000);
+  ok(
+    "D31 page deleted after confirm",
+    await page.evaluate((n) => ![...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

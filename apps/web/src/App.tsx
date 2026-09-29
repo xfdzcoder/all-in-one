@@ -15,6 +15,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
+import { ConfirmAction } from "./confirm";
 import { LoginPage } from "./LoginPage";
 import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
@@ -123,9 +124,12 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               新建页面
             </Button>
             {active && dashboards.length > 1 && (
-              <Button size="xs" variant="light" color="red" onClick={() => void removeActive()}>
-                删除此页
-              </Button>
+              <ConfirmAction
+                label="删除此页"
+                size="xs"
+                message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
+                onConfirm={() => void removeActive()}
+              />
             )}
           </Group>
 

@@ -14,6 +14,7 @@ import { useGridStack, useGridStackItem } from "gridstack/dist/react";
 import type { GridStackWidget } from "gridstack/dist/react";
 
 import type { KanbanCardRow } from "./api";
+import { ConfirmAction } from "./confirm";
 import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
 import { WidgetEditContext } from "./widget-edit-context";
 
@@ -153,15 +154,13 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
                     if (t && t !== col.title) void m.renameColumn(col.id, t);
                   }}
                 />
-                <Button
+                <ConfirmAction
+                  label="×"
                   size="compact-xs"
                   variant="subtle"
-                  color="red"
-                  onClick={() => void m.deleteColumn(col.id)}
-                  title="删除列"
-                >
-                  ×
-                </Button>
+                  message={`删除列「${col.title}」将一并删除其中 ${cardsOf(col.id).length} 张卡片（不可恢复）。确认删除？`}
+                  onConfirm={() => void m.deleteColumn(col.id)}
+                />
               </Group>
               <Stack gap={4}>
                 {cardsOf(col.id).map((card) => (
@@ -303,17 +302,15 @@ export function KanbanWidget({ boardId }: { boardId?: string }) {
               >
                 {editing.archived ? "取消归档" : "归档"}
               </Button>
-              <Button
+              <ConfirmAction
+                label="删除"
                 size="xs"
-                color="red"
-                variant="light"
-                onClick={() => {
+                message={`确认删除卡片「${editing.title}」？（不可恢复）`}
+                onConfirm={() => {
                   void m.deleteCard(editing.id);
                   setEditing(null);
                 }}
-              >
-                删除
-              </Button>
+              />
             </Group>
           </Stack>
         )}

@@ -234,6 +234,8 @@ try {
   ok("MAIL reopen manager for cleanup", await clickBtn("管理账号"));
   await sleep(400);
   ok("MAIL delete account", await clickInModal("删除"));
+  await sleep(400);
+  ok("MAIL delete requires confirm (D31)", await clickInModal("确认"));
   await sleep(1200);
   const afterAccounts = JSON.parse((await apiFetch("/api/mail/accounts")).body);
   ok(
