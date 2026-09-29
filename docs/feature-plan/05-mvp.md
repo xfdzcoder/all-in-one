@@ -41,6 +41,7 @@
 | 交付物 | ① `widget-sdk` 契约包：manifest、configSchema→表单生成、生命周期、能力声明（data/refresh/action）② 后端统一数据通道：服务端代取/缓存/限流/刷新调度 + SSE 失效通知（FR-W3/I3/I6）③ Credential Store（AES-256-GCM，主密钥环境变量注入，SEC3）+ secret 引用式配置 ④ SSRF 基线（内网目标默认拒绝，SEC4）⑤ **Todo 组件**（Workspace 级数据、勾选完成/新增、清单过滤配置）⑥ **自定义 API 组件**（D14 声明式模板 + Raw JSON 兜底）⑦ widget-sdk 契约测试（Vitest） |
 | 验收 | **J4**（双页面 Todo 同步）、**J5**（自定义 API 含鉴权）、**J8**（规范文档 + 内置组件按规范实现即为样例） |
 | 对应需求 | FR-W1~W5/7、FR-I1~I5、SEC3/4/5 |
+| **状态** | ✅ **完成（2026-09-29）**：① widget-sdk 契约包（manifest/configSchema/生命周期/能力声明 + 契约测试 5 项，README 即 J8 规范文档）② 数据通道（POST /api/widgets/data + TTL 缓存/最小间隔限流 + SSE 失效通知）③ Credential Store（AES-256-GCM + CREDENTIALS_MASTER_KEY + credential API，明文只在 connector 内解密）④ SSRF 基线（协议白名单/内网段拒绝/DNS 解析防 rebinding/禁跟随跳转）⑤ Todo 组件（Workspace 级，D21 user_id 代位；J4 11/11）⑥ 自定义 API 组件（D14 四类模板 + ConfigForm 表单 + secret 入凭证库；J5 8/8）⑦ 单元测试 60 项 |
 
 ### M3 · 组件补齐 + 移动端收口 + 部署
 
