@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 19 轮完成 · Q13 ✅ FR-P1 重命名/排序；**FR 审计发现新缺口已补录队列**（Q14–Q16），下一项 Q14 刷新频率与定时刷新） |
+| 最近更新 | 2026-09-29（第 20 轮完成 · Q14a ✅ 刷新频率配置 + 定时刷新；下一项 Q14b 手动刷新统一与状态审计） |
 
 ## 迭代队列
 
@@ -38,7 +38,9 @@
 - [ ] Q10 · 二期：自定义 API 受限 JS/JSX 模板（**待用户确认：06 待定 #5 安全边界**——本轮跳过，见「待用户确认」#3）
 - [x] Q12 · 部署回归：Docker 单镜像构建 + 容器冒烟 + deploy 文档同步（新增依赖/插件目录/内网出站语义）**✅ 2026-09-29**
 - [x] Q13 · FR-P1 完整化：页面重命名 + 排序（上移/下移 + sortOrder 重编号）——FR 审计发现的【必须】缺口**✅ 2026-09-29**
-- [ ] Q14 · FR-I2/I3 收口：标准刷新频率配置（capabilities.refresh → 配置面板通用字段）+ 定时刷新（refetchInterval）+ 手动刷新一致性【必须】
+- [ ] Q14 · FR-I2/I3 收口【必须】（**拆分为 Q14a–Q14b**）
+  - [x] Q14a · 标准刷新频率配置（capabilities.refresh → 表单通用字段 → props.refreshSec）+ 定时刷新（refetchInterval，配置值优先/默认值兜底）**✅ 2026-09-29**
+  - [ ] Q14b · 手动刷新按钮统一（缺的数据组件补齐）+ 错误态/加载态审计（FR-I3 后半句）
 - [ ] Q15 · FR-I4 组件内查看详情（抽屉/弹层；capabilities.detail 已声明无宿主 UI）【应该】
 - [ ] Q16 · FR-P9 页面级设置（图标/背景/列密度）+ FR-I6 轮询兜底（SSE 断线时）【应该】
 
@@ -65,6 +67,7 @@
 | 17 | 2026-09-29 | **Q8 OpenCode 组件（D32）**：`connector/opencode.ts` 直接 HTTP 薄封装（**不引官方 SDK**，绑定面最小）——`/app` 版本探测（best-effort）+ `/session` 列表归一（兼容 `time.{created,updated}` 与扁平字段、耗时=差值、新→旧、条数上限、Bearer 凭证注入、SSRF 基线原因明示）；**探测容错**：不可达/形状不符返回 `probe{ok,error}` 由组件显式提示（experimental API 漂移免疫，不空白）。`opencode-widget.tsx`：版本徽标、会话卡（标题/耗时/更新时间）、探测失败横幅、手动刷新强制回源（尊重 5s 限流）。决策记 **D32** | server 122/122（新增 5 项：探测归一/令牌注入/形状不符/不可达/缺配置+SSRF 原因）✅；verify-opc 12/12（连跑两轮：版本徽标、会话/耗时、Bearer 注入、限流后刷新回源、不兼容 API 横幅）✅；全量 15 脚本 260 项 ✅；Playwright 5/5 ✅；typecheck/lint ✅ | `6ade3bc` |
 | 18 | 2026-09-29 | **第 18 轮：队列收口 + Q12 部署回归**：① 按 D22 跳过规则把 **Q9（监控数据来源，待定 #4）/ Q10（受限 JS 模板安全边界，待定 #5）列入「待用户确认」**（#2/#3）并跳过；② 06 §3 待定 #1/#2 按实现定论结案（**D33**：Todo 模型 = list/title/done/sortOrder + 组件过滤；RSS 源管理 = 组件内配置）；③ **Q12 部署回归**：Docker 单镜像构建（含 fflate/imapflow/mailparser 新依赖）+ 容器冒烟（health/SPA/登录/看板种子/mail·plugins·kanban API/日志零密钥）+ deploy 文档与 compose 注释同步（`data/plugins` 随 `./data` 备份、内网出站语义澄清） | docker build ✅；容器冒烟 6 项 ✅（含密码/主密钥日志脱敏检查）；文档同步 ✅ | `2c503a0`、`dfd4997` |
 | 19 | 2026-09-29 | **Q13 FR-P1 完整化（页面重命名 + 排序）**：对 01 冻结 FR 做覆盖审计，发现【必须】缺口 FR-P1（重命名/排序无 UI）、FR-I2/I3（刷新频率不可配、无定时刷新）——Q13 本轮完成：重命名弹窗（条件挂载，Enter 提交）+ 上移/下移（移动后 sortOrder 统一重编号，规避全 0 交换无效）；`patchDashboard` 类型对齐服务端（title/icon/sortOrder/layoutJson）。审计结论补录 Q14–Q16（FR-I2/I3 刷新收口、FR-I4 详情抽屉、FR-P9+FR-I6）。**事故复盘**：清理步骤在 reload 后误删首页（活动 tab 重置为第一个）——脚本改为先选中目标 tab + 确认弹窗必须点名目标页 + 断言首页幸存 | verify-m1 35/35（含 P1 重命名/排序/刷新持久化 14 项）✅；全量 15 脚本 277 项 ✅；Playwright 5/5 ✅；Vitest 122/122 ✅；typecheck/lint ✅ | `703a962` |
+| 20 | 2026-09-29 | **Q14a 刷新频率配置 + 定时刷新（FR-I2/I3）**：`ConfigForm` 在 manifest 声明 `capabilities.refresh` 时渲染标准「刷新频率（秒）」字段（选择器添加表单 + 配置编辑表单通用，存 `props.refreshSec`，下限= minRefreshSec）；全部数据 hooks 接 `refetchInterval`（配置值优先，否则组件 manifest 默认：todo/kanban 60s、launcher 120s、custom-api/rss/mail 300s、opencode 60s；Workspace 组件另有 SSE 同步）。verify-opc 新增 3 项（刷新频率持久化、定时刷新产生数据通道流量且无需手动、双组件分离保证手动刷新断言确定性） | verify-opc 15/15（连跑两轮）✅；全量 15 脚本 280 项 ✅；Playwright 5/5 ✅；Vitest 122/122 ✅；typecheck/lint ✅ | `3dfd187` |
 
 ## 待用户确认
 
