@@ -8,10 +8,12 @@
   "scripts": {
     "build": "tsc --noEmit",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "oxlint": "^1.81.0",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.2"
   }
 }
