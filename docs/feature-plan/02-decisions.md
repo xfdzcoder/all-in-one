@@ -184,6 +184,14 @@
 - **影响**：迭代阶段由 loop 自动驱动，每轮产出落盘 07-iteration-progress.md 供人工审计；权限基线见项目 `opencode.jsonc`；需求/决策变更仍走维护约定（追加 D#，不改写历史）。D19 保留原文，其"不恢复 loop"部分自本条起被取代。
 - **被否备选**：维持 D19 手动批次（不满足长期自主诉求）；`--until` 文本条件停止（全仓扫描易误命中）；外部脚本循环调 `opencode run`（无 idle 感知/verify/checkpoint 等能力）；`@bojackduy/opencode-loopd` 目标引擎（形态过重，引入独立子代理体系）。
 
+## D23 · iframe 禁嵌检测：服务端响应头判定（取代前端超时启发式）
+
+- **状态**：已决
+- **背景**：J7 验收脚本化（迭代第 2 轮）实测发现 M3-③ 的禁嵌提示**从未生效**：Chrome 在 X-Frame-Options / CSP frame-ancestors 拒绝嵌入时仍触发 iframe 的 `load` 事件（frame 内载入错误页），`timedOut && !loaded` 启发式的前提不成立；同时空字符串配置值绕过默认沙箱（`sandbox ?? DEFAULT_SANDBOX` 对 `""` 不生效 → 全禁沙箱）。
+- **决策**：禁嵌判定改由**服务端 connector（`iframe-embed`）读响应头**完成（X-Frame-Options deny/sameorigin/allow-from、CSP frame-ancestors 匹配 parentOrigin），前端据判定给出明确提示 + "新标签页打开"逃生口；不可达 / 重定向超限时**不误报**（verified:false，正常渲染）。目标多为内网面板（Portainer 等，J7 主场景）→ 走 allowPrivate 通道（同 app-launcher，D22），逐跳 SSRF 校验、不自动跟随跳转。沙箱空值回落最小集 `allow-scripts`。
+- **影响**：SEC5"禁嵌明确提示"真正可用；iframe manifest 移除已无意义的 `timeoutSec` 配置（旧布局残留值被忽略），capabilities.data 由 none 改为 http-connector；新增 13 项单测（判定规则 + connector 含重定向跳/不可达）。
+- **被否备选**：保留前端超时启发式（前提不成立，永不触发）；前端 `contentDocument` 探测（跨域一律不可读，无法区分禁嵌）；仅 HEAD 探测（部分面板不响应 HEAD）；前端直连读响应头（违反"前端只消费工作台 API"不变量且浏览器受 CORS 限制）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）

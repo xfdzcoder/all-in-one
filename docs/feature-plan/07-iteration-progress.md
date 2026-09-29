@@ -8,14 +8,14 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 1 轮完成 · Q1 ✅，下一项 Q2） |
+| 最近更新 | 2026-09-29（第 2 轮完成 · Q2 ✅，下一项 Q3） |
 
 ## 迭代队列
 
 > 首轮（2026-09-29）由 loop 同步：先收口 05-mvp 未完成项（出口标准 J1–J8 记录），再按 [06-roadmap.md](06-roadmap.md) §1 二期候选 / §3 待定清单排入；完成项标记 `[x]`。大项在选中当轮再拆小步。
 
 - [x] Q1 · 组件选择器 + configSchema 驱动添加表单（FR-W2 收口：manifest 清单驱动选择器，替换 Board 硬编码添加按钮；同步 verify-m1/j4/j5 与 Playwright J2b/J4 用例）**✅ 2026-09-29**
-- [ ] Q2 · J6/J7 验收脚本化（verify-j6.mjs / verify-j7.mjs；复跑 verify-m1/j3/j4/j5）
+- [x] Q2 · J6/J7 验收脚本化（verify-j6.mjs / verify-j7.mjs；复跑 verify-m1/j3/j4/j5）**✅ 2026-09-29**
 - [ ] Q3 · J8 扩展机制验收脚本化 + [05-mvp.md](05-mvp.md) 出口标准勾选（J1–J8 全绿记录落盘）
 - [ ] Q4 · 组件配置变更（FR-W4 生命周期收口：编辑已有组件的 configSchema 配置）
 - [ ] Q5 · 二期：代码级插件（FR-W5③ + FR-W6 管理 + FR-W7 沙箱/权限声明；FR-W7 落地形态涉及产品决策，届时视情况进"待用户确认"）
@@ -30,6 +30,7 @@
 | # | 日期 | 内容 | 验证 | commit |
 |---|---|---|---|---|
 | 1 | 2026-09-29 | **Q1 组件选择器 + configSchema 添加表单**：新增 `WidgetPicker`（builtinManifests 清单 → ConfigForm 默认值 → 确认添加）；Board 六个硬编码添加按钮 + custom-api 专属弹窗整体替换，todo 清单/过滤、应用入口 itemsJson、iframe URL/沙箱等均改为表单可配（FR-W2 收口，J6/J7 前置）；secret → 凭证引用逻辑通用化（SEC3）；`widgetComponents` 增加 manifest.type 别名。附带：verify-m1/j4/j5 与 Playwright J2b/J4 改走选择器流程；J2 拖拽前置重置首页 seed 布局（历史布局占落点，gridstack 50% 碰撞规则）、J3 任务标题按轮唯一（Workspace 任务跨轮累积导致 strict 冲突） | `pnpm test` 65/65 ✅；typecheck/lint ✅；verify-m1 13/13、verify-j3 8/8、verify-j4 11/11、verify-j5 10/10 ✅；Playwright J1–J4 5/5（连跑两轮均可重复）✅ | `2f6e2bd` |
+| 2 | 2026-09-29 | **Q2 J6/J7 验收脚本化**：新增 verify-j6（应用入口：选择器配 itemsJson → HTTP/TCP 探活 1/2 在线 + 绿/红徽标 → 点击新标签页跳转）与 verify-j7（iframe：自定义/默认沙箱 + 禁嵌提示 + 逃生口）。验收揭出两个真 bug 并修复（**D23**）：① Chrome 禁嵌时仍触发 iframe load 事件，前端超时启发式永不生效 → 新增服务端 `iframe-embed` connector 读响应头判定（XFO/frame-ancestors，逐跳 SSRF、allowPrivate 通道）；② 空字符串沙箱绕过默认最小集 → 回落 `allow-scripts`；iframe manifest 移除失效的 `timeoutSec`。附带：verify-j4 / Playwright J4 任务标题按轮唯一 + 按行勾选（Workspace 任务累积导致盲点第一个 checkbox 抖动） | `pnpm test` 78/78（新增 13 项）✅；typecheck/lint ✅；verify-m1 13/13、verify-j3 8/8、verify-j4 11/11（连跑两轮）、verify-j5 10/10、verify-j6 12/12、verify-j7 9/9 ✅；Playwright J1–J4 5/5 ✅ | `e5adffb` |
 
 ## 待用户确认
 
