@@ -16,6 +16,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
 import { LoginPage } from "./LoginPage";
+import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
 
 type SessionState =
@@ -28,6 +29,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [dashboards, setDashboards] = useState<Dashboard[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const [pluginAdminOpen, setPluginAdminOpen] = useState(false);
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -83,11 +85,19 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               {me.username}
             </Text>
           </Group>
-          <Button variant="default" size="xs" onClick={() => void api.logout().then(onLogout)}>
-            退出登录
-          </Button>
+          <Group gap="xs">
+            {isDesktop && (
+              <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
+                插件管理
+              </Button>
+            )}
+            <Button variant="default" size="xs" onClick={() => void api.logout().then(onLogout)}>
+              退出登录
+            </Button>
+          </Group>
         </Group>
       </AppShell.Header>
+      <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
       <AppShell.Main>
         <Tabs
           value={activeId}
