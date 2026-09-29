@@ -46,6 +46,10 @@ configSchema: [
 字段类型：`text | number | boolean | select | json | secret`。
 `secret` 字段的值永远是 `{ credentialRef: string }`，明文只在服务端 connector 内解密。
 
+**标准字段（宿主自动附加）**：manifest 声明 `capabilities.refresh` 时，表单尾部自动
+出现「刷新频率（秒）」（存 `props.refreshSec`，下限 = `minRefreshSec`，留空 = 用
+`defaultRefreshSec`）——组件**不要**在 configSchema 里重复声明。
+
 ### 3. 实现组件并注册
 
 ```tsx
@@ -70,8 +74,10 @@ export const builtinManifests  = […, myManifest];
   - `workspace`：工作台自身 REST（如 Todo）；
   - `http-connector`：服务端代取（POST `/api/widgets/data`，SSRF 基线 + 凭证注入 + 缓存限流）；
   - `none`：无数据源（纯展示）。
-- 刷新：宿主按 `refresh.defaultRefreshSec` 轮询 + SSE 失效通知（FR-I6）；
-  `minRefreshSec` 是防打爆第三方的下限（NFR4）。
+- 刷新（FR-I3）：**定时**——`props.refreshSec`（FR-I2 标准字段）优先，否则
+  `refresh.defaultRefreshSec`；`minRefreshSec` 是防打爆第三方的下限（NFR4）。
+  **手动**——组件头部「刷新」按钮强制回源（数据通道 `force` 穿透服务端 TTL 缓存）；
+  SSE 不可用时宿主另有断线轮询兜底（FR-I6）。
 
 ## 动作（FR-I5）
 
@@ -84,6 +90,17 @@ export const builtinManifests  = […, myManifest];
 组件只消费数据、派发动作；加载/错误态由 `WidgetDataState` 表达。
 **配置变更**由宿主提供：编辑态每个实例带「配置」入口（WidgetChrome），
 按 manifest 的 configSchema 打开表单、改后写回布局 JSON —— 组件实现零感知。
+
+**宿主服务**（`WidgetEditContext`，D28）：`editMode`（是否编辑态）、`onConfigure(id)`、
+`requestSave()` —— 组件把"视图选择"沉淀为配置时，写回自身节点 props 后调用
+`requestSave()` 触发布局持久化（Workspace 数据仍走 REST/SSE，不进 props）。
+
+**详情（FR-I4）**：`capabilities.detail: true` 由组件**自行**提供详情弹层
+（条目点击 → Modal/Drawer）；宿主不提供通用详情 UI。摘要/正文等不可信 HTML
+一律用 `HtmlSandbox`（deny-all iframe + CSP 禁脚本）渲染。
+
+**破坏性操作（D34）**：删除/退订/卸载一律二次确认（宿主 `ConfirmAction`，弹窗点名
+目标并说明数据边界）；唯一豁免 = 布局编辑内的组件移除。
 
 ## 插件 ABI（FR-W5③ / FR-W6 / FR-W7，D7 契约先行）
 
