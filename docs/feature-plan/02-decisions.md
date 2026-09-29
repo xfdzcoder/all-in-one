@@ -280,6 +280,38 @@
 - **影响**：Todo 任务删除、RSS 源退订接入确认（弹窗点名目标）；自动化脚本对这两类操作改为「触发 → 确认」两步。
 - **被否备选**：按"可恢复性"豁免清单删除（判定含糊、退订/删任务体验不一致）；撤销栈（D31 已否，成本高）；仅悬停显示 ×（触屏不可用，且不解决误触）。
 
+## D35 · 自定义 API 模板升级：受限 JSX（Homarr 模式）
+
+- **状态**：已决（用户拍板，2026-09-29）
+- **背景**：Q10（06 待定 #5：受限 JS/JSX 模板的安全边界）。调研 Homarr 的 Custom Widgets：其"Custom JSX"并非执行任意 JS，而是**组件白名单 + 安全数据绑定**的声明式模板（9 种展示预设 + 白名单 Mantine 组件；事件处理器/危险标签剥离、`eval`/`import`/`fetch` 等标识符字符串级拒绝、href 白名单）。我们与 Homarr 同为 Mantine v9，此模式可直接复用其组件观感。
+- **决策**：模板升级采用**受限 JSX（数据非代码）**：① 仅白名单组件（Mantine v9 布局/排版/数据展示/图表）；② 绑定面 = `data` + 安全子集（String/Number/Boolean、Math 子集、JSON.stringify、Array/Object 无害方法）；③ 拒绝含 `eval`/`Function`/`import`/`require`/`globalThis`/`window`/`document`/`fetch` 的模板；④ 渲染期剥离事件处理器、`dangerouslySetInnerHTML`、script/iframe/object/embed/form/style/link/meta/base；href 仅 `https://`、相对路径、`#`；⑤ 恶意样例回归测试守护。三层兜底：声明式预设 → 受限 JSX → Raw JSON。
+- **影响**：Q10 实施以此为边界；未来模板导入/共享按不可信输入对待（该模型已覆盖）。
+- **被否备选**：沙箱 iframe 跑任意 JS（隔离更强但视觉孤岛、与宿主组件脱节；保留为未来"高级逃生舱"）；纯表达式 DSL（表达力不足）；宿主 realm 执行 JS（无隔离，否决）。
+
+## D36 · 服务器监控：打通第三方服务（Glances 优先，只做连接与展示）
+
+- **状态**：已决（用户拍板，2026-09-29）
+- **背景**：Q9（06 待定 #4：监控数据来源选型）。原三选项（后端直采/node-exporter/自研 agent）都隐含"我们负责采集"；用户定位是**打通与展示**——监控由既有服务承担。
+- **决策**：定义**监控源适配器契约**（`fetch → 归一化指标 { cpu, mem, disk[], load, uptime, extras }`），v1 实现 **Glances 适配器**（`glances -w` REST API `/api/4/*`），后续按需增补（node-exporter / Netdata / Uptime Kuma…同一 widget 多 source）。配置 = URL + 可选认证（凭证库引用，SEC3）；目标为内网服务（同 app-launcher/OpenCode 族，D22 allowPrivate 通道）。**不自建采集、不落时序库**（历史曲线依赖来源方，或后续轻量采样表再议）。
+- **影响**：Q9 实施以此为架构；部署文档需注明"先自行运行 Glances 等数据源"。
+- **被否备选**：后端直采（自建采集面，违背"只做打通"定位）；自研 agent（工作量/安全面最大，否决）；绑定 Prometheus 全家桶（部署复杂度超出个人工作台）。
+
+## D37 · Gmail API 专项纳入（OAuth 授权流，只读）
+
+- **状态**：已决（用户拍板，2026-09-29）
+- **背景**：06 待定 #3（邮件是否需要 Gmail API 专项）。用户确认**需要**。
+- **决策**：邮件组件增加 **Gmail 数据源**：OAuth 授权流（用户自备 Google Cloud client_id/secret，redirect 端点 `/api/mail/gmail/callback`；refresh_token 存凭证库）；`messages.list/get` **只读**（D3 边界不变）→ 归一为现有 `MailMessageSummary/Full` 与 IMAP 账号同列表聚合（逐账号错误隔离复用）。token 只在服务端、不入日志。
+- **影响**：拆分 Q-G1（OAuth 绑定）/ Q-G2（拉取映射）/ Q-G3（文档 + 验收）；D30 的"Gmail 专项不纳入本期"就此更新。
+- **被否备选**：应用专用密码走 IMAP（即现状，不算专项）；Gmail 服务账号（面向 Workspace 域，不适用个人账号）。
+
+## D38 · 编辑态组件内容惰性（inert）
+
+- **状态**：已决（用户反馈，2026-09-29）
+- **背景**：用户反馈"编辑布局时不允许修改看板/Todo 等可编辑卡片"。D29 已定拖拽的模式互斥，但组件内操作（勾选/输入/加卡/点击）仍可在编辑态触发，既易误操作又与布局拖拽争抢手势。
+- **决策**：编辑态下组件内容整体 **`inert` + `pointer-events:none`**（宿主「配置」入口在外层不受影响）；浏览态完全恢复。与 D29 合成完整语义：**编辑 = 只动布局；浏览 = 组件内操作**。
+- **影响**：旅程脚本（verify-j4/j6/kan/mail、Playwright J4）改为浏览态执行卡片/链接操作；自动化点击语义改真实鼠标（命中测试才走 inert）。
+- **被否备选**：逐组件手写禁用态（侵入所有组件、易漏）；仅禁止拖拽相关手势（误操作仍在）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
