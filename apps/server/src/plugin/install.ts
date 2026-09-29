@@ -19,6 +19,7 @@ const BUILTIN_TYPES = new Set([
   "rss",
   "kanban",
   "mail",
+  "opencode",
   "app-launcher",
   "iframe",
   "custom-api",

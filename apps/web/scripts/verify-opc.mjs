@@ -1,0 +1,160 @@
+/**
+ * OPC acceptance (Q8 OpenCode 组件, FR-E4/D32): 会话列表/状态/耗时 + API 版本探测 ——
+ *  ① 正常 API：版本徽标、会话列表（标题/耗时/更新时间）、令牌注入（Bearer）；
+ *  ② experimental 形状不符：显式"探测失败"提示（不空白）。
+ * mock opencode API 在脚本内起 HTTP 服务（同 verify-j5/j6 模式）。
+ * Run: node scripts/verify-opc.mjs (server :3000 with ALLOW_PRIVATE_OUTBOUND=1,
+ *      preview :4173)
+ */
+import { createServer } from "node:http";
+import puppeteer from "puppeteer-core";
+
+const WEB = "http://localhost:4173/";
+const results = [];
+const ok = (name, pass, detail = "") => {
+  results.push({ name, pass, detail });
+  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const uniq = Date.now().toString(36).slice(-4);
+
+let seenAuth = null;
+const good = createServer((req, res) => {
+  seenAuth = req.headers.authorization ?? null;
+  res.setHeader("Content-Type", "application/json");
+  if (req.url === "/app") {
+    res.end(JSON.stringify({ name: "opencode", version: "9.9.9-test" }));
+  } else if (req.url === "/session") {
+    res.end(
+      JSON.stringify([
+        { id: `s-a-${uniq}`, title: `修复登录问题-${uniq}`, time: { created: 1000, updated: 65_000 } },
+        { id: `s-b-${uniq}`, title: `写周报-${uniq}`, time: { created: 2000, updated: 2500 } },
+      ]),
+    );
+  } else {
+    res.writeHead(404).end();
+  }
+});
+await new Promise((r) => good.listen(0, "127.0.0.1", r));
+const goodUrl = `http://127.0.0.1:${good.address().port}`;
+
+const weird = createServer((_req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify({ nope: true }));
+});
+await new Promise((r) => weird.listen(0, "127.0.0.1", r));
+const weirdUrl = `http://127.0.0.1:${weird.address().port}`;
+
+const browser = await puppeteer.launch({
+  executablePath: "/usr/bin/google-chrome",
+  headless: "new",
+  args: ["--no-sandbox", "--window-size=1400,900"],
+});
+const page = await browser.newPage();
+await page.setViewport({ width: 1400, height: 900 });
+
+const clickBtn = (label, exact = false) =>
+  page.evaluate(
+    ({ l, ex }) => {
+      const btns = [...document.querySelectorAll("button")];
+      const btn = ex
+        ? btns.find((b) => b.textContent.trim() === l)
+        : btns.find((b) => b.textContent.trim().includes(l));
+      if (!btn) return false;
+      btn.click();
+      return true;
+    },
+    { l: label, ex: exact },
+  );
+
+const setField = (label, value) =>
+  page.evaluate(
+    ({ l, v }) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes(l),
+      );
+      const target = wrapper?.querySelector("input, textarea");
+      if (!target) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(target, v);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    },
+    { l: label, v: value },
+  );
+
+const addOpencodeWidget = async (url, token) => {
+  if (!(await clickBtn("添加组件"))) return false;
+  await sleep(300);
+  if (!(await clickBtn("OpenCode"))) return false;
+  await sleep(400);
+  if (!(await setField("服务地址", url))) return false;
+  if (token && !(await setField("访问令牌", token))) return false;
+  await sleep(200);
+  return clickBtn("确认添加", true);
+};
+
+try {
+  await page.goto(WEB, { waitUntil: "networkidle0" });
+  await page.waitForSelector("input[autocomplete=username]", { timeout: 8000 });
+  await page.type("input[autocomplete=username]", "admin");
+  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.click("button[type=submit]");
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+
+  // 前置：重置首页布局（组件累积会干扰定位）
+  await page.evaluate(async () => {
+    const seed = [
+      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+    ];
+    const list = await (await fetch("/api/dashboards")).json();
+    const home = list.find((d) => d.title === "首页");
+    await fetch(`/api/dashboards/${home.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
+    });
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(500);
+
+  // ① 正常 API
+  ok("OPC enter edit", await clickBtn("编辑布局"));
+  await sleep(300);
+  ok("OPC add opencode widget", await addOpencodeWidget(goodUrl, "sk-opc"));
+  await sleep(2500);
+  const bodyText = await page.evaluate(() => document.body.textContent ?? "");
+  ok("OPC version badge (API probe)", bodyText.includes("v9.9.9-test"), bodyText.slice(-140));
+  ok("OPC session titles rendered", bodyText.includes(`修复登录问题-${uniq}`) && bodyText.includes(`写周报-${uniq}`));
+  ok("OPC duration badge derived (耗时)", bodyText.includes("1 分") && bodyText.includes("秒"), "");
+  ok("OPC updated time shown", bodyText.includes("更新于"));
+  ok("OPC bearer token injected (SEC3)", seenAuth === "Bearer sk-opc", String(seenAuth));
+
+  // 刷新按钮（数据通道有 5s 最小间隔限流 —— 等待间隔后手动刷新应回源）
+  seenAuth = null;
+  await sleep(5200);
+  ok("OPC refresh button", await clickBtn("刷新"));
+  await sleep(1500);
+  ok("OPC refresh refetches", seenAuth === "Bearer sk-opc", String(seenAuth));
+
+  // ② experimental 形状不符 → 显式探测失败提示
+  ok("OPC add widget against incompatible API", await addOpencodeWidget(weirdUrl, null));
+  await sleep(2500);
+  const body2 = await page.evaluate(() => document.body.textContent ?? "");
+  ok("OPC incompatible API surfaced explicitly", body2.includes("无法读取 opencode API") && body2.includes("形状不符"), body2.slice(-160));
+  ok("OPC probe-failure badge", body2.includes("探测失败"));
+} catch (e) {
+  ok("flow completed", false, String(e).slice(0, 200));
+}
+
+await browser.close();
+good.close();
+weird.close();
+const failed = results.filter((r) => !r.pass);
+console.log(`\n${results.length - failed.length}/${results.length} passed`);
+process.exit(failed.length ? 1 : 0);

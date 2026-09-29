@@ -8,6 +8,7 @@ import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
 import { KanbanWidget } from "./kanban-widget";
 import { MailWidget } from "./mail-widget";
+import { OpencodeWidget } from "./opencode-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -190,6 +191,26 @@ export const kanbanManifest: WidgetManifest = {
   },
 };
 
+/** OpenCode 组件（FR-E4/Q8）：会话列表/状态/耗时 + API 版本探测（D32）。 */
+export const opencodeManifest: WidgetManifest = {
+  type: "opencode",
+  name: "OpenCode",
+  description: "opencode 会话列表 / 状态 / 耗时 + API 版本探测（实验性接口）",
+  category: "服务",
+  defaultSize: { w: 4, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "url", label: "服务地址", type: "text", required: true, placeholder: "http://127.0.0.1:4096" },
+    { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
+    { key: "limit", label: "会话条数", type: "number", default: 20 },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
 /** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
 export const mailManifest: WidgetManifest = {
   type: "mail",
@@ -212,6 +233,7 @@ export const widgetComponents = {
   rss: RssWidget,
   kanban: KanbanWidget,
   mail: MailWidget,
+  opencode: OpencodeWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -229,6 +251,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   rss: rssManifest,
   kanban: kanbanManifest,
   mail: mailManifest,
+  opencode: opencodeManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -248,6 +271,7 @@ export const builtinManifests: WidgetManifest[] = [
   rssManifest,
   kanbanManifest,
   mailManifest,
+  opencodeManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

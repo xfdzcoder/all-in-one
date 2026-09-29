@@ -18,6 +18,7 @@ import { httpConnector } from "../connector/http.ts";
 import { rssConnector } from "../feed/connector.ts";
 import { appLauncherConnector } from "../connector/launcher.ts";
 import { iframeEmbedConnector } from "../connector/iframe.ts";
+import { opencodeConnector } from "../connector/opencode.ts";
 import {
   PluginPermissionError,
   fetchPluginData,
@@ -49,6 +50,7 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(rssConnector);
   registry.register(appLauncherConnector);
   registry.register(iframeEmbedConnector);
+  registry.register(opencodeConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),

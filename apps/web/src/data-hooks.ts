@@ -183,6 +183,41 @@ export function useKanbanMutations(boardId: string | undefined) {
   };
 }
 
+/** OpenCode 会话数据（FR-E4：会话列表/状态/耗时 + API 版本探测，D32）。 */
+export type OpencodeSession = {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  durationMs: number;
+};
+export type OpencodeData = {
+  probe: { ok: boolean; version?: string; error?: string };
+  sessions: OpencodeSession[];
+};
+
+export function useOpencodeData(config: Record<string, unknown>) {
+  const qc = useQueryClient();
+  const key = ["opencode", JSON.stringify(config)];
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => api.widgetData("opencode", config) as Promise<OpencodeData>,
+    enabled: Boolean(config.url),
+    staleTime: 30_000,
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
+    refresh: () => {
+      void (api.widgetData("opencode", config, true) as Promise<OpencodeData>).then((d) =>
+        qc.setQueryData(key, d),
+      );
+    },
+  };
+}
+
 /** 邮件账号清单（Q7b）。 */
 export function useMailAccounts() {
   const query = useQuery({

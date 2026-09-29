@@ -121,7 +121,7 @@ try {
   const picker = await page.evaluate(() =>
     [...document.querySelectorAll(".mantine-Modal-root button")].map((b) => b.textContent.trim()),
   );
-  const expectedNames = ["个人 Todo", "信息流", "看板", "邮件", "应用入口", "嵌入页面", "自定义 API", "占位组件", "指标卡片"];
+  const expectedNames = ["个人 Todo", "信息流", "看板", "邮件", "OpenCode", "应用入口", "嵌入页面", "自定义 API", "占位组件", "指标卡片"];
   const absent = expectedNames.filter((n) => !picker.some((t) => t.includes(n)));
   ok("J8 picker lists every builtin manifest (manifest-driven)", absent.length === 0, absent.length ? `missing: ${absent.join(",")}` : `${expectedNames.length} manifests`);
   ok(
