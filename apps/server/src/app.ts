@@ -8,11 +8,17 @@ import { registerAuthRoutes } from "./auth/routes.ts";
 import { config } from "./config.ts";
 import { registerDashboardRoutes } from "./dashboard/routes.ts";
 import { seedDefaultDashboard } from "./dashboard/seed.ts";
+import {
+  defaultDataChannel,
+  registerDataRoutes,
+  type DataChannelDeps,
+} from "./data/routes.ts";
 import { createDb, ensureSchema, type Db } from "./db/client.ts";
 import { LAYOUT_SCHEMA_VERSION, session } from "./db/schema.ts";
 
 export type AppDeps = {
   db: Db;
+  dataChannel?: DataChannelDeps;
 };
 
 export function buildApp(deps: AppDeps): FastifyInstance {
@@ -32,6 +38,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.decorate("db", deps.db);
   registerAuthRoutes(app);
   registerDashboardRoutes(app);
+  registerDataRoutes(app, deps.dataChannel ?? defaultDataChannel());
   return app;
 }
 

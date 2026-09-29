@@ -168,6 +168,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@all-in-one/widget-sdk':
+        specifier: workspace:*
+        version: link:../../packages/widget-sdk
       '@fastify/cookie':
         specifier: ^11.1.2
         version: 11.1.2
