@@ -268,7 +268,14 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider>
+      <MantineProvider
+        defaultColorScheme="dark"
+        theme={{
+          primaryColor: "blue",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          defaultRadius: "sm",
+        }}
+      >
         {session.kind === "loading" && (
           <Center h="50vh">
             <Loader />

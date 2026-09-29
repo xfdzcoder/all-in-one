@@ -1,3 +1,15 @@
+html {
+  /* 深色模式：原生控件/滚动条跟随深色（Mantine 组件另行经 defaultColorScheme=dark） */
+  color-scheme: dark;
+}
+
+/* 深色标定（verify-dark 快检驱动）：Mantine 默认 dimmed/placeholder 灰在深底上
+   仅 ~2.5–4.0:1，提亮到 AA；!important 因 Mantine 运行时注入同优先级变量会覆盖本层。 */
+[data-mantine-color-scheme="dark"] {
+  --mantine-color-dimmed: #a6a9ae !important;
+  --mantine-color-placeholder: #a6a9ae !important;
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;

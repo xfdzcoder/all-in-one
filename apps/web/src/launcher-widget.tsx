@@ -54,7 +54,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
             rel="noopener noreferrer"
             style={{ textDecoration: "none" }}
           >
-            <Group gap={6} wrap="nowrap" style={{ padding: "8px 12px", borderRadius: 8, background: "#222b3a" }}>
+            <Group gap={6} wrap="nowrap" style={{ padding: "8px 12px", borderRadius: 8, background: "var(--mantine-color-default-hover)" }}>
               <Badge size="xs" circle color={it.alive ? "green" : "red"}>
                 &nbsp;
               </Badge>
