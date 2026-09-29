@@ -85,11 +85,34 @@ export const builtinManifests  = […, myManifest];
 **配置变更**由宿主提供：编辑态每个实例带「配置」入口（WidgetChrome），
 按 manifest 的 configSchema 打开表单、改后写回布局 JSON —— 组件实现零感知。
 
-## 未来第三方插件（D7 二期）
+## 插件 ABI（FR-W5③ / FR-W6 / FR-W7，D7 契约先行）
 
-本契约即插件 ABI：manifest 可序列化为 JSON（插件包内 `manifest.json`），
-运行时校验用 `validateManifest()` / `validateConfigSchema()`；
-安装器（FR-W6）与沙箱属二期范围。
+代码级插件与内置组件共用上面的 Widget 契约；插件额外带 `plugin` 块
+（`PluginManifest`，安装/加载前用 `validatePluginManifest()` 校验）：
+
+```jsonc
+{
+  "type": "hello-plugin",
+  "name": "Hello 插件",
+  "defaultSize": { "w": 4, "h": 3 },
+  "configSchema": [/* ConfigField[]，同上 */],
+  "capabilities": { "data": { "source": "http-connector" } },
+  "plugin": {
+    "entry": "dist/widget.js",   // 包内相对 ESM 模块路径（禁绝对路径 / `..` 穿越）
+    "apiVersion": "1.0.0",       // 宿主 ABI 版本（semver，主版本须一致才可启用）
+    "permissions": {              // FR-W7 显式白名单，缺省 = 最小权限
+      "apis": ["widgets.data"],
+      "credentialKinds": ["http-header"],
+      "actions": []
+    }
+  }
+}
+```
+
+- **包格式**：zip = `manifest.json` + `entry` 模块（ESM，导出 `WidgetComponent`）+ 可选资源。
+- **信任模型（K7）**：仅管理员安装（FR-W6）；权限显式声明、默认最小化 —— 未声明即不可调用宿主 API、不可引用凭证、不可派发动作；数据一律走宿主统一数据通道（FR-W3），插件不直连第三方、不持有凭证明文。
+- **加载与沙箱（FR-W7）**：宿主在隔离环境渲染插件（iframe CSP / Web Component，落地选型随运行时实现记录决策）；越权调用由宿主按白名单拒绝。
+- **生命周期（FR-W6）**：上传 → 校验 → 启用 / 禁用 / 卸载；`apiVersion` 主版本与宿主不一致的插件拒绝启用。
 
 ---
 

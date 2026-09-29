@@ -41,3 +41,13 @@ export {
   type WidgetSize,
   validateManifest,
 } from "./manifest.ts";
+
+export {
+  type PluginManifest,
+  type PluginPermissions,
+  isPluginManifest,
+  isSafePluginEntry,
+  validatePluginManifest,
+  PLUGIN_ENTRY_PATTERN,
+  SEMVER_PATTERN,
+} from "./plugin.ts";
