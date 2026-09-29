@@ -1,14 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentType } from "react";
 import { GridStack, useGridStack } from "gridstack/dist/react";
-import type { GridStackHandle, GridStackWidget } from "gridstack/dist/react";
-import { Alert, Button, Group, Text } from "@mantine/core";
+import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/dist/react";
+import { Utils } from "gridstack";
+import type { ConfigValues, WidgetManifest } from "@all-in-one/widget-sdk";
+import { Alert, Button, Group, Modal, Text } from "@mantine/core";
 
 import { api } from "./api";
-import { FALLBACK_LAYOUT, widgetComponents } from "./widget-registry";
+import { FALLBACK_LAYOUT, manifestForComponent, widgetComponents } from "./widget-registry";
+import { WidgetEditContext } from "./widget-edit-context";
+import { withWidgetChrome } from "./widget-chrome";
 import { WidgetPicker } from "./WidgetPicker";
+import { ConfigForm } from "./ConfigForm";
 import { propsWithSecretRefs } from "./config-form-utils";
 
 const SAVE_DEBOUNCE_MS = 800;
+
+/** 全部组件包上编辑态外框（配置入口），组件实现零改动（FR-W4 配置变更 / J8）。 */
+const chromeComponents: ComponentMap = Object.fromEntries(
+  Object.entries(widgetComponents).map(([key, Comp]) => [
+    key,
+    withWidgetChrome(Comp as ComponentType<Record<string, unknown>>),
+  ]),
+);
+
+/** gridstack 节点上的扩展字段（component/props 由 react 层透传，类型未声明）。 */
+type NodeEx = GridStackWidget & { component?: string; props?: ConfigValues };
+
+function findNode(grid: NonNullable<ReturnType<GridStackHandle["getGrid"]>>, id: string): NodeEx | undefined {
+  return Utils.findInGrid(grid, id, true) as NodeEx | undefined;
+}
 
 function parseLayout(json: string): GridStackWidget[] {
   try {
@@ -191,6 +212,51 @@ export function Board({
     grid.enableResize(effectiveEditMode);
   }, [effectiveEditMode]);
 
+  // FR-W4 配置变更：编辑态组件外框的「配置」入口 → 该实例的 configSchema 表单。
+  const [configureId, setConfigureId] = useState<string | null>(null);
+  const [configManifest, setConfigManifest] = useState<WidgetManifest | null>(null);
+  const [configValues, setConfigValues] = useState<ConfigValues>({});
+  const [configOriginal, setConfigOriginal] = useState<ConfigValues>({});
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  const openConfig = useCallback((id: string) => {
+    const grid = gridRef.current?.getGrid();
+    const node = grid ? findNode(grid, id) : undefined;
+    const manifest = node ? manifestForComponent(String(node.component ?? "")) : undefined;
+    if (!grid || !node || !manifest) return;
+    setConfigureId(id);
+    setConfigManifest(manifest);
+    setConfigValues({ ...(node.props ?? {}) });
+    setConfigOriginal({ ...(node.props ?? {}) });
+    setConfigError(null);
+  }, []);
+
+  const saveConfig = useCallback(
+    (values: ConfigValues) => {
+      void (async () => {
+        const grid = gridRef.current?.getGrid();
+        const node = grid && configureId ? findNode(grid, configureId) : undefined;
+        if (!grid || !node?.el || !configManifest) return;
+        try {
+          // SEC3：secret 字段明文入库凭证库，props 只保存引用；未改动的引用原样保留
+          const props = await propsWithSecretRefs(
+            configManifest.configSchema,
+            values,
+            (name, secret) => api.createCredential(name, secret),
+            configOriginal,
+          );
+          grid.update(node.el, { props } as GridStackWidget);
+          scheduleSave(); // props-only 更新不触发 change 事件，手动落盘（FR-P4）
+          setConfigureId(null);
+          setConfigManifest(null);
+        } catch (e) {
+          setConfigError(e instanceof Error ? e.message : String(e));
+        }
+      })();
+    },
+    [configureId, configManifest, configOriginal, scheduleSave],
+  );
+
   return (
     <div>
       {saveError && (
@@ -198,11 +264,12 @@ export function Board({
           {saveError}
         </Alert>
       )}
-      <GridStack
-        ref={gridRef}
-        key={dashboardId}
-        options={options}
-        components={widgetComponents}
+      <WidgetEditContext.Provider value={{ editMode: effectiveEditMode, onConfigure: openConfig }}>
+        <GridStack
+          ref={gridRef}
+          key={dashboardId}
+          options={options}
+          components={chromeComponents}
         onChange={scheduleSave}
         onAdded={scheduleSave}
         onRemoved={scheduleSave}
@@ -219,7 +286,24 @@ export function Board({
             });
           }}
         />
-      </GridStack>
+        </GridStack>
+      </WidgetEditContext.Provider>
+      {configureId !== null && configManifest !== null && (
+        <Modal opened onClose={() => setConfigureId(null)} title={`配置 · ${configManifest.name}`}>
+          <ConfigForm
+            schema={configManifest.configSchema}
+            values={configValues}
+            onChange={(key, value) => setConfigValues((c) => ({ ...c, [key]: value }))}
+            onSubmit={saveConfig}
+            submitLabel="保存配置"
+          />
+          {configError && (
+            <Text size="xs" c="red">
+              {configError}
+            </Text>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

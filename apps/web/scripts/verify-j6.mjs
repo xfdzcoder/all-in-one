@@ -61,8 +61,8 @@ const clickBtn = (label, exact = false) =>
 const setField = (kind, label, value) =>
   page.evaluate(
     ({ kind: k, label: l, value: v }) => {
-      const root = document.querySelector(".mantine-Modal-root");
-      const wrapper = [...root.querySelectorAll(".mantine-InputWrapper-root")].find((w) =>
+      // 多 Modal 并存时各自持有 .mantine-Modal-root（关闭态留空壳），按字段跨全部 root 查找
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
         w.querySelector("label")?.textContent.includes(l),
       );
       const target = wrapper?.querySelector(k === "json" ? "textarea" : "input");

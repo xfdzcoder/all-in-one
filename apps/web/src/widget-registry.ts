@@ -187,6 +187,23 @@ export const widgetComponents = {
   StatBox,
 };
 
+/** 渲染 key（component 字段）→ manifest（配置表单/默认尺寸来源）。 */
+const manifestsByComponent: Record<string, WidgetManifest> = {
+  todo: todoManifest,
+  rss: rssManifest,
+  "app-launcher": launcherManifest,
+  iframe: iframeManifest,
+  "custom-api": customApiManifest,
+  placeholder: placeholderManifest,
+  Placeholder: placeholderManifest,
+  "stat-box": statBoxManifest,
+  StatBox: statBoxManifest,
+};
+
+export function manifestForComponent(component: string): WidgetManifest | undefined {
+  return manifestsByComponent[component];
+}
+
 /** 内置 manifest 清单（供组件选择器 / 配置表单 / J8 验证）。 */
 export const builtinManifests: WidgetManifest[] = [
   todoManifest,

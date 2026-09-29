@@ -53,16 +53,24 @@ export function validateForm(schema: ConfigSchema, values: ConfigValues): FieldE
 }
 
 /** SEC3：secret 字段的明文先写入凭证库，返回值中替换为 SecretRef（配置只保存引用）。
- *  createCredential 由宿主注入（Board 走 api.createCredential），便于测试替身。 */
+ *  createCredential 由宿主注入（Board 走 api.createCredential），便于测试替身。
+ *  编辑场景传 `original`：值仍是原 SecretRef 的 credentialRef 字符串 = 未改动，
+ *  保留原引用，不重复入库。 */
 export async function propsWithSecretRefs(
   schema: ConfigSchema,
   values: ConfigValues,
   createCredential: (name: string, secret: string) => Promise<{ id: string }>,
+  original?: ConfigValues,
 ): Promise<ConfigValues> {
   const props: ConfigValues = { ...values };
   for (const f of schema) {
     if (f.type !== "secret") continue;
     const v = props[f.key];
+    const orig = original?.[f.key];
+    if (isSecretRef(orig) && v === (orig as SecretRef).credentialRef) {
+      props[f.key] = orig;
+      continue;
+    }
     if (typeof v === "string" && v) {
       const cred = await createCredential(`${f.key}-${Date.now()}`, v);
       props[f.key] = { credentialRef: cred.id };

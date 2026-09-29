@@ -88,8 +88,8 @@ const clickBtn = (label, exact = false) =>
 const setField = (label, value) =>
   page.evaluate(
     ({ l, v }) => {
-      const root = document.querySelector(".mantine-Modal-root");
-      const wrapper = [...root.querySelectorAll(".mantine-InputWrapper-root")].find((w) =>
+      // 多 Modal 并存时各自持有 .mantine-Modal-root（关闭态留空壳），按字段跨全部 root 查找
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
         w.querySelector("label")?.textContent.includes(l),
       );
       const target = wrapper?.querySelector("input, textarea");
@@ -118,10 +118,9 @@ try {
   await sleep(400);
 
   // ② 选择器清单由 builtinManifests 驱动（新增组件自动进清单，无需改核心 UI）
-  const picker = await page.evaluate(() => {
-    const modal = document.querySelector(".mantine-Modal-root");
-    return [...modal.querySelectorAll("button")].map((b) => b.textContent.trim());
-  });
+  const picker = await page.evaluate(() =>
+    [...document.querySelectorAll(".mantine-Modal-root button")].map((b) => b.textContent.trim()),
+  );
   const expectedNames = ["个人 Todo", "信息流", "应用入口", "嵌入页面", "自定义 API", "占位组件", "指标卡片"];
   const absent = expectedNames.filter((n) => !picker.some((t) => t.includes(n)));
   ok("J8 picker lists every builtin manifest (manifest-driven)", absent.length === 0, absent.length ? `missing: ${absent.join(",")}` : `${expectedNames.length} manifests`);
@@ -135,8 +134,7 @@ try {
   await sleep(400);
   ok("J8 sample configured via configSchema form", await setField("接口地址", upstreamUrl));
   await page.evaluate(() => {
-    const root = document.querySelector(".mantine-Modal-root");
-    const sel = [...root.querySelectorAll("[role=combobox]")].find((s) =>
+    const sel = [...document.querySelectorAll(".mantine-Modal-root [role=combobox]")].find((s) =>
       s.closest(".mantine-InputWrapper-root")?.querySelector("label")?.textContent.includes("展示模板"),
     );
     sel?.click();
