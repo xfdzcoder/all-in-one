@@ -28,6 +28,8 @@ export const dashboardPatchBody = z
   .object({
     title: z.string().min(1).max(200).optional(),
     icon: z.string().max(200).nullish(),
+    /** 页面背景色（FR-P9）：任意 CSS 颜色串，空 = 回落默认底色。 */
+    background: z.string().max(64).nullish(),
     sortOrder: z.number().int().min(0).optional(),
     layoutJson: layoutJsonSchema.optional(),
   })

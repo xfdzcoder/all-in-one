@@ -203,13 +203,13 @@ try {
     await page.evaluate((n) => ![...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
   );
 
-  // FR-P1：页面重命名 + 排序（在临时页上验证，不动首页 fixture）
+  // FR-P1/P9：页面设置（名称/图标/背景）+ 排序（在临时页上验证，不动首页 fixture）
   const p1 = `P1-${Date.now().toString(36).slice(-4)}`;
   const renamed = `改名-${Date.now().toString(36).slice(-4)}`;
   await page.type('input[placeholder="新页面名"]', p1);
   ok("P1 create page", await clickBtn("新建页面"));
   await sleep(800);
-  ok("P1 open rename dialog", await clickBtn("重命名"));
+  ok("P1 open page settings", await clickBtn("页面设置"));
   await sleep(400);
   ok(
     "P1 fill new name",
@@ -225,11 +225,11 @@ try {
       return true;
     }, renamed),
   );
-  ok("P1 save rename", await clickBtn("保存", true));
+  ok("P1 save settings", await clickBtn("保存", true));
   await sleep(1000);
   ok(
     "P1 tab renamed",
-    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === t), renamed),
+    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(t)), renamed),
   );
 
   const orderBefore = await page.evaluate(() =>
@@ -253,11 +253,71 @@ try {
     JSON.stringify(orderReload),
   );
 
+  // FR-P9：图标 + 背景色（页面级设置）——刷新后活动页回到第一个，先选中目标 tab！
+  ok(
+    "P9 select renamed tab",
+    await page.evaluate((t) => {
+      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => (x.textContent ?? "").includes(t));
+      if (!tab) return false;
+      tab.click();
+      return true;
+    }, renamed),
+  );
+  await sleep(600);
+  ok("P9 open page settings", await clickBtn("页面设置"));
+  await sleep(400);
+  ok(
+    "P9 fill icon",
+    await page.evaluate(() => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes("图标"),
+      );
+      const input = wrapper?.querySelector("input");
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(input, "🧪");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }),
+  );
+  ok(
+    "P9 fill background",
+    await page.evaluate(() => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes("背景色"),
+      );
+      const input = wrapper?.querySelector("input");
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(input, "#102030");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }),
+  );
+  ok("P9 save settings", await clickBtn("保存", true));
+  await sleep(1000);
+  ok(
+    "P9 icon shown on tab",
+    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed),
+  );
+  const bgApplied = await page.evaluate(() => {
+    const main = document.querySelector(".mantine-AppShell-main");
+    return main ? getComputedStyle(main).backgroundColor : null;
+  });
+  ok("P9 background applied", bgApplied === "rgb(16, 32, 48)", String(bgApplied));
+  await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(600);
+  ok(
+    "P9 settings persist after reload",
+    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed),
+  );
+
   // 清理临时页：先选中目标 tab（刷新后活动页会回到第一个！），并核对确认弹窗点名的是它
   ok(
     "P1 select renamed tab before cleanup",
     await page.evaluate((t) => {
-      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => x.textContent.trim() === t);
+      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => (x.textContent ?? "").includes(t));
       if (!tab) return false;
       tab.click();
       return true;
@@ -274,11 +334,11 @@ try {
   await sleep(800);
   ok(
     "P1 cleanup done",
-    await page.evaluate((t) => ![...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === t), renamed),
+    await page.evaluate((t) => ![...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(t)), renamed),
   );
   ok(
     "P1 首页 fixture untouched",
-    await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].some((x) => x.textContent.trim() === "首页")),
+    await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes("首页"))),
   );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));

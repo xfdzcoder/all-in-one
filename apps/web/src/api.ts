@@ -2,6 +2,7 @@ export type Dashboard = {
   id: string;
   title: string;
   icon: string | null;
+  background: string | null;
   sortOrder: number;
   layoutJson: string;
   schemaVersion: number;
@@ -134,7 +135,7 @@ export const api = {
   createDashboard: (title: string) => req<Dashboard>("POST", "/api/dashboards", { title }),
   patchDashboard: (
     id: string,
-    patch: Partial<Pick<Dashboard, "title" | "icon" | "sortOrder" | "layoutJson">>,
+    patch: Partial<Pick<Dashboard, "title" | "icon" | "background" | "sortOrder" | "layoutJson">>,
   ) => req<Dashboard>("PATCH", `/api/dashboards/${id}`, patch),
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),

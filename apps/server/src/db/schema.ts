@@ -29,6 +29,8 @@ export const dashboard = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     icon: text("icon"),
+    /** 页面背景色（FR-P9 页面级设置；空 = 默认深色底）。 */
+    background: text("background"),
     sortOrder: integer("sort_order").notNull().default(0),
     /** gridstack widget layout + per-widget config; Dashboard owns layout only. */
     layoutJson: text("layout_json").notNull().default("[]"),

@@ -7,6 +7,7 @@ import {
   Loader,
   MantineProvider,
   Modal,
+  Stack,
   Tabs,
   Text,
   TextInput,
@@ -32,8 +33,10 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [pluginAdminOpen, setPluginAdminOpen] = useState(false);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameTitle, setRenameTitle] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTitle, setSettingsTitle] = useState("");
+  const [settingsIcon, setSettingsIcon] = useState("");
+  const [settingsBackground, setSettingsBackground] = useState("");
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -71,12 +74,16 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
     await refresh();
   };
 
-  // FR-P1：页面重命名
-  const renameActive = async () => {
-    const title = renameTitle.trim();
+  // FR-P1/P9：页面设置（名称/图标/背景色）
+  const savePageSettings = async () => {
+    const title = settingsTitle.trim();
     if (!active || !title) return;
-    await api.patchDashboard(active.id, { title });
-    setRenameOpen(false);
+    await api.patchDashboard(active.id, {
+      title,
+      icon: settingsIcon.trim() || null,
+      background: settingsBackground.trim() || null,
+    });
+    setSettingsOpen(false);
     await refresh();
   };
 
@@ -125,7 +132,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
         </Group>
       </AppShell.Header>
       <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
-      <AppShell.Main>
+      {/* FR-P9：页面背景色（留空 = 默认深色底） */}
+      <AppShell.Main style={{ background: active?.background ?? "transparent", minHeight: "100vh" }}>
         <Tabs
           value={activeId}
           onChange={(v) => setActiveId(v)}
@@ -135,7 +143,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             <Tabs.List>
               {dashboards.map((d) => (
                 <Tabs.Tab key={d.id} value={d.id}>
-                  {d.title}
+                  {d.icon ? `${d.icon} ${d.title}` : d.title}
                 </Tabs.Tab>
               ))}
             </Tabs.List>
@@ -154,11 +162,13 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               variant="light"
               disabled={!active}
               onClick={() => {
-                setRenameTitle(active?.title ?? "");
-                setRenameOpen(true);
+                setSettingsTitle(active?.title ?? "");
+                setSettingsIcon(active?.icon ?? "");
+                setSettingsBackground(active?.background ?? "");
+                setSettingsOpen(true);
               }}
             >
-              重命名
+              页面设置
             </Button>
             <Button size="xs" variant="light" disabled={!active} onClick={() => void moveActive(-1)}>
               上移
@@ -174,25 +184,41 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 onConfirm={() => void removeActive()}
               />
             )}
-            {renameOpen && (
-              <Modal opened onClose={() => setRenameOpen(false)} title="重命名页面" size="sm">
-                <TextInput
-                  size="xs"
-                  label="页面名称"
-                  value={renameTitle}
-                  onChange={(e) => setRenameTitle(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void renameActive();
-                  }}
-                />
-                <Group gap="xs" mt="sm">
-                  <Button size="xs" onClick={() => void renameActive()}>
-                    保存
-                  </Button>
-                  <Button size="xs" variant="default" onClick={() => setRenameOpen(false)}>
-                    取消
-                  </Button>
-                </Group>
+            {settingsOpen && (
+              <Modal opened onClose={() => setSettingsOpen(false)} title="页面设置" size="sm">
+                <Stack gap="xs">
+                  <TextInput
+                    size="xs"
+                    label="页面名称"
+                    value={settingsTitle}
+                    onChange={(e) => setSettingsTitle(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void savePageSettings();
+                    }}
+                  />
+                  <TextInput
+                    size="xs"
+                    label="图标（emoji / 短文本）"
+                    value={settingsIcon}
+                    onChange={(e) => setSettingsIcon(e.currentTarget.value)}
+                    placeholder="如 🧪（留空 = 无图标）"
+                  />
+                  <TextInput
+                    size="xs"
+                    label="背景色"
+                    value={settingsBackground}
+                    onChange={(e) => setSettingsBackground(e.currentTarget.value)}
+                    placeholder="如 #102030（留空 = 默认底色）"
+                  />
+                  <Group gap="xs">
+                    <Button size="xs" onClick={() => void savePageSettings()}>
+                      保存
+                    </Button>
+                    <Button size="xs" variant="default" onClick={() => setSettingsOpen(false)}>
+                      取消
+                    </Button>
+                  </Group>
+                </Stack>
               </Modal>
             )}
           </Group>

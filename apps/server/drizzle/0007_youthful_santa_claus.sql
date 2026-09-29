@@ -1,0 +1,1 @@
+ALTER TABLE `dashboard` ADD `background` text;

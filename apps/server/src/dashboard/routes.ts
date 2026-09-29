@@ -59,6 +59,7 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
     const set: Record<string, unknown> = { updatedAt: new Date() };
     if (body.title !== undefined) set.title = body.title;
     if (body.icon !== undefined) set.icon = body.icon;
+    if (body.background !== undefined) set.background = body.background;
     if (body.sortOrder !== undefined) set.sortOrder = body.sortOrder;
     if (body.layoutJson !== undefined) {
       set.layoutJson = body.layoutJson;

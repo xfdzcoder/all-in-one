@@ -79,11 +79,21 @@ describe("dashboard CRUD (M1-④)", () => {
       method: "PATCH",
       url: `/api/dashboards/${id}`,
       cookies: { sid },
-      payload: { layoutJson: layout, title: "开发2" },
+      payload: { layoutJson: layout, title: "开发2", icon: "🧪", background: "#102030" },
     });
     expect(patched.statusCode).toBe(200);
     expect(patched.json().title).toBe("开发2");
     expect(patched.json().layoutJson).toBe(layout);
+    // FR-P9 页面级设置：图标 / 背景色
+    expect(patched.json().icon).toBe("🧪");
+    expect(patched.json().background).toBe("#102030");
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/api/dashboards/${id}`,
+      cookies: { sid },
+      payload: { background: null },
+    });
+    expect(cleared.json().background).toBeNull();
 
     const del = await app.inject({
       method: "DELETE",

@@ -50,6 +50,13 @@
       "when": 1790705195487,
       "tag": "0006_stale_crusher_hogan",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790712289636,
+      "tag": "0007_youthful_santa_claus",
+      "breakpoints": true
     }
   ]
 }

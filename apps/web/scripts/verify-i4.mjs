@@ -74,20 +74,6 @@ const setField = (label, value) =>
     { l: label, v: value },
   );
 
-const apiFetch = (path, options = {}) =>
-  page.evaluate(
-    async ({ p, o }) => {
-      const res = await fetch(p, {
-        method: o.method ?? "GET",
-        body: o.body,
-        credentials: "same-origin",
-        headers: o.body ? { "Content-Type": "application/json" } : undefined,
-      });
-      return { status: res.status, body: await res.text() };
-    },
-    { p: path, o: options },
-  );
-
 const clickInWidget = (marker, label) =>
   page.evaluate(
     ({ m, l }) => {
