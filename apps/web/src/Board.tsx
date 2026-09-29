@@ -121,6 +121,23 @@ function BoardToolbar({
           >
             添加应用入口
           </Button>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => {
+              addWidget({
+                id: nextId("i"),
+                x: 0,
+                y: 100,
+                w: 6,
+                h: 4,
+                component: "iframe",
+                props: { url: "https://example.com", timeoutSec: 8 },
+              });
+            }}
+          >
+            添加嵌入页面
+          </Button>
           <Button size="xs" variant="light" onClick={() => setConfigOpen(true)}>
             配置 API 组件
           </Button>

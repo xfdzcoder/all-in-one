@@ -5,6 +5,7 @@ import { TodoWidget } from "./todo-widget";
 import { CustomApiWidget } from "./custom-api-widget";
 import { RssWidget } from "./rss-widget";
 import { LauncherWidget } from "./launcher-widget";
+import { IframeWidget } from "./iframe-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -154,11 +155,30 @@ export const launcherManifest: WidgetManifest = {
   },
 };
 
+export const iframeManifest: WidgetManifest = {
+  type: "iframe",
+  name: "嵌入页面",
+  description: "iframe 嵌入第三方页面（sandbox 沙箱；目标站禁嵌时给出提示）",
+  icon: "iframe",
+  category: "服务",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "url", label: "页面地址", type: "text", required: true, placeholder: "http://192.168.31.133:9000" },
+    { key: "sandbox", label: "沙箱能力", type: "text", placeholder: "默认 allow-scripts（可加 allow-same-origin）" },
+    { key: "timeoutSec", label: "禁嵌提示超时(秒)", type: "number", default: 8 },
+  ],
+  capabilities: {
+    data: { source: "none" },
+  },
+};
+
 /** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
   rss: RssWidget,
   "app-launcher": LauncherWidget,
+  iframe: IframeWidget,
   "custom-api": CustomApiWidget,
   Placeholder,
   StatBox,
@@ -169,6 +189,7 @@ export const builtinManifests: WidgetManifest[] = [
   todoManifest,
   rssManifest,
   launcherManifest,
+  iframeManifest,
   customApiManifest,
   placeholderManifest,
   statBoxManifest,
