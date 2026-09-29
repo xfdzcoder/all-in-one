@@ -27,12 +27,12 @@ import { WidgetEditContext } from "./widget-edit-context";
 
 type NodeLike = { el?: HTMLElement; props?: Record<string, unknown> };
 
-export function KanbanWidget({ boardId }: { boardId?: string }) {
+export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refreshSec?: number }) {
   const { editMode, requestSave } = useContext(WidgetEditContext);
   const { grid } = useGridStack();
   const { node } = useGridStackItem();
   const { boards, refresh: refreshBoards } = useKanbanBoards();
-  const { tree, error } = useKanbanTree(boardId);
+  const { tree, error } = useKanbanTree(boardId, refreshSec);
   const m = useKanbanMutations(boardId);
   const [newBoard, setNewBoard] = useState("");
   const [newColumn, setNewColumn] = useState("");

@@ -40,12 +40,12 @@ function HtmlSandbox({ html, title }: { html: string; title: string }) {
   );
 }
 
-export function MailWidget({ limit = 20 }: { limit?: number }) {
+export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refreshSec?: number }) {
   const [filter, setFilter] = useState<string>("");
   const [open, setOpen] = useState<MailListEntry | null>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
   const { accounts, refresh: refreshAccounts } = useMailAccounts();
-  const { agg, loading, error, refresh } = useMailMessages(filter || undefined, limit);
+  const { agg, loading, error, refresh } = useMailMessages(filter || undefined, limit, refreshSec);
   const { message: detail, error: detailError } = useMailMessage(open?.accountId ?? null, open?.uid ?? null);
   const m = useMailMutations();
 

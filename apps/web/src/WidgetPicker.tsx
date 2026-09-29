@@ -105,6 +105,7 @@ export function WidgetPicker({
               })();
             }}
             submitLabel={busy ? "添加中…" : "确认添加"}
+            refresh={selected.capabilities?.refresh}
           />
           {error && (
             <Text size="xs" c="red">

@@ -14,6 +14,12 @@ export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
+/** FR-I3 定时刷新间隔：组件配置 refreshSec（秒）> 0 时优先，否则用组件默认值。 */
+function refreshInterval(refreshSec: unknown, defaultMs: number): number {
+  const n = Number(refreshSec);
+  return n > 0 ? n * 1000 : defaultMs;
+}
+
 /** SSE 失效订阅（FR-I6）：按 topic 失效对应查询（todo / rss / kanban）。 */
 export function useSseInvalidation(): void {
   const qc = useQueryClient();
@@ -37,10 +43,11 @@ export function useSseInvalidation(): void {
 }
 
 /** Todo 数据（走 REST，变更经 SSE 让其它页面的组件同步 —— J4）。 */
-export function useTodos(list?: string): WidgetDataState<TodoItem[]> {
+export function useTodos(list?: string, refreshSec?: unknown): WidgetDataState<TodoItem[]> {
   const query = useQuery({
     queryKey: ["todos", list ?? "all"],
     queryFn: () => api.listTodos(list),
+    refetchInterval: refreshInterval(refreshSec, 60_000),
   });
   return {
     data: query.data,
@@ -84,6 +91,7 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
     queryFn: () => api.widgetData("custom-api", config),
     enabled: Boolean(config.url),
     staleTime: 60_000,
+    refetchInterval: refreshInterval(config.refreshSec, 300_000),
   });
   return {
     data: query.data,
@@ -95,7 +103,7 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
 }
 
 /** 应用入口探活数据（app-launcher connector —— 内网服务探活，D22）。 */
-export function useAppLauncher(items: Array<{ name: string; url: string }>) {
+export function useAppLauncher(items: Array<{ name: string; url: string }>, refreshSec?: unknown) {
   const query = useQuery({
     queryKey: ["launcher", JSON.stringify(items)],
     queryFn: () =>
@@ -106,6 +114,7 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>) {
       }>,
     enabled: items.length > 0,
     staleTime: 30_000,
+    refetchInterval: refreshInterval(refreshSec, 120_000),
   });
   return {
     data: query.data,
@@ -132,11 +141,12 @@ export function usePlugins() {
 }
 
 /** Kanban 看板树（Q6b：列/卡渲染 + SSE 同步）。 */
-export function useKanbanTree(boardId: string | undefined) {
+export function useKanbanTree(boardId: string | undefined, refreshSec?: unknown) {
   const query = useQuery({
     queryKey: ["kanban", boardId ?? ""],
     queryFn: () => api.getBoardTree(boardId!),
     enabled: Boolean(boardId),
+    refetchInterval: refreshInterval(refreshSec, 60_000),
   });
   return {
     tree: query.data,
@@ -204,6 +214,7 @@ export function useOpencodeData(config: Record<string, unknown>) {
     queryFn: () => api.widgetData("opencode", config) as Promise<OpencodeData>,
     enabled: Boolean(config.url),
     staleTime: 30_000,
+    refetchInterval: refreshInterval(config.refreshSec, 60_000),
   });
   return {
     data: query.data,
@@ -231,11 +242,12 @@ export function useMailAccounts() {
 }
 
 /** 聚合邮件列表（只读；服务端 60s 缓存）。 */
-export function useMailMessages(account: string | undefined, limit = 20) {
+export function useMailMessages(account: string | undefined, limit = 20, refreshSec?: unknown) {
   const query = useQuery({
     queryKey: ["mail-messages", account ?? "all", limit],
     queryFn: () => api.mailMessages({ account, limit }),
     staleTime: 30_000,
+    refetchInterval: refreshInterval(refreshSec, 300_000),
   });
   return {
     agg: query.data,
@@ -326,11 +338,12 @@ export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
 }
 
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
-export function useFeeds(limit: number) {
+export function useFeeds(limit: number, refreshSec?: unknown) {
   const query = useQuery({
     queryKey: ["feeds", limit],
     queryFn: () => api.widgetData("rss", { limit }) as Promise<import("./api").FeedAgg>,
     staleTime: 60_000,
+    refetchInterval: refreshInterval(refreshSec, 300_000),
   });
   return {
     data: query.data,

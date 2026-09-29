@@ -19,6 +19,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const uniq = Date.now().toString(36).slice(-4);
 
 let seenAuth = null;
+let dataCalls = 0;
 const good = createServer((req, res) => {
   seenAuth = req.headers.authorization ?? null;
   res.setHeader("Content-Type", "application/json");
@@ -52,6 +53,9 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
+page.on("request", (r) => {
+  if (r.url().includes("/api/widgets/data")) dataCalls++;
+});
 
 const clickBtn = (label, exact = false) =>
   page.evaluate(
@@ -83,13 +87,14 @@ const setField = (label, value) =>
     { l: label, v: value },
   );
 
-const addOpencodeWidget = async (url, token) => {
+const addOpencodeWidget = async (url, token, refreshSec) => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
   if (!(await clickBtn("OpenCode"))) return false;
   await sleep(400);
   if (!(await setField("服务地址", url))) return false;
   if (token && !(await setField("访问令牌", token))) return false;
+  if (refreshSec && !(await setField("刷新频率", String(refreshSec)))) return false;
   await sleep(200);
   return clickBtn("确认添加", true);
 };
@@ -123,10 +128,10 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
-  // ① 正常 API
+  // ① 正常 API（refreshSec=3600：定时刷新单测走另一个组件，避免相互污染）
   ok("OPC enter edit", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("OPC add opencode widget", await addOpencodeWidget(goodUrl, "sk-opc"));
+  ok("OPC add opencode widget", await addOpencodeWidget(goodUrl, "sk-opc", 3600));
   await sleep(2500);
   const bodyText = await page.evaluate(() => document.body.textContent ?? "");
   ok("OPC version badge (API probe)", bodyText.includes("v9.9.9-test"), bodyText.slice(-140));
@@ -135,6 +140,30 @@ try {
   ok("OPC updated time shown", bodyText.includes("更新于"));
   ok("OPC bearer token injected (SEC3)", seenAuth === "Bearer sk-opc", String(seenAuth));
 
+  // FR-I2：刷新频率是配置的一部分（重开配置面板可见并持久化）
+  ok(
+    "OPC open config for refresh check",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
+        (i.textContent ?? "").includes("OpenCode 会话"),
+      );
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "配置");
+      if (!btn) return false;
+      btn.click();
+      return true;
+    }),
+  );
+  await sleep(500);
+  const refreshSecValue = await page.evaluate(() => {
+    const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+      w.querySelector("label")?.textContent.includes("刷新频率"),
+    );
+    return wrapper?.querySelector("input")?.value ?? null;
+  });
+  ok("FR-I2 refresh frequency persisted in config (refreshSec=3600)", refreshSecValue === "3600", String(refreshSecValue));
+  await page.keyboard.press("Escape");
+  await sleep(300);
+
   // 刷新按钮（数据通道有 5s 最小间隔限流 —— 等待间隔后手动刷新应回源）
   seenAuth = null;
   await sleep(5200);
@@ -142,12 +171,17 @@ try {
   await sleep(1500);
   ok("OPC refresh refetches", seenAuth === "Bearer sk-opc", String(seenAuth));
 
-  // ② experimental 形状不符 → 显式探测失败提示
-  ok("OPC add widget against incompatible API", await addOpencodeWidget(weirdUrl, null));
+  // ② experimental 形状不符 → 显式探测失败提示（该组件 refreshSec=10 用于定时刷新断言）
+  ok("OPC add widget against incompatible API", await addOpencodeWidget(weirdUrl, null, 10));
   await sleep(2500);
   const body2 = await page.evaluate(() => document.body.textContent ?? "");
   ok("OPC incompatible API surfaced explicitly", body2.includes("无法读取 opencode API") && body2.includes("形状不符"), body2.slice(-160));
   ok("OPC probe-failure badge", body2.includes("探测失败"));
+
+  // FR-I3：定时刷新（refreshSec=10 → 13s 内自动再次请求数据通道，无需手动刷新）
+  const baseline = dataCalls;
+  await sleep(13_000);
+  ok("FR-I3 scheduled refresh fires without manual action", dataCalls > baseline, `${baseline} -> ${dataCalls}`);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

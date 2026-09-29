@@ -12,8 +12,8 @@ export type RssConfig = {
   filter?: "all" | "unread";
 };
 
-export function RssWidget({ limit = 10, filter = "all" }: RssConfig) {
-  const { data, loading, error } = useFeeds(limit);
+export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig & { refreshSec?: number }) {
+  const { data, loading, error } = useFeeds(limit, refreshSec);
   const sources = useFeedSources();
   const { markRead, addSource, removeSource } = useFeedMutations();
   const [newUrl, setNewUrl] = useDraft();

@@ -24,9 +24,9 @@ function parseItems(json: string | undefined): LaunchItem[] {
   }
 }
 
-export function LauncherWidget({ itemsJson }: LauncherConfig) {
+export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { refreshSec?: number }) {
   const items = parseItems(itemsJson);
-  const { data, loading, error } = useAppLauncher(items);
+  const { data, loading, error } = useAppLauncher(items, refreshSec);
 
   return (
     <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>

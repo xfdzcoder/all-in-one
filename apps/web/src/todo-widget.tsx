@@ -15,8 +15,8 @@ export type TodoConfig = {
  * 注：M2 内置组件直接消费工作台 REST + SSE（业务数据通道）；
  * 第三方数据类组件（custom-api）走服务端 connector 数据通道（M2-⑤）。
  */
-export function TodoWidget({ list = "inbox", filter = "open" }: TodoConfig) {
-  const { data, loading, error } = useTodos(list);
+export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: TodoConfig & { refreshSec?: number }) {
+  const { data, loading, error } = useTodos(list, refreshSec);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
 

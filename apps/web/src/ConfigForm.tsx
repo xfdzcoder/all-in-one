@@ -24,12 +24,15 @@ export function ConfigForm({
   onChange,
   onSubmit,
   submitLabel = "保存配置",
+  refresh,
 }: {
   schema: ConfigSchema;
   values: ConfigValues;
   onChange: (key: string, value: unknown) => void;
   onSubmit: (values: ConfigValues) => void;
   submitLabel?: string;
+  /** FR-I2/I3：组件声明了刷新能力时，表单附带标准"刷新频率"字段（存 props.refreshSec）。 */
+  refresh?: { minRefreshSec?: number; defaultRefreshSec?: number };
 }) {
   const submit = () => {
     const errors = validateForm(schema, values);
@@ -116,6 +119,16 @@ export function ConfigForm({
             );
         }
       })}
+      {refresh && (
+        <NumberInput
+          label="刷新频率（秒）"
+          size="xs"
+          min={refresh.minRefreshSec ?? 0}
+          placeholder={`留空 = 默认 ${refresh.defaultRefreshSec ?? 60} 秒`}
+          value={typeof values.refreshSec === "number" ? values.refreshSec : ""}
+          onChange={(nv) => onChange("refreshSec", typeof nv === "number" ? nv : undefined)}
+        />
+      )}
       <Button size="xs" onClick={submit}>
         {submitLabel}
       </Button>

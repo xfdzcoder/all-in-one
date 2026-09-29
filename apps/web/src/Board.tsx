@@ -356,6 +356,7 @@ export function Board({
             onChange={(key, value) => setConfigValues((c) => ({ ...c, [key]: value }))}
             onSubmit={saveConfig}
             submitLabel="保存配置"
+            refresh={configManifest.capabilities?.refresh}
           />
           {configError && (
             <Text size="xs" c="red">
