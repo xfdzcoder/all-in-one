@@ -256,6 +256,14 @@
 - **影响**：误触不再丢数据；自动化脚本对破坏性操作的点击变为「触发 → 确认」两步（verify-m1/ mail / pl6 已同步）。
 - **被否备选**：`window.confirm`（阻塞式、样式不可控、自动化不友好）；仅对删除页面加确认（不一致，列/卡/账号同样不可逆）；撤销栈（实现成本高，个人规模收益低，后续可再议）。
 
+## D32 · OpenCode 组件：直接 HTTP 薄封装 + 版本探测容错（Q8）
+
+- **状态**：已决
+- **背景**：Q8（06 §1"OpenCode 组件：会话列表/状态/耗时；API 版本探测"，01 FR-E4）实施。06 备注"薄封装官方 SDK；experimental API 风险"——SDK 本身即 experimental API 的又一层变动面，且我们只用传输层。
+- **决策**：① **直接 HTTP 薄封装** opencode server API（`/app` 版本探测 + `/session` 会话列表），不引入官方 SDK 依赖——绑定面最小化，响应形状做兼容归一（`time.{created,updated}` 与扁平字段均接受）；② **版本探测 + 容错**：API 不可达/形状不符不抛错，返回 `probe{ok,error}` 由组件显式提示（"实验性接口可能已变更"），绝不空白；③ 会话耗时 = updatedAt − createdAt；④ 目标为本机/内网 opencode server（服务聚合核心场景）→ 走 allowPrivate 通道（同 app-launcher/iframe-embed，D22 同族）；令牌经凭证库注入 Bearer（SEC3）；⑤ 手动刷新强制回源（跳过客户端 staleTime 与服务端 TTL），尊重数据通道 5s 最小间隔限流。
+- **影响**：会话监控可用且对 experimental API 漂移免疫（显式降级）；若日后官方 SDK 稳定可平滑替换传输层。
+- **被否备选**：引入官方 SDK（多一层 experimental 变动面、体积大）；仅缓存不探测（API 漂移时静默空白）；写操作（发消息/中止会话）——超出 06"会话列表/状态/耗时"范围，未纳入。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
