@@ -13,6 +13,7 @@ import {
 } from "../connector/registry.ts";
 import { DataCache } from "./cache.ts";
 import { EventBus, type InvalidationEvent } from "./events.ts";
+import { todoConnector } from "../todo/connector.ts";
 
 const queryBody = z.object({
   type: z.string().min(1).max(64),
@@ -31,10 +32,12 @@ export function createDataChannel(deps: DataChannelDeps): DataChannelDeps {
   return deps;
 }
 
-/** 默认数据通道（M2-④ 起注册 todo connector；M2-⑤ 注册 http）。 */
+/** 默认数据通道（todo connector 内置；M2-⑤ 注册 http）。 */
 export function defaultDataChannel(): DataChannelDeps {
+  const registry = createConnectorRegistry();
+  registry.register(todoConnector);
   return {
-    registry: createConnectorRegistry(),
+    registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),
     bus: new EventBus(),
   };

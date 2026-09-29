@@ -77,6 +77,29 @@ export const credential = sqliteTable(
   (t) => [index("credential_user_id_idx").on(t.userId)],
 );
 
+/**
+ * D21: 业务表用 user_id 代位 Workspace 归属（单用户 Workspace ≡ user）。
+ * Todo 数据归 Workspace（01 §1.3）——删除 Dashboard/Widget 绝不删除这里的数据。
+ */
+export const todo = sqliteTable(
+  "todo",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** 清单名（默认 inbox）；widget 配置选择清单过滤。 */
+    list: text("list").notNull().default("inbox"),
+    title: text("title").notNull(),
+    done: integer("done", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("todo_user_id_idx").on(t.userId)],
+);
+
 export type User = typeof user.$inferSelect;
 export type NewUser = typeof user.$inferInsert;
 export type Dashboard = typeof dashboard.$inferSelect;
@@ -85,3 +108,5 @@ export type Session = typeof session.$inferSelect;
 export type NewSession = typeof session.$inferInsert;
 export type Credential = typeof credential.$inferSelect;
 export type NewCredential = typeof credential.$inferInsert;
+export type Todo = typeof todo.$inferSelect;
+export type NewTodo = typeof todo.$inferInsert;

@@ -64,7 +64,7 @@ try {
 
   // J2: debounce auto-save (800ms) then reload restores the MOVED position
   await sleep(1500);
-  await page.reload({ waitUntil: "networkidle0" });
+  await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(400);
   const y2 = Number(await gs("seed-1", "gs-y"));
@@ -82,7 +82,7 @@ try {
     return found.at(-1) ?? null;
   });
   await sleep(1500); // debounce save
-  await page.reload({ waitUntil: "networkidle0" });
+  await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(400);
   const countAfter = await page.$$eval(".grid-stack-item", (els) => els.length);

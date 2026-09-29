@@ -1,0 +1,65 @@
+import { useEffect, useState } from "react";
+import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
+import type { WidgetDataState } from "@all-in-one/widget-sdk";
+import { api, type TodoItem } from "./api";
+
+/** TanStack Query 单例（04-tech-stack：TanStack Query + SSE）。 */
+export const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+});
+
+/** SSE 失效订阅（FR-I6）：任意端发布 invalidation → 重取 todo。 */
+export function useSseInvalidation(): void {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+    es.addEventListener("invalidation", () => {
+      void qc.invalidateQueries({ queryKey: ["todos"] });
+    });
+    return () => es.close();
+  }, [qc]);
+}
+
+/** Todo 数据（走 REST，变更经 SSE 让其它页面的组件同步 —— J4）。 */
+export function useTodos(list?: string): WidgetDataState<TodoItem[]> {
+  const query = useQuery({
+    queryKey: ["todos", list ?? "all"],
+    queryFn: () => api.listTodos(list),
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
+  };
+}
+
+export function useTodoMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => void qc.invalidateQueries({ queryKey: ["todos"] });
+  const create = useMutation({
+    mutationFn: (title: string) => api.createTodo(title),
+    onSuccess: invalidate,
+  });
+  const toggle = useMutation({
+    mutationFn: (v: { id: string; done: boolean }) => api.patchTodo(v.id, { done: v.done }),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteTodo(id),
+    onSuccess: invalidate,
+  });
+  return { create, toggle, remove };
+}
+
+/** 组件卸载安全的本地输入状态。 */
+export function useDraft(initial = ""): [string, (v: string) => void] {
+  const [v, setV] = useState(initial);
+  return [v, setV];
+}

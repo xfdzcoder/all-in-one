@@ -15,6 +15,7 @@ import {
 } from "./data/routes.ts";
 import { createDb, ensureSchema, type Db } from "./db/client.ts";
 import { LAYOUT_SCHEMA_VERSION, session } from "./db/schema.ts";
+import { registerTodoRoutes } from "./todo/routes.ts";
 
 export type AppDeps = {
   db: Db;
@@ -36,9 +37,15 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.get("/api/openapi.json", async () => openApiDoc);
 
   app.decorate("db", deps.db);
+  const dataChannel = deps.dataChannel ?? defaultDataChannel();
   registerAuthRoutes(app);
   registerDashboardRoutes(app);
-  registerDataRoutes(app, deps.dataChannel ?? defaultDataChannel());
+  registerDataRoutes(app, dataChannel);
+  // Todo 变更 → 失效缓存 + SSE 广播（FR-I6 双页面同步）
+  registerTodoRoutes(app, () => {
+    dataChannel.cache.clear();
+    dataChannel.bus.publish("todo");
+  });
   return app;
 }
 

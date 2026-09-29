@@ -31,7 +31,10 @@ function BoardToolbar({
   onToggleEdit: () => void;
 }) {
   const { grid, addWidget, removeWidget } = useGridStack();
-  const seq = useRef(100);
+
+  // ids must be unique across sessions — persisted layouts may already contain
+  // t100/n100 from earlier runs; collisions leave the new portal empty (M2-④ 实测).
+  const nextId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
   return (
     <Group mb="sm" gap="xs" style={{ position: "relative", zIndex: 2 }}>
@@ -46,19 +49,35 @@ function BoardToolbar({
             size="xs"
             variant="light"
             onClick={() => {
-              const n = seq.current++;
               addWidget({
-                id: `n${n}`,
+                id: nextId("n"),
                 x: 0,
                 y: 100,
                 w: 3,
                 h: 2,
                 component: "Placeholder",
-                props: { title: `N${n}`, color: "#6b5a7d" },
+                props: { title: "N", color: "#6b5a7d" },
               });
             }}
           >
             添加组件
+          </Button>
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => {
+              addWidget({
+                id: nextId("t"),
+                x: 0,
+                y: 100,
+                w: 4,
+                h: 4,
+                component: "todo",
+                props: { list: "inbox", filter: "open" },
+              });
+            }}
+          >
+            添加 Todo
           </Button>
           <Button
             size="xs"

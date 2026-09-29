@@ -167,6 +167,14 @@
 - **决策**：统一补记：① 会话 TTL = 30 天；② Cookie `secure` 默认关、`COOKIE_SECURE=1` 开启（LAN/HTTP MVP，公网化随 SEC6 强制）；③ PRAGMA `journal_mode=WAL` + `foreign_keys=ON` 为启动必做（D16 附带）；④ 默认库路径 `file:./data/app.db`（相对 CWD，启动时解析为绝对路径）。
 - **影响**：消除"未记录简决"缺口；后续变更照常追加新 D#。
 
+## D21 · Workspace 实体形态：`user_id` 代位（业务表归属字段）
+
+- **状态**：已决
+- **背景**：06-roadmap 待定 #6 —— 概念模型"Workspace 拥有数据"（01 §1.3）在 schema 中如何落地：引入独立 `workspace` 表 vs 继续用 `user_id` 代位。M2 起建 Todo 等业务表前必须定案。
+- **决策**：**继续 `user_id` 代位**，不引入 `workspace` 表。所有业务表（`credential`、`todo` 及后续 RSS/Kanban）带 `user_id` 归属字段（NFR5），该字段同时就是 Workspace 归属——单用户下 Workspace 唯一且恒等于该 user（01 §1.3"首版简化"）。
+- **影响**：概念模型不变（数据归 Workspace / 布局归 Dashboard / Widget 只引用数据）；未来多用户时为 user 建默认 workspace 并把 `user_id` 迁移为 `workspace_id` 或加映射表即可，属机械迁移。M2 Todo 表直接落 `user_id`。
+- **被否备选**：现在引入 `workspace`/`workspace_member` 表（单用户下纯属空转，违背 D9 仅架构可扩展与避免过度设计）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）

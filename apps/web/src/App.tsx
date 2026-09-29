@@ -11,10 +11,12 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
 import { LoginPage } from "./LoginPage";
+import { queryClient, useSseInvalidation } from "./data-hooks";
 
 type SessionState =
   | { kind: "loading" }
@@ -22,6 +24,7 @@ type SessionState =
   | { kind: "authed"; me: Me };
 
 function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  useSseInvalidation();
   const [dashboards, setDashboards] = useState<Dashboard[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -48,9 +51,11 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const addDashboard = async () => {
     const title = newTitle.trim();
     if (!title) return;
-    await api.createDashboard(title);
+    const created = await api.createDashboard(title);
     setNewTitle("");
     await refresh();
+    // UX：新建后直接切到新页面（J4 流程也依赖这一点）
+    setActiveId(created.id);
   };
 
   const removeActive = async () => {
@@ -158,16 +163,18 @@ export default function App() {
   }, [check]);
 
   return (
-    <MantineProvider>
-      {session.kind === "loading" && (
-        <Center h="50vh">
-          <Loader />
-        </Center>
-      )}
-      {session.kind === "anonymous" && <LoginPage onLoggedIn={() => void check()} />}
-      {session.kind === "authed" && (
-        <Workbench me={session.me} onLogout={() => setSession({ kind: "anonymous" })} />
-      )}
-    </MantineProvider>
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider>
+        {session.kind === "loading" && (
+          <Center h="50vh">
+            <Loader />
+          </Center>
+        )}
+        {session.kind === "anonymous" && <LoginPage onLoggedIn={() => void check()} />}
+        {session.kind === "authed" && (
+          <Workbench me={session.me} onLogout={() => setSession({ kind: "anonymous" })} />
+        )}
+      </MantineProvider>
+    </QueryClientProvider>
   );
 }

@@ -15,6 +15,13 @@
       "when": 1790677038034,
       "tag": "0001_material_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790677534423,
+      "tag": "0002_slim_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

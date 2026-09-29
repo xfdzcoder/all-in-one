@@ -11,6 +11,16 @@ export type Dashboard = {
 
 export type Me = { id: string; username: string };
 
+export type TodoItem = {
+  id: string;
+  list: string;
+  title: string;
+  done: boolean;
+  sortOrder: number;
+  createdAt: number | string;
+  updatedAt: number | string;
+};
+
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -44,4 +54,11 @@ export const api = {
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),
   deleteDashboard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/dashboards/${id}`),
+  listTodos: (list?: string) =>
+    req<TodoItem[]>("GET", `/api/todos${list ? `?list=${encodeURIComponent(list)}` : ""}`),
+  createTodo: (title: string, list = "inbox") =>
+    req<TodoItem>("POST", "/api/todos", { title, list }),
+  patchTodo: (id: string, patch: { done?: boolean; title?: string }) =>
+    req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
+  deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
 };
