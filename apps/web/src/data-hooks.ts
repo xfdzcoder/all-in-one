@@ -20,25 +20,87 @@ function refreshInterval(refreshSec: unknown, defaultMs: number): number {
   return n > 0 ? n * 1000 : defaultMs;
 }
 
-/** SSE 失效订阅（FR-I6）：按 topic 失效对应查询（todo / rss / kanban）。 */
+/** FR-I6 轮询兜底间隔 / SSE 恢复重试间隔。 */
+const POLL_INTERVAL_MS = 30_000;
+const SSE_RETRY_MS = 60_000;
+
+/** 兜底轮询：失效全部数据查询（与 SSE 通知同效，仅在 SSE 不可用时启用）。 */
+function invalidateAllData(qc: ReturnType<typeof useQueryClient>): void {
+  for (const key of [
+    ["todos"],
+    ["feeds"],
+    ["kanban"],
+    ["kanban-boards"],
+    ["mail-messages"],
+    ["mail-accounts"],
+    ["opencode"],
+    ["custom-api"],
+    ["launcher"],
+    ["plugin-data"],
+  ]) {
+    void qc.invalidateQueries({ queryKey: key });
+  }
+}
+
+/** SSE 失效订阅（FR-I6）：按 topic 失效对应查询（todo / rss / kanban）；
+ *  SSE 不可用/放弃重连时**轮询兜底**，并定期重试 SSE 恢复低延迟路径。 */
 export function useSseInvalidation(): void {
   const qc = useQueryClient();
   useEffect(() => {
-    const es = new EventSource("/api/events");
-    es.addEventListener("invalidation", (e: MessageEvent<string>) => {
-      let topic = "todo";
-      try {
-        topic = String((JSON.parse(e.data) as { topic?: string }).topic ?? "todo");
-      } catch {
-        /* 保持默认 */
+    let es: EventSource | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+
+    const startPolling = () => {
+      if (pollTimer || disposed) return;
+      pollTimer = setInterval(() => invalidateAllData(qc), POLL_INTERVAL_MS);
+    };
+    const stopPolling = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
       }
-      if (topic === "rss") void qc.invalidateQueries({ queryKey: ["feeds"] });
-      else if (topic === "kanban") {
-        void qc.invalidateQueries({ queryKey: ["kanban"] });
-        void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
-      } else void qc.invalidateQueries({ queryKey: ["todos"] });
-    });
-    return () => es.close();
+    };
+    const connect = () => {
+      if (disposed) return;
+      es?.close();
+      const src = new EventSource("/api/events");
+      es = src;
+      src.onopen = () => stopPolling();
+      src.addEventListener("invalidation", (e: MessageEvent<string>) => {
+        let topic = "todo";
+        try {
+          topic = String((JSON.parse(e.data) as { topic?: string }).topic ?? "todo");
+        } catch {
+          /* 保持默认 */
+        }
+        if (topic === "rss") void qc.invalidateQueries({ queryKey: ["feeds"] });
+        else if (topic === "kanban") {
+          void qc.invalidateQueries({ queryKey: ["kanban"] });
+          void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
+        } else void qc.invalidateQueries({ queryKey: ["todos"] });
+      });
+      src.onerror = () => {
+        // CONNECTING = 浏览器自动重连中（无需兜底）；CLOSED = 放弃 → 轮询兜底 + 定期重试
+        if (src.readyState === EventSource.CLOSED) {
+          startPolling();
+          if (!retryTimer && !disposed) {
+            retryTimer = setTimeout(() => {
+              retryTimer = null;
+              connect();
+            }, SSE_RETRY_MS);
+          }
+        }
+      };
+    };
+    connect();
+    return () => {
+      disposed = true;
+      stopPolling();
+      if (retryTimer) clearTimeout(retryTimer);
+      es?.close();
+    };
   }, [qc]);
 }
 
