@@ -192,6 +192,14 @@
 - **影响**：SEC5"禁嵌明确提示"真正可用；iframe manifest 移除已无意义的 `timeoutSec` 配置（旧布局残留值被忽略），capabilities.data 由 none 改为 http-connector；新增 13 项单测（判定规则 + connector 含重定向跳/不可达）。
 - **被否备选**：保留前端超时启发式（前提不成立，永不触发）；前端 `contentDocument` 探测（跨域一律不可读，无法区分禁嵌）；仅 HEAD 探测（部分面板不响应 HEAD）；前端直连读响应头（违反"前端只消费工作台 API"不变量且浏览器受 CORS 限制）。
 
+## D24 · 代码级插件 ABI：契约先行（PluginManifest + 权限白名单 + apiVersion）
+
+- **状态**：已决
+- **背景**：迭代队列 Q5（二期·代码级插件，FR-W5③/FR-W6/FR-W7）启动。D7/K3/K7 已定原则（契约先行、实现分层；仅前端渲染 + 宿主统一数据通道；管理员安装、权限显式声明默认最小化），但 ABI 未冻结——安装器/运行时落地前必须先定死包格式、权限语义与版本兼容，否则插件无法互操作。
+- **决策**：widget-sdk 新增 `PluginManifest = WidgetManifest + { plugin: { entry, apiVersion, permissions? } }`：① `entry` 为插件包内相对 ESM 模块路径（禁绝对路径与 `..`/隐藏段穿越，`isSafePluginEntry`）；② `apiVersion` semver（与宿主主版本一致才可启用）；③ `permissions` 为显式白名单（`apis` / `credentialKinds` / `actions`），**缺省 = 最小权限**（仅数据通道、无凭证、无动作），未知权限键一律拒绝（`validatePluginManifest`）。插件包 = zip（`manifest.json` + entry 模块 + 可选资源）。
+- **影响**：Q5 后续步骤（上传/校验/存储、运行时沙箱加载、管理页与权限执行）都以本 ABI 为准；权限执行 = 宿主按白名单放行、越权拒绝。06 §1「代码级插件」进入实施。
+- **被否备选**：manifest 不带版本（宿主升级无法判兼容，K3 风险）；权限隐式推断/默认全开（违背 K7 显式最小化）；插件自带服务端 connector 代码（K7 明确最后考虑，最大攻击面）；等待运行时实现后再补契约（D7 明确契约先行）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
