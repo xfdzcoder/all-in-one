@@ -184,3 +184,75 @@ export const plugin = sqliteTable(
 
 export type Plugin = typeof plugin.$inferSelect;
 export type NewPlugin = typeof plugin.$inferInsert;
+
+/**
+ * Kanban 看板（二期 Q6，多项目看板 01 §2.3/06 §1；D21：user_id 代位 Workspace 归属）。
+ * 数据归 Workspace —— 删除 Dashboard/Widget/看板之外的任何东西都不动这里的卡片。
+ * 三层：board（项目）→ column（列）→ card（卡片）；移动 = 卡片换列/排序（sortOrder）。
+ */
+export const kanbanBoard = sqliteTable("kanban_board", {
+  id: text("id").primaryKey(),
+  /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const kanbanColumn = sqliteTable(
+  "kanban_column",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => kanbanBoard.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("kanban_column_user_idx").on(t.userId),
+    index("kanban_column_board_idx").on(t.boardId),
+  ],
+);
+
+export const kanbanCard = sqliteTable(
+  "kanban_card",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => kanbanBoard.id, { onDelete: "cascade" }),
+    columnId: text("column_id")
+      .notNull()
+      .references(() => kanbanColumn.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    /** 归档（卡片操作的非破坏形态）；删除是显式动作。 */
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("kanban_card_user_idx").on(t.userId),
+    index("kanban_card_board_idx").on(t.boardId),
+    index("kanban_card_column_idx").on(t.columnId),
+  ],
+);
+
+export type KanbanBoard = typeof kanbanBoard.$inferSelect;
+export type NewKanbanBoard = typeof kanbanBoard.$inferInsert;
+export type KanbanColumn = typeof kanbanColumn.$inferSelect;
+export type NewKanbanColumn = typeof kanbanColumn.$inferInsert;
+export type KanbanCard = typeof kanbanCard.$inferSelect;
+export type NewKanbanCard = typeof kanbanCard.$inferInsert;

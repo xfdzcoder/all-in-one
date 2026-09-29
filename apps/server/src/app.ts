@@ -21,6 +21,7 @@ import { registerCredentialRoutes } from "./credentials/routes.ts";
 import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
+import { registerKanbanRoutes } from "./kanban/routes.ts";
 
 export type AppDeps = {
   db: Db;
@@ -76,6 +77,10 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerPluginRoutes(app, (topic) => {
     dataChannel.cache.clear();
     dataChannel.bus.publish(topic);
+  });
+  // Kanban（Q6a）写操作 → SSE 广播（任一组件改看板，其余同步，FR-I6）
+  registerKanbanRoutes(app, () => {
+    dataChannel.bus.publish("kanban");
   });
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
