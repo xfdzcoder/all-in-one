@@ -183,6 +183,80 @@ export function useKanbanMutations(boardId: string | undefined) {
   };
 }
 
+/** 邮件账号清单（Q7b）。 */
+export function useMailAccounts() {
+  const query = useQuery({
+    queryKey: ["mail-accounts"],
+    queryFn: () => api.listMailAccounts(),
+  });
+  return {
+    accounts: query.data ?? [],
+    refresh: () => void query.refetch(),
+  };
+}
+
+/** 聚合邮件列表（只读；服务端 60s 缓存）。 */
+export function useMailMessages(account: string | undefined, limit = 20) {
+  const query = useQuery({
+    queryKey: ["mail-messages", account ?? "all", limit],
+    queryFn: () => api.mailMessages({ account, limit }),
+    staleTime: 30_000,
+  });
+  return {
+    agg: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
+/** 单封正文（沙箱渲染前取回，D30）。 */
+export function useMailMessage(accountId: string | null, uid: number | null) {
+  const query = useQuery({
+    queryKey: ["mail-message", accountId, uid],
+    queryFn: () => api.mailMessage(accountId!, uid!),
+    enabled: Boolean(accountId) && uid !== null,
+    staleTime: 300_000,
+  });
+  return {
+    message: query.data,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
+/** 邮件账号管理（密码先入凭证库 SEC3，账号只保存引用）。 */
+export function useMailMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["mail-accounts"] });
+    void qc.invalidateQueries({ queryKey: ["mail-messages"] });
+    void qc.invalidateQueries({ queryKey: ["mail-message"] });
+  };
+  return {
+    createAccount: async (input: {
+      name: string;
+      host: string;
+      port?: number;
+      security?: string;
+      username: string;
+      folder?: string;
+      password?: string;
+    }) => {
+      // 口令只进凭证库（SEC3）：不随账号创建请求传输
+      const { password, ...rest } = input;
+      let credentialId: string | null = null;
+      if (password) {
+        const cred = await api.createCredential(`mail-${Date.now()}`, password, "generic");
+        credentialId = cred.id;
+      }
+      const row = await api.createMailAccount({ ...rest, credentialId });
+      invalidate();
+      return row;
+    },
+    deleteAccount: (id: string) => api.deleteMailAccount(id).then((r) => (invalidate(), r)),
+  };
+}
+
 /** 插件数据桥（FR-W3：宿主统一取数 → 沙箱；权限在服务端按白名单把关，D26）。 */
 export function usePluginData(
   type: string,

@@ -55,6 +55,32 @@ export type PluginRow = {
   createdAt: string;
 };
 
+/** 邮件（Q7b）：只读聚合（D3）；账号密码只存凭证引用（SEC3）。 */
+export type MailAccountRow = {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  security: string;
+  username: string;
+  credentialId: string | null;
+  folder: string;
+};
+export type MailListEntry = {
+  uid: number;
+  subject: string;
+  from: string;
+  date: string;
+  seen: boolean;
+  accountId: string;
+  accountName: string;
+};
+export type MailAgg = {
+  items: MailListEntry[];
+  errors: Array<{ accountId: string; accountName: string; error: string }>;
+};
+export type MailFull = MailListEntry & { text: string; html: string };
+
 /** Kanban（Q6）：看板/列/卡，数据归 Workspace（D21）。 */
 export type KanbanBoardRow = { id: string; title: string };
 export type KanbanColumnRow = {
@@ -151,4 +177,24 @@ export const api = {
   patchCard: (id: string, patch: Partial<Pick<KanbanCardRow, "title" | "body" | "columnId" | "sortOrder" | "archived">>) =>
     req<KanbanCardRow>("PATCH", `/api/kanban/cards/${id}`, patch),
   deleteCard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/kanban/cards/${id}`),
+  listMailAccounts: () => req<MailAccountRow[]>("GET", "/api/mail/accounts"),
+  createMailAccount: (input: {
+    name: string;
+    host: string;
+    port?: number;
+    security?: string;
+    username: string;
+    credentialId?: string | null;
+    folder?: string;
+  }) => req<MailAccountRow>("POST", "/api/mail/accounts", input),
+  deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
+  mailMessages: (opts: { account?: string; limit?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (opts.account) q.set("account", opts.account);
+    if (opts.limit) q.set("limit", String(opts.limit));
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return req<MailAgg>("GET", `/api/mail/messages${suffix}`);
+  },
+  mailMessage: (accountId: string, uid: number) =>
+    req<MailFull>("GET", `/api/mail/messages/${accountId}/${uid}`),
 };

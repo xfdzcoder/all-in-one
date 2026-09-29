@@ -7,6 +7,7 @@ import { RssWidget } from "./rss-widget";
 import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
 import { KanbanWidget } from "./kanban-widget";
+import { MailWidget } from "./mail-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -189,11 +190,28 @@ export const kanbanManifest: WidgetManifest = {
   },
 };
 
+/** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
+export const mailManifest: WidgetManifest = {
+  type: "mail",
+  name: "邮件",
+  description: "多账号邮件聚合（只读）：列表 + 正文（沙箱渲染）",
+  category: "信息流",
+  defaultSize: { w: 6, h: 5 },
+  minSize: { w: 3, h: 3 },
+  configSchema: [],
+  capabilities: {
+    data: { source: "workspace", resource: "mail" },
+    refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
 /** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
   rss: RssWidget,
   kanban: KanbanWidget,
+  mail: MailWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -210,6 +228,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   todo: todoManifest,
   rss: rssManifest,
   kanban: kanbanManifest,
+  mail: mailManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -228,6 +247,7 @@ export const builtinManifests: WidgetManifest[] = [
   todoManifest,
   rssManifest,
   kanbanManifest,
+  mailManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

@@ -32,6 +32,11 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  // 显式选中「首页」——不依赖 tab 顺序
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === "首页");
+    tab?.click();
+  });
   await sleep(600);
   ok("J3 dashboard renders at 375px", true);
 
