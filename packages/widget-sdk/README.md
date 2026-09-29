@@ -82,6 +82,8 @@ export const builtinManifests  = […, myManifest];
 
 宿主向组件注入 `WidgetProps`：`config / data / refresh / dispatch / widgetId`。
 组件只消费数据、派发动作；加载/错误态由 `WidgetDataState` 表达。
+**配置变更**由宿主提供：编辑态每个实例带「配置」入口（WidgetChrome），
+按 manifest 的 configSchema 打开表单、改后写回布局 JSON —— 组件实现零感知。
 
 ## 未来第三方插件（D7 二期）
 
