@@ -71,7 +71,7 @@
 
 ## 6. 出口标准（Definition of Done）
 
-- [ ] J1–J8 全部通过（Playwright 覆盖 J1–J4，其余旅程手工验收记录，D15）
+- [x] J1–J8 全部通过（D15：Playwright J1–J4 5/5；J5–J8 验收脚本化记录 = `apps/web/scripts/verify-j5.mjs`–`verify-j8.mjs`，另 `verify-m1.mjs` 覆盖 J1/J2、`verify-j3.mjs`/`verify-j4.mjs` 覆盖 J3/J4。**2026-09-29 全绿**：verify-m1 13/13、j3 8/8、j4 11/11、j5 10/10、j6 12/12、j7 9/9、j8 12/12 + Playwright 5/5 + Vitest 78/78）
 - [x] SEC1/3/4/5 落地自检通过（单元测试覆盖：凭证不落前端/日志、SSRF 拒绝内网、iframe 沙箱生效）
 - [x] D12 spike 结论已定并记录（✅ 保留 gridstack，见 D12）
 - [x] `docker compose up` 可部署 + 备份/恢复文档（docs/deploy.md）+ 容器冒烟通过

@@ -25,7 +25,7 @@
 | 技术方案设计 | ✅ 完成 | 03-tech-analysis、04-tech-stack（D11–D14） |
 | MVP 定义 | ✅ 完成 | 05-mvp（定稿，D15） |
 | 开发 | ✅ MVP 完成（M0–M3 全绿，J1–J8 出口达成） | — |
-| 测试 | 🔄 随里程碑进行（Vitest 70 项 + Playwright J1–J4 + verify 脚本） | — |
+| 测试 | ✅ MVP 出口全绿（Vitest 78 项 + Playwright J1–J4 5/5 + verify-m1/j3–j8 脚本化验收） | — |
 | 部署 | ✅ Docker 单镜像 + compose + 备份文档 | docs/deploy.md |
 | 迭代 | 🔄 自主迭代 loop（D22，授权自主推进） | 07-iteration-progress |
 
