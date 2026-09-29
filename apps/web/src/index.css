@@ -4,3 +4,23 @@ body {
   background: #14181f;
   color: #e8e8e8;
 }
+
+/*
+ * NFR2：移动端触控目标 ≥44px（375px 核心操作路径可用）。
+ * 用 !important 覆盖组件库（Mantine）按 size 变体设置的 min-height ——
+ * 触控可达性优先于紧凑外观。
+ */
+@media (max-width: 767px) {
+  button,
+  a[href],
+  input,
+  select,
+  textarea,
+  [role="checkbox"],
+  [role="tab"],
+  [role="combobox"] {
+    min-height: 44px !important;
+    min-width: 44px;
+    box-sizing: border-box;
+  }
+}
