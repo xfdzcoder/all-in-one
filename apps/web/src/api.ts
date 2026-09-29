@@ -108,6 +108,8 @@ export const api = {
   uninstallPlugin: (id: string) => req<{ ok: boolean }>("DELETE", `/api/plugins/${id}`),
   setPluginStatus: (id: string, enabled: boolean) =>
     req<PluginRow>("POST", `/api/plugins/${id}/${enabled ? "enable" : "disable"}`),
+  pluginAction: (id: string, name: string, params: unknown) =>
+    req<{ ok: boolean; result: unknown }>("POST", `/api/plugins/${id}/actions`, { name, params }),
   getPluginEntry: (id: string) =>
     req<{ manifest: unknown; code: string }>("GET", `/api/plugins/${id}/entry`),
 };

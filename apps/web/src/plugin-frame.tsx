@@ -3,7 +3,7 @@ import { Alert, Text } from "@mantine/core";
 import type { ConfigValues, PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api } from "./api";
-import { usePluginData } from "./data-hooks";
+import { queryClient, usePluginData } from "./data-hooks";
 
 /**
  * 插件沙箱宿主（FR-W7 / **D25**：iframe CSP 隔离，否决 Web Component 方案）。
@@ -141,13 +141,21 @@ export function PluginFrame({
           postProps();
           break;
         case "action": {
-          // FR-W7：动作走显式白名单，未声明即拒绝（执行通道随 Q5d 权限执行落地）
+          // FR-W7：动作走显式白名单，未声明即拒绝（服务端 D27 复核 + 执行 + 审计）
           const allowed = manifest.plugin.permissions?.actions ?? [];
           if (!allowed.includes(d.name)) {
             setRuntimeError(`动作 ${d.name} 未在 permissions.actions 声明，已拒绝`);
             break;
           }
-          console.warn(`[plugin ${manifest.type}] action ${d.name} 无宿主执行通道（Q5d 落地）`, d.params);
+          api
+            .pluginAction(pluginId, d.name, d.params)
+            .then(() => {
+              // 动作可能改动 todo/feed 数据 —— 刷新插件数据桥（SSE 另有失效通知）
+              void queryClient.invalidateQueries({ queryKey: ["plugin-data"] });
+            })
+            .catch((e: unknown) => {
+              setRuntimeError(`动作执行失败：${e instanceof Error ? e.message : String(e)}`);
+            });
           break;
         }
         case "error":
@@ -162,7 +170,7 @@ export function PluginFrame({
     return () => window.removeEventListener("message", onMessage);
     // postProps 每次渲染重建无妨（只读 propsRef）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manifest]);
+  }, [manifest, pluginId]);
 
   // props 变更 → 推入框内重新渲染（FR-W4 配置变更/数据刷新路径）
   useEffect(() => {

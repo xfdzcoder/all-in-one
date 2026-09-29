@@ -15,17 +15,30 @@ import {
   uninstallPlugin,
 } from "./install.ts";
 import { PluginPackageError } from "./package.ts";
+import {
+  PluginActionError,
+  executePluginAction,
+  type ActionTopic,
+} from "./actions.ts";
 
 /**
- * 插件管理 API（FR-W6）：上传安装 / 列表 / 详情 / 启用 / 禁用 / 卸载 / 入口源码。
+ * 插件管理 API（FR-W6）：上传安装 / 列表 / 详情 / 启用 / 禁用 / 卸载 / 入口源码 / 动作。
  * 插件包为 zip（D24），经 base64 传输（≤1.5MB，bodyLimit 放宽）；manifest 属公开元数据。
  * 入口源码以 JSON 下发给宿主沙箱加载器（D25：iframe CSP 隔离），不作 JS 资源伺服。
+ * 动作（FR-I5/D27）：permissions.actions 白名单 + 服务端固定 registry 执行 + 审计日志。
  */
 
 const uploadBody = z.object({ packageBase64: z.string().min(1).max(2_000_000) });
 const idParams = z.object({ id: z.string().min(1).max(64) });
+const actionBody = z.object({
+  name: z.string().min(1).max(128),
+  params: z.unknown().optional(),
+});
 
-export function registerPluginRoutes(app: FastifyInstance): void {
+export function registerPluginRoutes(
+  app: FastifyInstance,
+  onChanged: (topic: ActionTopic) => void = () => {},
+): void {
   const pluginsRoot = () => path.join(config.dataDir, "plugins");
 
   app.post("/api/plugins", { preHandler: authGuard, bodyLimit: 3_000_000 }, async (req, reply) => {
@@ -84,6 +97,42 @@ export function registerPluginRoutes(app: FastifyInstance): void {
 
   app.post("/api/plugins/:id/enable", { preHandler: authGuard }, statusHandler("enabled"));
   app.post("/api/plugins/:id/disable", { preHandler: authGuard }, statusHandler("disabled"));
+
+  /** 插件动作（FR-I5/D27）：白名单 + 参数校验 + 服务端执行 + 审计日志。 */
+  app.post("/api/plugins/:id/actions", { preHandler: authGuard }, async (req, reply) => {
+    const params = idParams.safeParse(req.params);
+    const body = actionBody.safeParse(req.body);
+    if (!params.success || !body.success) return reply.code(400).send({ error: "invalid request" });
+    const row = await getPlugin(app.db, req.user!.id, params.data.id);
+    if (!row || row.status !== "enabled") {
+      return reply.code(400).send({ error: "plugin not installed or disabled" });
+    }
+    try {
+      const { result, topic } = await executePluginAction(
+        app.db,
+        req.user!.id,
+        row,
+        body.data.name,
+        body.data.params,
+      );
+      // 审计（FR-I5/NFR1）：结构化日志记 who/which/what；参数不入日志（用户内容/密钥基线）
+      app.log.info(
+        {
+          evt: "plugin.action",
+          pluginId: row.id,
+          pluginType: row.type,
+          action: body.data.name,
+          userId: req.user!.id,
+        },
+        "plugin action executed",
+      );
+      onChanged(topic);
+      return { ok: true, result: result ?? null };
+    } catch (e) {
+      if (e instanceof PluginActionError) return reply.code(e.status).send({ error: e.message });
+      throw e;
+    }
+  });
 
   app.delete("/api/plugins/:id", { preHandler: authGuard }, async (req, reply) => {
     const params = idParams.safeParse(req.params);

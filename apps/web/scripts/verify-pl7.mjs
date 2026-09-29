@@ -17,7 +17,6 @@ const ok = (name, pass, detail = "") => {
   console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const uniq = Date.now().toString(36).slice(-4);
 
 // mock upstream：要求 Bearer sk-secret，回显鉴权头
 const upstream = createServer((req, res) => {

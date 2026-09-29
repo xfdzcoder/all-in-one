@@ -72,8 +72,11 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     dataChannel.cache.clear();
     dataChannel.bus.publish("rss");
   });
-  // 插件管理（FR-W6 安装/卸载；启用/禁用随运行时加载实现）
-  registerPluginRoutes(app);
+  // 插件管理（FR-W6 安装/卸载）；插件动作（D27）→ 失效缓存 + SSE 广播
+  registerPluginRoutes(app, (topic) => {
+    dataChannel.cache.clear();
+    dataChannel.bus.publish(topic);
+  });
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;
