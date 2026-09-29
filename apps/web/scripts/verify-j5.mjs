@@ -56,7 +56,10 @@ try {
 
   ok("J5 enter edit", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("J5 open API config form", await clickBtn("配置 API 组件"));
+  // FR-W2：选择器 → 自定义 API → configSchema 驱动表单
+  ok("J5 open widget picker", await clickBtn("添加组件"));
+  await sleep(300);
+  ok("J5 open API config form", await clickBtn("自定义 API"));
   await sleep(500);
 
   // FR-W2: form is generated from configSchema — fill it
@@ -97,7 +100,7 @@ try {
   });
   await sleep(300);
 
-  ok("J5 submit config form", await clickBtn("添加 API 组件", true));
+  ok("J5 submit config form", await clickBtn("确认添加", true));
   await sleep(2500); // modal close + widget render + data channel fetch
 
   const state = await page.evaluate(() => ({
@@ -112,7 +115,9 @@ try {
   );
 
   // raw JSON template fallback check via second widget without token → 502 error path
-  ok("J5 reopen config", await clickBtn("配置 API 组件"));
+  ok("J5 reopen picker", await clickBtn("添加组件"));
+  await sleep(300);
+  ok("J5 reopen config", await clickBtn("自定义 API"));
   await sleep(400);
   await page.evaluate((port) => {
     const inputs = [...document.querySelectorAll(".mantine-Modal-root input")];
@@ -129,7 +134,7 @@ try {
     set("接口地址", `http://127.0.0.1:${port}/metrics`);
     set("访问令牌", "wrong-token"); // 错误 token → 上游 401 → 502
   }, upstreamPort);
-  ok("J5 submit (no token → error shown)", await clickBtn("添加 API 组件", true));
+  ok("J5 submit (no token → error shown)", await clickBtn("确认添加", true));
   await sleep(2500);
   const errState = await page.evaluate(() =>
     document.body.textContent.includes("401") || document.body.textContent.includes("HTTP"),

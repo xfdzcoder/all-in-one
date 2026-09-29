@@ -180,6 +180,10 @@ export const widgetComponents = {
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
+  // manifest.type 别名：组件选择器按 type 添加（placeholder/stat-box）；
+  // 旧布局 JSON 用类名 key（Placeholder/StatBox），保留兼容（seed/历史布局）。
+  placeholder: Placeholder,
+  "stat-box": StatBox,
   Placeholder,
   StatBox,
 };

@@ -22,13 +22,43 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
 
-const clickBtn = (label) =>
-  page.evaluate((l) => {
-    const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes(l));
-    if (!btn) return false;
-    btn.click();
-    return true;
-  }, label);
+const clickBtn = (label, exact = false) =>
+  page.evaluate(
+    ({ l, ex }) => {
+      const btns = [...document.querySelectorAll("button")];
+      const btn = ex
+        ? btns.find((b) => b.textContent.trim() === l)
+        : btns.find((b) => b.textContent.includes(l));
+      if (!btn) return false;
+      btn.click();
+      return true;
+    },
+    { l: label, ex: exact },
+  );
+
+/** FR-W2 选择器流程：添加组件 → 选 manifest → configSchema 表单 → 确认添加。 */
+const addWidgetViaPicker = async (name, fillTitle) => {
+  if (!(await clickBtn("添加组件"))) return false;
+  await sleep(300);
+  if (!(await clickBtn(name))) return false;
+  await sleep(300);
+  if (fillTitle) {
+    const okSet = await page.evaluate((t) => {
+      const inputs = [...document.querySelectorAll(".mantine-Modal-root input")];
+      const target = inputs.find((i) =>
+        i.closest(".mantine-InputWrapper-root")?.querySelector("label")?.textContent.includes("标题"),
+      );
+      if (!target) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(target, t);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }, fillTitle);
+    if (!okSet) return false;
+    await sleep(200);
+  }
+  return clickBtn("确认添加", true);
+};
 
 try {
   // J1: login screen renders
@@ -44,6 +74,28 @@ try {
 
   const count = await page.$$eval(".grid-stack-item", (els) => els.length);
   ok("J1 default 首页 with example widgets", count >= 3, `${count} widgets`);
+
+  // J2 前置：恢复默认 seed 布局（对齐 server seed）——历史布局会占用拖拽落点，
+  // 重置后拖拽旅程可重复执行（gridstack 50% 碰撞规则，见 AGENTS.md）。
+  await page.evaluate(async () => {
+    const seed = [
+      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+    ];
+    const list = await (await fetch("/api/dashboards")).json();
+    const home = list.find((d) => d.title === "首页");
+    await fetch(`/api/dashboards/${home.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
+    });
+  });
+  await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(400);
 
   // J2: drag INTO EMPTY SPACE below (no collision → gridstack >50% rule not applicable).
   // Asserting the position actually CHANGED (non-vacuous).
@@ -70,17 +122,12 @@ try {
   const y2 = Number(await gs("seed-1", "gs-y"));
   ok("J2 auto-save + reload restores moved position", y1 === y2 && y2 > y0, `moved=${y1} restored=${y2}`);
 
-  // props round-trip: add widget (props {title: "N100"}), save, reload, check props survive
+  // props round-trip: picker → configSchema 表单（标题）→ 添加 → save → reload → props survive
   ok("J2b re-enter edit mode", await clickBtn("编辑布局"));
   await sleep(300);
   const countBefore = await page.$$eval(".grid-stack-item", (els) => els.length);
-  ok("J2b add widget", await clickBtn("添加组件"));
-  await sleep(300);
-  const addedTitle = await page.evaluate(() => {
-    const els = [...document.querySelectorAll(".grid-stack-item strong")];
-    const found = els.map((e) => e.textContent).filter((t) => t.startsWith("N"));
-    return found.at(-1) ?? null;
-  });
+  const addedTitle = `N-${Date.now().toString(36).slice(-4)}`;
+  ok("J2b add widget via picker form", await addWidgetViaPicker("占位组件", addedTitle));
   await sleep(1500); // debounce save
   await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
   await page.waitForSelector(".grid-stack", { timeout: 8000 });

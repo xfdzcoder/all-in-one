@@ -12,6 +12,27 @@ async function login(page: Page) {
   await page.waitForSelector(".grid-stack", { timeout: 15_000 });
 }
 
+/** J2 前置：把首页布局重置为默认 seed（对齐 apps/server/src/dashboard/seed.ts）。
+ *  旅程定义为「默认布局 → 编辑 → 拖拽 → 保存 → 恢复」；历史运行留下的布局会
+ *  占用拖拽落点（gridstack 50% 碰撞规则），重置后旅程可重复执行。 */
+async function resetHomeLayout(page: Page) {
+  const seed = [
+    { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+    { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+    { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+    { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+    { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+  ];
+  const dashboards = (await (await page.request.get("/api/dashboards")).json()) as Array<{
+    id: string;
+    title: string;
+  }>;
+  const home = dashboards.find((d) => d.title === "首页");
+  await page.request.put(`/api/dashboards/${home!.id}/layout`, {
+    data: { layoutJson: JSON.stringify(seed) },
+  });
+}
+
 test("J1 first-run: login lands on default dashboard with example widgets", async ({ page }) => {
   await login(page);
   // 默认首页 + 示例组件（含 D8 首版 todo/rss）
@@ -23,6 +44,10 @@ test("J1 first-run: login lands on default dashboard with example widgets", asyn
 
 test("J2 edit → drag → auto-save → reload restores layout", async ({ page }) => {
   await login(page);
+  await resetHomeLayout(page);
+  await page.reload();
+  await page.waitForSelector(".grid-stack", { timeout: 15_000 });
+  await page.waitForTimeout(500);
   await page.getByRole("button", { name: "编辑布局" }).click();
   await page.waitForTimeout(400);
 
@@ -56,13 +81,18 @@ test("J2b add widget persists with props after reload", async ({ page }) => {
   await page.getByRole("button", { name: "编辑布局" }).click();
   await page.waitForTimeout(400);
   const before = await page.locator(".grid-stack-item").count();
+  // FR-W2：选择器 → 占位组件 → configSchema 表单填标题 → 确认添加
   await page.getByRole("button", { name: "添加组件" }).click();
-  await page.waitForTimeout(400);
+  await page.getByRole("button", { name: "占位组件" }).click();
+  const title = `N-${Date.now().toString(36).slice(-4)}`;
+  await page.locator(".mantine-Modal-root").getByLabel("标题").fill(title);
+  await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(1500); // debounce save
   await page.reload();
   await page.waitForSelector(".grid-stack", { timeout: 15_000 });
   await page.waitForTimeout(500);
   expect(await page.locator(".grid-stack-item").count()).toBe(before + 1);
+  await expect(page.getByText(title)).toBeVisible(); // props round-trip
 });
 
 test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({ page }) => {
@@ -82,13 +112,14 @@ test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({
   });
   expect(small).toBe(0);
   // 组件内操作：Todo 新增（按专属 placeholder 定位，scoped 到同一 widget）
+  const title = `手机任务-${Date.now().toString(36).slice(-4)}`; // 任务归 Workspace，标题需按轮唯一
   const todoBox = page
     .locator(".grid-stack-item")
     .filter({ has: page.locator('input[placeholder="新任务…"]') })
     .first();
-  await todoBox.locator('input[placeholder="新任务…"]').fill("手机任务");
+  await todoBox.locator('input[placeholder="新任务…"]').fill(title);
   await todoBox.getByRole("button", { name: "添加", exact: true }).click();
-  await expect(page.getByText("手机任务")).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
 });
 
 test("J4 data/view separation: two todo widgets share Workspace state", async ({ page }) => {
@@ -96,7 +127,9 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   // 页面 A：添加 Todo（filter=open）并新建任务
   await page.getByRole("button", { name: "编辑布局" }).click();
   await page.waitForTimeout(400);
-  await page.getByRole("button", { name: "添加 Todo" }).click();
+  await page.getByRole("button", { name: "添加组件" }).click();
+  await page.getByRole("button", { name: "个人 Todo" }).click();
+  await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(800);
 
   const title = `J4-${Date.now().toString(36)}`;
@@ -115,7 +148,9 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   await page.waitForTimeout(800);
   await page.getByRole("button", { name: "编辑布局" }).click();
   await page.waitForTimeout(400);
-  await page.getByRole("button", { name: "添加 Todo" }).click();
+  await page.getByRole("button", { name: "添加组件" }).click();
+  await page.getByRole("button", { name: "个人 Todo" }).click();
+  await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(1500);
   const todoB = page
     .locator(".grid-stack-item")

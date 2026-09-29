@@ -38,6 +38,15 @@ const clickBtn = (label, exact = false) =>
 const openTodos = () =>
   page.$$eval('.grid-stack-item input[placeholder="新任务…"]', (els) => els.length);
 
+/** FR-W2 选择器流程：添加组件 → 选 manifest → configSchema 表单（默认值）→ 确认添加。 */
+const addWidgetViaPicker = async (name) => {
+  if (!(await clickBtn("添加组件"))) return false;
+  await sleep(300);
+  if (!(await clickBtn(name))) return false;
+  await sleep(300);
+  return clickBtn("确认添加", true);
+};
+
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await page.waitForSelector("input[autocomplete=username]");
@@ -49,7 +58,7 @@ try {
   // page A (首页): edit → add Todo widget
   ok("J4 enter edit A", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("J4 add Todo on page A", await clickBtn("添加 Todo"));
+  ok("J4 add Todo on page A", await addWidgetViaPicker("个人 Todo"));
   await sleep(1200); // portal render + hydration
   const todoInputsA = await openTodos();
   ok("J4 Todo widget renders on page A", todoInputsA >= 1, `inputs=${todoInputsA}`);
@@ -83,7 +92,7 @@ try {
   await sleep(800);
   ok("J4 enter edit B", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("J4 add Todo on page B", await clickBtn("添加 Todo"));
+  ok("J4 add Todo on page B", await addWidgetViaPicker("个人 Todo"));
   await sleep(1500); // portal render + SSE round-trip
 
   // task created on A must appear on B WITHOUT reload (SSE invalidation + query)
