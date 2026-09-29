@@ -7,7 +7,7 @@
 | 文档 | 内容 | 状态 |
 |---|---|---|
 | [01-requirements.md](01-requirements.md) | 产品需求规格 v1.0（目标/非目标、概念模型、场景、功能与非功能需求、组件系统、集成、安全） | 冻结 |
-| [02-decisions.md](02-decisions.md) | 决策日志 D1–D28（ADR 风格：背景/决策/影响/被否备选） | 随决策追加 |
+| [02-decisions.md](02-decisions.md) | 决策日志 D1–D29（ADR 风格：背景/决策/影响/被否备选） | 随决策追加 |
 | [03-tech-analysis.md](03-tech-analysis.md) | 关键技术问题分析 K1–K8（可选方案、优缺点、风险） | 对比过程文档，结论见 04 |
 | [04-tech-stack.md](04-tech-stack.md) | 技术方案选型与总体架构（已冻结） | 冻结 |
 | [05-mvp.md](05-mvp.md) | MVP 定义与里程碑切分（M0–M3、验收映射、出口标准） | 定稿 |
