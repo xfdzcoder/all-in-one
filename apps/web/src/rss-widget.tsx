@@ -21,6 +21,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
   const [newUrl, setNewUrl] = useDraft();
   const [newTitle, setNewTitle] = useDraft();
   const [detail, setDetail] = useState<FeedItem | null>(null);
+  const [unsub, setUnsub] = useState<FeedSource | null>(null);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -104,13 +105,35 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
         <Group gap={4}>
           {(sources.data ?? []).map((s: FeedSource) => (
             <Badge key={s.id} size="xs" variant="outline" style={{ cursor: "pointer" }}
-              onClick={() => removeSource.mutate(s.id)}
+              onClick={() => setUnsub(s)}
               title="点击退订"
             >
               {s.title} ×
             </Badge>
           ))}
         </Group>
+      )}
+      {unsub && (
+        <Modal opened onClose={() => setUnsub(null)} title="确认操作" size="sm">
+          <Text size="sm">
+            确认退订「{unsub.title}」？（已读标记保留，可随时重新订阅）
+          </Text>
+          <Group gap="xs" mt="sm">
+            <Button
+              size="xs"
+              color="red"
+              onClick={() => {
+                removeSource.mutate(unsub.id);
+                setUnsub(null);
+              }}
+            >
+              确认
+            </Button>
+            <Button size="xs" variant="default" onClick={() => setUnsub(null)}>
+              取消
+            </Button>
+          </Group>
+        </Modal>
       )}
       {detail && (
         <Modal opened onClose={() => setDetail(null)} title="文章详情" size="lg">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@mantine/core";
 
 import type { TodoItem } from "./api";
+import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
@@ -78,9 +79,13 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
               >
                 {t.title}
               </Text>
-              <Button size="compact-xs" variant="subtle" color="red" onClick={() => remove.mutate(t.id)}>
-                ×
-              </Button>
+              <ConfirmAction
+                label="×"
+                size="compact-xs"
+                variant="subtle"
+                message={`确认删除任务「${t.title}」？（不可恢复）`}
+                onConfirm={() => remove.mutate(t.id)}
+              />
             </Group>
           </List.Item>
         ))}
