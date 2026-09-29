@@ -224,6 +224,14 @@
 - **影响**：PluginFrame 桥接动作 → `POST /api/plugins/:id/actions`；插件可安全驱动 Workspace 写操作（如"一键建任务"），与 D24 ABI 的 actions 白名单闭环；至此 Q5（代码级插件）Q5a–Q5d 全部完成。
 - **被否备选**：在沙箱/宿主 realm 执行插件传来的代码（等同 RCE，直接否决）；动作名自由映射到任意 REST（绕过白名单语义）；参数完整入日志做审计（违背日志保密基线）；插件自带服务端逻辑（K7 明确最后考虑）。
 
+## D28 · 组件自配置写回：gridstack 节点 props + 宿主 requestSave 服务
+
+- **状态**：已决
+- **背景**：Q6b 看板组件需要"组件内选看板"（属组件配置，非临时状态）且要随布局持久化。布局 JSON 保存由宿主（Board）按防抖触发，组件自身无法触达；gridstack 的 `useWidgetSerializer` 合并发生在 save 时，但改状态不会触发 save。需要统一一条"组件改写自身配置"的通路。
+- **决策**：组件内配置变更 = `grid.update(node.el, { props })` 写回节点（宿主据 updateCB 重渲染）+ 调用宿主注入的 `requestSave()`（WidgetEditContext 新增的宿主服务，指向 Board 的防抖保存，FR-P4）。配置弹窗（FR-W4）与组件内写回共用同一 props 通路；Workspace 数据仍走 REST/SSE，不混入 props。
+- **影响**：任意组件可安全地把"视图选择"沉淀为配置（如看板选择）；`WidgetEditContext` 从"编辑态开关"演进为**宿主服务**上下文（editMode / onConfigure / requestSave）。实现注意：React 的 setState updater 会在渲染期重放，**事件对象属性（`e.currentTarget`）不得在 updater 内读取**（否则 null 崩溃）——已在 Q6b 踩坑并修复。
+- **被否备选**：`useWidgetSerializer`（不触发保存，需配合 requestSave，徒增一层）；仅配置弹窗可选看板（组件内切换体验差）；组件直连布局保存 API（破坏"宿主持有布局"边界）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
