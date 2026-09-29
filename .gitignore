@@ -13,3 +13,7 @@ dist/
 # IDE / 工具本地状态
 .idea/
 .mimocode/
+
+# test artifacts
+apps/web/test-results/
+apps/web/playwright-report/

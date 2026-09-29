@@ -1,6 +1,8 @@
 import cookie from "@fastify/cookie";
 import Fastify, { type FastifyInstance } from "fastify";
 import { lt } from "drizzle-orm";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 import { openApiDoc } from "./api/openapi.ts";
 import { ensureInitialUser } from "./auth/ensure-user.ts";
@@ -25,7 +27,23 @@ export type AppDeps = {
 };
 
 export function buildApp(deps: AppDeps): FastifyInstance {
-  const app = Fastify({ logger: true });
+  // NFR6：结构化日志脱敏 —— 敏感字段永不落日志（SEC3 附带）
+  const app = Fastify({
+    logger: {
+      level: process.env.LOG_LEVEL ?? "info",
+      redact: {
+        paths: [
+          "req.headers.authorization",
+          "req.headers.cookie",
+          "req.body.password",
+          "req.body.secret",
+          "req.body.apiToken",
+          "req.body.token",
+        ],
+        censor: "[REDACTED]",
+      },
+    },
+  });
 
   app.register(cookie, {});
 
@@ -43,8 +61,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerAuthRoutes(app);
   registerDashboardRoutes(app);
   registerDataRoutes(app, dataChannel);
-  registerCredentialRoutes(app);
-  // Todo 变更 → 失效缓存 + SSE 广播（FR-I6 双页面同步）
+  registerCredentialRoutes(app);  // Todo 变更 → 失效缓存 + SSE 广播（FR-I6 双页面同步）
   registerTodoRoutes(app, () => {
     dataChannel.cache.clear();
     dataChannel.bus.publish("todo");
@@ -54,6 +71,31 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     dataChannel.cache.clear();
     dataChannel.bus.publish("rss");
   });
+
+  // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
+  const publicDir = process.env.PUBLIC_DIR;
+  if (publicDir && existsSync(publicDir)) {
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith("/api/")) {
+        reply.code(404).send({ error: "not found" });
+        return;
+      }
+      const filePath = path.join(publicDir, req.url.replace(/^\//, ""));
+      if (req.url !== "/" && existsSync(filePath)) {
+        const ext = path.extname(filePath);
+        const types: Record<string, string> = {
+          ".js": "text/javascript",
+          ".css": "text/css",
+          ".svg": "image/svg+xml",
+          ".png": "image/png",
+          ".html": "text/html",
+        };
+        reply.type(types[ext] ?? "application/octet-stream").send(readFileSync(filePath));
+        return;
+      }
+      reply.type("text/html").send(readFileSync(path.join(publicDir, "index.html")));
+    });
+  }
   return app;
 }
 

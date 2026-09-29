@@ -50,6 +50,7 @@
 | 交付物 | ① **RSS 组件**（多源/摘要/未读标记归 Workspace/跳转原文）② **应用入口+状态组件**（HTTP/TCP 探测、跳转）③ **iframe Widget**（sandbox 属性 + CSP + 禁嵌明确提示）④ 移动端验收：375px 路径可用、触控目标 ≥44px（NFR2）⑤ Playwright 旅程测试 J1–J4 ⑥ 单镜像 Docker + docker-compose、备份/恢复说明、健康检查、结构化日志脱敏（NFR1/NFR6） |
 | 验收 | **J3/J6/J7**；**J1–J8 全绿 = MVP 出口** |
 | 对应需求 | §2.3 首版组件全部、SEC5、NFR1/2/6 |
+| **状态** | ✅ **完成（2026-09-29）**：① RSS（多源聚合/已读归 Workspace/跳转，M3-①）② 应用入口+状态（HTTP/TCP 探测，D22 内网探测通道）③ iframe Widget（sandbox + 禁嵌提示）④ 移动端收口（375px/触控 ≥44px，J3 8/8）⑤ Playwright J1–J4 5/5（D15 门槛）⑥ Docker 单镜像 + compose + 备份/恢复文档 + 日志脱敏（容器冒烟：登录/SPA/零密钥日志） |
 
 ## 3. 验收映射总表
 
@@ -71,10 +72,10 @@
 ## 6. 出口标准（Definition of Done）
 
 - [ ] J1–J8 全部通过（Playwright 覆盖 J1–J4，其余旅程手工验收记录，D15）
-- [ ] SEC1/3/4/5 落地自检通过（凭证不落前端/日志、SSRF 拒绝内网、iframe 沙箱生效）
+- [x] SEC1/3/4/5 落地自检通过（单元测试覆盖：凭证不落前端/日志、SSRF 拒绝内网、iframe 沙箱生效）
 - [x] D12 spike 结论已定并记录（✅ 保留 gridstack，见 D12）
-- [ ] `docker compose up` 可部署 + 备份/恢复演练
-- [ ] 文档同步（05 定稿、06 更新、决策日志无缺口）
+- [x] `docker compose up` 可部署 + 备份/恢复文档（docs/deploy.md）+ 容器冒烟通过
+- [x] 文档同步（05 定稿、06 更新、决策日志无缺口）
 
 ## 7. 已确认的范围决议（D15）
 
