@@ -37,6 +37,9 @@ const PERMISSION_KEYS = ["apis", "credentialKinds", "actions"] as const;
 export const PLUGIN_ENTRY_PATTERN = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*\.m?js$/;
 export const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
 
+/** 宿主 ABI 版本（D24）：插件 plugin.apiVersion 的主版本须与之一致才可安装/启用。 */
+export const HOST_API_VERSION = "1.0.0";
+
 /** 入口路径安全：形状合法 + 禁止 `.`/`..`/隐藏段（绝对路径与穿越均被拒）。 */
 export function isSafePluginEntry(entry: string): boolean {
   return (

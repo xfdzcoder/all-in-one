@@ -29,6 +29,13 @@
       "when": 1790686470344,
       "tag": "0003_petite_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790699468804,
+      "tag": "0004_military_shiver_man",
+      "breakpoints": true
     }
   ]
 }

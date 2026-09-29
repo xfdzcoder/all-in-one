@@ -20,6 +20,7 @@ import { LAYOUT_SCHEMA_VERSION, session } from "./db/schema.ts";
 import { registerCredentialRoutes } from "./credentials/routes.ts";
 import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
+import { registerPluginRoutes } from "./plugin/routes.ts";
 
 export type AppDeps = {
   db: Db;
@@ -71,6 +72,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     dataChannel.cache.clear();
     dataChannel.bus.publish("rss");
   });
+  // 插件管理（FR-W6 安装/卸载；启用/禁用随运行时加载实现）
+  registerPluginRoutes(app);
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;

@@ -48,6 +48,7 @@ export {
   isPluginManifest,
   isSafePluginEntry,
   validatePluginManifest,
+  HOST_API_VERSION,
   PLUGIN_ENTRY_PATTERN,
   SEMVER_PATTERN,
 } from "./plugin.ts";

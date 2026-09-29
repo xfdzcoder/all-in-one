@@ -154,3 +154,33 @@ export type FeedSource = typeof feedSource.$inferSelect;
 export type NewFeedSource = typeof feedSource.$inferInsert;
 export type FeedRead = typeof feedRead.$inferSelect;
 export type NewFeedRead = typeof feedRead.$inferInsert;
+
+/**
+ * 代码级插件注册表（FR-W5③/FR-W6，D24 ABI）。
+ * 插件包（zip）安装时解析 manifest.json → validatePluginManifest → 落盘
+ * dataDir/plugins/<id>/ 并登记本表；删除插件 = 卸载（FR-W6），不动任何业务数据。
+ */
+export const plugin = sqliteTable(
+  "plugin",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (NFR5/D21). */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** manifest.type —— 与内置组件/其它插件全局唯一。 */
+    type: text("type").notNull().unique(),
+    name: text("name").notNull(),
+    /** PluginManifest JSON（含权限声明 FR-W7，公开元数据，非机密）。 */
+    manifestJson: text("manifest_json").notNull(),
+    /** 安装目录名（相对 dataDir/plugins；运行时据此加载 plugin.entry）。 */
+    dir: text("dir").notNull(),
+    /** installed | enabled | disabled（FR-W6；启用/禁用随运行时加载实现）。 */
+    status: text("status").notNull().default("installed"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("plugin_user_id_idx").on(t.userId)],
+);
+
+export type Plugin = typeof plugin.$inferSelect;
+export type NewPlugin = typeof plugin.$inferInsert;
