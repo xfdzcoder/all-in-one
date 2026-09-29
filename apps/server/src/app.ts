@@ -22,10 +22,14 @@ import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
+import { registerMailRoutes } from "./mail/routes.ts";
+import type { MailClientFactory } from "./mail/client.ts";
 
 export type AppDeps = {
   db: Db;
   dataChannel?: DataChannelDeps;
+  /** 邮件客户端工厂（默认 imapflow 适配器；测试注入假客户端）。 */
+  mailClientFactory?: MailClientFactory;
 };
 
 export function buildApp(deps: AppDeps): FastifyInstance {
@@ -82,6 +86,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerKanbanRoutes(app, () => {
     dataChannel.bus.publish("kanban");
   });
+  // 邮件只读聚合（Q7a）：账号管理 + 列表/正文，无写邮箱端点（D3）
+  registerMailRoutes(app, { clientFactory: deps.mailClientFactory });
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;

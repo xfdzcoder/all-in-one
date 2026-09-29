@@ -43,6 +43,13 @@
       "when": 1790703005225,
       "tag": "0005_known_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790705195487,
+      "tag": "0006_stale_crusher_hogan",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^24.13.3",
     "drizzle-kit": "^0.31.11",
     "oxlint": "^1.81.0",
@@ -27,6 +28,8 @@
     "fast-xml-parser": "^5.11.1",
     "fastify": "^5.12.5",
     "fflate": "^0.8.3",
+    "imapflow": "^2.1.2",
+    "mailparser": "^3.9.31",
     "zod": "^4.6.5"
   }
 }

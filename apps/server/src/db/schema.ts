@@ -256,3 +256,31 @@ export type KanbanColumn = typeof kanbanColumn.$inferSelect;
 export type NewKanbanColumn = typeof kanbanColumn.$inferInsert;
 export type KanbanCard = typeof kanbanCard.$inferSelect;
 export type NewKanbanCard = typeof kanbanCard.$inferInsert;
+
+/**
+ * 邮件账号（二期 Q7a，只读聚合 01 FR-E3/§2.3；D21：user_id 代位 Workspace 归属）。
+ * 密码/应用专用密码存凭证库（SEC3）——本表只存 credential_id 引用，明文永不落库。
+ * D3 边界：**只读** —— 不发送、不删除、不回写 IMAP 状态（无 SEEN 标记）。
+ */
+export const mailAccount = sqliteTable("mail_account", {
+  id: text("id").primaryKey(),
+  /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  host: text("host").notNull(),
+  port: integer("port").notNull().default(993),
+  /** ssl | starttls | plain（默认 ssl:993）。 */
+  security: text("security").notNull().default("ssl"),
+  username: text("username").notNull(),
+  /** 凭证库引用（credential.id）——密码/应用专用密码（SEC3，软引用）。 */
+  credentialId: text("credential_id"),
+  /** 抓取文件夹（默认 INBOX）。 */
+  folder: text("folder").notNull().default("INBOX"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export type MailAccount = typeof mailAccount.$inferSelect;
+export type NewMailAccount = typeof mailAccount.$inferInsert;
