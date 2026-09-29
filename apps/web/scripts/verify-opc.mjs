@@ -164,10 +164,21 @@ try {
   await page.keyboard.press("Escape");
   await sleep(300);
 
-  // 刷新按钮（数据通道有 5s 最小间隔限流 —— 等待间隔后手动刷新应回源）
+  // 刷新按钮（数据通道有 5s 最小间隔限流 —— 等待间隔后手动刷新应回源；scoped 到本组件）
   seenAuth = null;
   await sleep(5200);
-  ok("OPC refresh button", await clickBtn("刷新"));
+  ok(
+    "OPC refresh button",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
+        (i.textContent ?? "").includes("OpenCode 会话"),
+      );
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "刷新");
+      if (!btn) return false;
+      btn.click();
+      return true;
+    }),
+  );
   await sleep(1500);
   ok("OPC refresh refetches", seenAuth === "Bearer sk-opc", String(seenAuth));
 

@@ -53,6 +53,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
+let listCalls = 0;
 
 const clickBtn = (label, exact = false) =>
   page.evaluate(
@@ -136,6 +137,22 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
+  // 消息 API 用夹具拦截（IMAP 路径由服务层单测覆盖）——从一开始就拦截：
+  // 真实 IMAP 尝试又慢又会在迟到时覆盖夹具结果（retry 与查询竞态）
+  await page.setRequestInterception(true);
+  page.on("request", (req) => {
+    const url = req.url();
+    if (url.includes("/api/mail/messages/") && /\/\d+$/.test(url)) {
+      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(bodyFixture) });
+    } else if (url.includes("/api/mail/messages")) {
+      // 首次返回空列表（空态提示可断言），此后返回夹具
+      listCalls += 1;
+      const payload = listCalls === 1 ? { items: [], errors: [] } : listFixture;
+      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+    } else {
+      void req.continue();
+    }
+  });
   // 添加邮件组件
   ok("MAIL enter edit", await clickBtn("编辑布局"));
   await sleep(300);
@@ -171,22 +188,21 @@ try {
     accountsRes.body.slice(0, 120),
   );
 
-  // 消息 API 用夹具拦截（IMAP 路径由服务层单测覆盖）
-  await page.setRequestInterception(true);
-  page.on("request", (req) => {
-    const url = req.url();
-    if (url.includes("/api/mail/messages/") && /\/\d+$/.test(url)) {
-      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(bodyFixture) });
-    } else if (url.includes("/api/mail/messages")) {
-      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(listFixture) });
-    } else {
-      void req.continue();
-    }
-  });
-  // 关闭管理弹窗（Esc）→ 刷新列表
+  // 关闭管理弹窗（Esc）→ 刷新列表（scoped：页面上其它组件也有「刷新」按钮）
   await page.keyboard.press("Escape");
   await sleep(300);
-  ok("MAIL refresh list", await clickBtn("刷新"));
+  ok(
+    "MAIL refresh list",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
+        (i.textContent ?? "").includes("管理账号"),
+      );
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "刷新");
+      if (!btn) return false;
+      btn.click();
+      return true;
+    }),
+  );
   await sleep(800);
 
   const bodyText = await page.evaluate(() => document.body.textContent ?? "");

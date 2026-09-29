@@ -1,4 +1,4 @@
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group, Stack, Text } from "@mantine/core";
 
 import { useAppLauncher } from "./data-hooks";
 
@@ -26,7 +26,7 @@ function parseItems(json: string | undefined): LaunchItem[] {
 
 export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { refreshSec?: number }) {
   const items = parseItems(itemsJson);
-  const { data, loading, error } = useAppLauncher(items, refreshSec);
+  const { data, loading, error, refresh } = useAppLauncher(items, refreshSec);
 
   return (
     <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
@@ -39,6 +39,9 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
             {data.up}/{data.total} 在线
           </Badge>
         )}
+        <Button size="compact-xs" variant="subtle" onClick={refresh}>
+          刷新
+        </Button>
       </Group>
       {loading && <Text size="xs" c="dimmed">探测中…</Text>}
       {error && <Text size="xs" c="red">{error}</Text>}

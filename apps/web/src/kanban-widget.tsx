@@ -32,7 +32,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const { grid } = useGridStack();
   const { node } = useGridStackItem();
   const { boards, refresh: refreshBoards } = useKanbanBoards();
-  const { tree, error } = useKanbanTree(boardId, refreshSec);
+  const { tree, error, loading, refresh } = useKanbanTree(boardId, refreshSec);
   const m = useKanbanMutations(boardId);
   const [newBoard, setNewBoard] = useState("");
   const [newColumn, setNewColumn] = useState("");
@@ -98,6 +98,9 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         <Button size="compact-xs" variant="light" onClick={() => void createBoardAndSelect()}>
           新建看板
         </Button>
+        <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
+          刷新
+        </Button>
         {archivedCount > 0 && (
           <Text size="xs" c="dimmed">
             已归档 {archivedCount}
@@ -113,6 +116,11 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
       {boardId && editMode && (
         <Text size="xs" c="dimmed">
           编辑模式：拖动 = 调整布局，卡片暂不可拖（完成后可拖动卡片，或用卡片内「移动到」）
+        </Text>
+      )}
+      {loading && (
+        <Text size="xs" c="dimmed">
+          加载中…
         </Text>
       )}
       {error && (

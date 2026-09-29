@@ -168,6 +168,13 @@ describe("mail read-only aggregation (Q7a, D3/SEC3/SEC4)", () => {
     expect(calls.find((c) => c.host === HOST_A)?.password).toBe(PASSWORD);
   });
 
+  it("force=1 bypasses the list cache (manual refresh, FR-I3)", async () => {
+    calls.length = 0;
+    await req("GET", "/api/mail/messages?limit=10&force=1");
+    const hosts = calls.map((c) => c.host);
+    expect(hosts.filter((h) => h === HOST_A)).toHaveLength(1);
+  });
+
   it("returns message body with truncation and resolves password per account", async () => {
     const res = await req("GET", `/api/mail/messages/${idA}/1`);
     expect(res.statusCode).toBe(200);

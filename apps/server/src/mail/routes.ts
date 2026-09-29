@@ -37,6 +37,8 @@ const bodyParams = z.object({
 const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
   account: z.string().max(64).optional(),
+  /** 手动刷新：force=1 穿透列表缓存（FR-I3）。 */
+  force: z.string().optional(),
 });
 
 export function registerMailRoutes(
@@ -80,6 +82,7 @@ export function registerMailRoutes(
         limit: q.data.limit,
         accountIds: q.data.account ? [q.data.account] : undefined,
         clientFactory: deps.clientFactory,
+        force: q.data.force === "1",
       });
     } catch (e) {
       if (e instanceof MailError) return reply.code(e.status).send({ error: e.message });

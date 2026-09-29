@@ -153,7 +153,13 @@ async function assertReachable(account: MailAccount): Promise<void> {
 export async function fetchMessages(
   db: Db,
   userId: string,
-  opts: { accountIds?: string[]; limit?: number; clientFactory?: MailClientFactory } = {},
+  opts: {
+    accountIds?: string[];
+    limit?: number;
+    clientFactory?: MailClientFactory;
+    /** 手动刷新：穿透 60s 列表缓存（FR-I3）。 */
+    force?: boolean;
+  } = {},
 ): Promise<MailAgg> {
   const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
   const all = await listAccounts(db, userId);
@@ -168,7 +174,7 @@ export async function fetchMessages(
     selected.map(async (account) => {
       const cacheKey = `${account.id}:${account.folder}:${limit}`;
       const cached = listCache.get(cacheKey);
-      if (cached && Date.now() - cached.at < LIST_TTL_MS) {
+      if (!opts.force && cached && Date.now() - cached.at < LIST_TTL_MS) {
         items.push(...cached.items.map((i) => ({ ...i, accountId: account.id, accountName: account.name })));
         return;
       }

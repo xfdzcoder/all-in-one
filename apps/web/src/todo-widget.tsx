@@ -16,7 +16,7 @@ export type TodoConfig = {
  * 第三方数据类组件（custom-api）走服务端 connector 数据通道（M2-⑤）。
  */
 export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: TodoConfig & { refreshSec?: number }) {
-  const { data, loading, error } = useTodos(list, refreshSec);
+  const { data, loading, error, refresh } = useTodos(list, refreshSec);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
 
@@ -24,9 +24,14 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
 
   return (
     <Stack gap="xs" style={{ height: "100%", overflow: "auto", padding: 4 }}>
-      <Text size="sm" fw={600}>
-        Todo · {list}
-      </Text>
+      <Group gap={6}>
+        <Text size="sm" fw={600} style={{ flex: 1 }}>
+          Todo · {list}
+        </Text>
+        <Button size="compact-xs" variant="subtle" onClick={refresh}>
+          刷新
+        </Button>
+      </Group>
       <Group gap="xs">
         <TextInput
           size="xs"

@@ -1,4 +1,4 @@
-import { Badge, Group, JsonInput, Stack, Table, Text } from "@mantine/core";
+import { Badge, Button, Group, JsonInput, Stack, Table, Text } from "@mantine/core";
 
 import { useCustomApiData } from "./data-hooks";
 
@@ -41,9 +41,9 @@ export function CustomApiWidget(props: CustomApiConfig) {
         <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
           自定义 API
         </Text>
-        <Badge size="xs" variant="light" style={{ cursor: "pointer" }} onClick={refresh}>
+        <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
-        </Badge>
+        </Button>
       </Group>
       {loading && <Text size="xs" c="dimmed">加载中…</Text>}
       {error && (

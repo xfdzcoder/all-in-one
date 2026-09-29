@@ -190,10 +190,11 @@ export const api = {
     folder?: string;
   }) => req<MailAccountRow>("POST", "/api/mail/accounts", input),
   deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
-  mailMessages: (opts: { account?: string; limit?: number } = {}) => {
+  mailMessages: (opts: { account?: string; limit?: number; force?: boolean } = {}) => {
     const q = new URLSearchParams();
     if (opts.account) q.set("account", opts.account);
     if (opts.limit) q.set("limit", String(opts.limit));
+    if (opts.force) q.set("force", "1");
     const suffix = q.toString() ? `?${q.toString()}` : "";
     return req<MailAgg>("GET", `/api/mail/messages${suffix}`);
   },

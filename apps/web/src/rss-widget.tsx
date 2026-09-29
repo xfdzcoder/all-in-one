@@ -13,7 +13,7 @@ export type RssConfig = {
 };
 
 export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig & { refreshSec?: number }) {
-  const { data, loading, error } = useFeeds(limit, refreshSec);
+  const { data, loading, error, refresh } = useFeeds(limit, refreshSec);
   const sources = useFeedSources();
   const { markRead, addSource, removeSource } = useFeedMutations();
   const [newUrl, setNewUrl] = useDraft();
@@ -27,6 +27,9 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           信息流
         </Text>
+        <Button size="compact-xs" variant="subtle" onClick={refresh}>
+          刷新
+        </Button>
         <Badge size="xs" variant="light">
           未读 {data?.unread ?? 0}
         </Badge>

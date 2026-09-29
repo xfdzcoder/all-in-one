@@ -43,7 +43,10 @@ export function useSseInvalidation(): void {
 }
 
 /** Todo 数据（走 REST，变更经 SSE 让其它页面的组件同步 —— J4）。 */
-export function useTodos(list?: string, refreshSec?: unknown): WidgetDataState<TodoItem[]> {
+export function useTodos(list?: string, refreshSec?: unknown): WidgetDataState<TodoItem[]> & {
+  refresh: () => void;
+} {
+  const qc = useQueryClient();
   const query = useQuery({
     queryKey: ["todos", list ?? "all"],
     queryFn: () => api.listTodos(list),
@@ -54,6 +57,7 @@ export function useTodos(list?: string, refreshSec?: unknown): WidgetDataState<T
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
+    refresh: () => void qc.invalidateQueries({ queryKey: ["todos"] }),
   };
 }
 
@@ -98,14 +102,21 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
-    refresh: () => void qc.invalidateQueries({ queryKey: ["custom-api"] }),
+    refresh: () => {
+      // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
+      void (api.widgetData("custom-api", config, true) as Promise<unknown>).then((d) =>
+        qc.setQueryData(["custom-api", JSON.stringify(config)], d),
+      );
+    },
   };
 }
 
 /** 应用入口探活数据（app-launcher connector —— 内网服务探活，D22）。 */
 export function useAppLauncher(items: Array<{ name: string; url: string }>, refreshSec?: unknown) {
+  const qc = useQueryClient();
+  const key = ["launcher", JSON.stringify(items)];
   const query = useQuery({
-    queryKey: ["launcher", JSON.stringify(items)],
+    queryKey: key,
     queryFn: () =>
       api.widgetData("app-launcher", { items }) as Promise<{
         items: Array<{ name: string; url: string; alive: boolean }>;
@@ -120,6 +131,12 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>, refr
     data: query.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
+    // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
+    refresh: () => {
+      void (api.widgetData("app-launcher", { items }, true) as Promise<unknown>).then((d) =>
+        qc.setQueryData(key, d),
+      );
+    },
   };
 }
 
@@ -241,10 +258,12 @@ export function useMailAccounts() {
   };
 }
 
-/** 聚合邮件列表（只读；服务端 60s 缓存）。 */
+/** 聚合邮件列表（只读；服务端 60s 缓存，手动刷新可 force 穿透）。 */
 export function useMailMessages(account: string | undefined, limit = 20, refreshSec?: unknown) {
+  const qc = useQueryClient();
+  const key = ["mail-messages", account ?? "all", limit];
   const query = useQuery({
-    queryKey: ["mail-messages", account ?? "all", limit],
+    queryKey: key,
     queryFn: () => api.mailMessages({ account, limit }),
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
@@ -253,7 +272,10 @@ export function useMailMessages(account: string | undefined, limit = 20, refresh
     agg: query.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    // 手动刷新 = 强制回源（force 穿透服务端列表缓存）
+    refresh: () => {
+      void api.mailMessages({ account, limit, force: true }).then((d) => qc.setQueryData(key, d));
+    },
   };
 }
 
@@ -339,8 +361,10 @@ export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
 
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
 export function useFeeds(limit: number, refreshSec?: unknown) {
+  const qc = useQueryClient();
+  const key = ["feeds", limit];
   const query = useQuery({
-    queryKey: ["feeds", limit],
+    queryKey: key,
     queryFn: () => api.widgetData("rss", { limit }) as Promise<import("./api").FeedAgg>,
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
@@ -349,6 +373,12 @@ export function useFeeds(limit: number, refreshSec?: unknown) {
     data: query.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
+    // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
+    refresh: () => {
+      void (api.widgetData("rss", { limit }, true) as Promise<unknown>).then((d) =>
+        qc.setQueryData(key, d),
+      );
+    },
   };
 }
 
