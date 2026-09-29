@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（首轮 2026-09-29 启动，队列已同步） |
-| 最近更新 | 2026-09-29（第 22 轮完成 · Q15 ✅ FR-I4 详情弹层；下一项 Q16 页面级设置 + 轮询兜底） |
+| 最近更新 | 2026-09-29（第 23 轮完成 · Q16a ✅ 页面设置（图标/背景）；下一项 Q16b SSE 断线轮询兜底） |
 
 ## 迭代队列
 
@@ -43,7 +43,9 @@
   - [x] Q14b · 手动刷新按钮统一（todo/rss/custom-api/launcher/kanban 补齐 + force 回源语义）+ 状态审计（加载态补 kanban）**✅ 2026-09-29**
 - [x] Q15 · FR-I4 组件内查看详情（抽屉/弹层）——信息流/Todo/自定义 API/OpenCode 四处弹层（capabilities.detail 全部兑现）**✅ 2026-09-29**
 - [ ] Q17 · D31 一致性扫尾：清单内「×删除」等破坏点未过二次确认（Todo 任务删除等）——统一或明确豁免原则
-- [ ] Q16 · FR-P9 页面级设置（图标/背景/列密度）+ FR-I6 轮询兜底（SSE 断线时）【应该】
+- [ ] Q16 · FR-P9 页面级设置 + FR-I6 轮询兜底【应该】（**拆分为 Q16a–Q16b**）
+  - [x] Q16a · 页面设置：图标 + 背景色（列密度不提供——与冻结的 D6/D12 断点模型冲突，已在实现说明中记录）**✅ 2026-09-29**
+  - [ ] Q16b · FR-I6 轮询兜底（SSE 断线/不可用时按间隔失效查询）
 
 ## 历轮记录
 
@@ -71,6 +73,7 @@
 | 20 | 2026-09-29 | **Q14a 刷新频率配置 + 定时刷新（FR-I2/I3）**：`ConfigForm` 在 manifest 声明 `capabilities.refresh` 时渲染标准「刷新频率（秒）」字段（选择器添加表单 + 配置编辑表单通用，存 `props.refreshSec`，下限= minRefreshSec）；全部数据 hooks 接 `refetchInterval`（配置值优先，否则组件 manifest 默认：todo/kanban 60s、launcher 120s、custom-api/rss/mail 300s、opencode 60s；Workspace 组件另有 SSE 同步）。verify-opc 新增 3 项（刷新频率持久化、定时刷新产生数据通道流量且无需手动、双组件分离保证手动刷新断言确定性） | verify-opc 15/15（连跑两轮）✅；全量 15 脚本 280 项 ✅；Playwright 5/5 ✅；Vitest 122/122 ✅；typecheck/lint ✅ | `3dfd187` |
 | 21 | 2026-09-29 | **Q14b 手动刷新统一 + 回源语义（FR-I3 收口）**：todo/rss/custom-api/launcher/kanban 补「刷新」按钮（浏览模式可用；custom-api 的可点 Badge 规范为 Button）；**force 回源语义**——通道型（custom-api/launcher/rss）手动刷新带 force 穿透服务端 TTL，邮件加 `force=1` 穿透列表缓存（服务端 + 单测），REST 型直接重取；kanban 补加载态。verify-fr3 27/27（五按钮存在+可点、todo/kanban 请求计数、custom-api/launcher 刷新达上游 mock = 缓存穿透实证）。**测试竞态修复**：verify-mail 的消息夹具改为从一开始就拦截（真实 IMAP 尝试迟到覆盖查询缓存），首个响应为空保留空态断言；verify-mail/verify-opc 的刷新点击改为组件内定位（新增的共享按钮遮蔽了全文档匹配） | 全量 16 脚本 307 项 ✅；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `0696b8b` |
 | 22 | 2026-09-29 | **Q15 FR-I4 组件内详情（弹层）**：声明 `capabilities.detail` 的四个组件全部兑现——信息流（条目点击→弹层：标题/来源/摘要沙箱渲染+阅读原文；顺带标记已读，S6）、Todo（任务点击→标题/清单/状态/时间）、自定义 API（「详情」→完整响应 JSON，超出模板投影）、OpenCode（会话→ID/创建/更新/耗时）；摘要沙箱抽为共享 `html-sandbox.tsx`（与邮件共用）。verify-i4 21/21（四弹层内容断言 + 摘要注入脚本零执行实证） | 全量 17 脚本 328 项 ✅；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `c924850` |
+| 23 | 2026-09-29 | **Q16a 页面设置（FR-P9）**：重命名弹窗升级为「页面设置」（名称/图标/背景色）——`dashboard.background` 列 + 迁移 0007（drizzle-kit，D18）、patch 面扩展（背景空 = 回落默认底色）；tab 显示图标前缀、活动页背景应用到主区。**列密度不提供**：与冻结的 D6/D12 单布局断点模型冲突（页面列数会破坏跨端布局语义）。dashboard 路由测试补图标/背景置清断言。verify-m1 P9 旅程 8 项（弹窗/tab 图标/计算背景色/刷新持久化） | verify-m1 43/43（连跑两轮）✅；全量 17 脚本 336 项 ✅；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `79b34cb` |
 
 ## 待用户确认
 
