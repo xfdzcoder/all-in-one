@@ -200,6 +200,14 @@
 - **影响**：Q5 后续步骤（上传/校验/存储、运行时沙箱加载、管理页与权限执行）都以本 ABI 为准；权限执行 = 宿主按白名单放行、越权拒绝。06 §1「代码级插件」进入实施。
 - **被否备选**：manifest 不带版本（宿主升级无法判兼容，K3 风险）；权限隐式推断/默认全开（违背 K7 显式最小化）；插件自带服务端 connector 代码（K7 明确最后考虑，最大攻击面）；等待运行时实现后再补契约（D7 明确契约先行）。
 
+## D25 · 插件运行时沙箱：iframe CSP（否决 Web Component）
+
+- **状态**：已决
+- **背景**：Q5c 落地 FR-W7 插件沙箱隔离（FR-W7/K7 已列二选一：iframe CSP / Web Component）。插件是不可信第三方 JS；K7 要求"仅前端渲染 + 宿主统一数据通道、插件不直连第三方"。Web Component/Shadow DOM 只隔离样式、**不隔离 JS**（同 realm，插件可触及宿主 window / 凭证引用 / fetch）。
+- **决策**：**iframe sandbox 沙箱**：`sandbox="allow-scripts"`（不加 allow-same-origin → 不透明源，碰不到宿主 DOM/cookie/storage）+ srcdoc 内 CSP（`default-src 'none'`、`script-src 'nonce-…' data:`、`connect-src 'none'`、`img-src data:`、`frame-src/form-action/base-uri 'none'`）→ 插件**无法发起任何网络请求**（含内网），数据只能由宿主取好后经桥传入；入口模块经 data: URL 在框内 `import()`（自包含、禁止 import 外部模块），源码永不进入宿主 JS 作用域；宿主 ↔ 插件只交换结构化 postMessage（sourceWindow 校验 + `aio-*` 标识）。运行时 ABI：入口默认导出 `render(props, ctx)`（详见 widget-sdk README）。
+- **影响**：启用插件按 manifest.type 动态注册进 components map / 组件选择器 / 配置表单（J8"新增组件不改核心"）；动作按 `permissions.actions` 白名单放行、未声明即拒绝；入口源码以 JSON 下发（不作 JS 资源伺服）。数据桥（capabilities.data）与凭证/权限执行、动作执行通道在 Q5d 随权限执行一并落地。
+- **被否备选**：Web Component + Shadow DOM（JS 同 realm，无隔离）；ShadowRealm（未标准化）；动态 import 进宿主 realm（等同 eval）；iframe 加 allow-same-origin（插件可摸宿主同源资源）；服务端执行插件代码（K7 明确最后考虑，最大攻击面）。
+
 ---
 
 ## 命名约定（非编号决策，已确认）
