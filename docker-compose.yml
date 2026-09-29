@@ -19,10 +19,11 @@ services:
       # 公网化时置 1（SEC6）
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
     volumes:
-      # SQLite 库文件 + 备份落点
+      # SQLite 库文件 + 插件安装目录 + 备份落点
       - ./data:/app/data
-    # 内网探活（app-launcher）需要访问 192.168.x —— 默认即可；
-    # 若改为公网部署，删除下方注释以放行内网出站（SEC4 逃生阀，慎用）：
+    # 内网出站（SEC4 逃生阀，慎用）：app-launcher / iframe 禁嵌检测 / OpenCode 探测
+    # 本就放行内网目标（服务聚合场景，D22/D32）；custom-api 与邮件组件以本机/内网
+    # 服务为目标时才需要置 1：
     # environment:
     #   ALLOW_PRIVATE_OUTBOUND: "1"
 

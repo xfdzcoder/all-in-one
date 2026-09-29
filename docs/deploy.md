@@ -11,9 +11,10 @@ docker compose up -d --build
 # 首次访问 http://192.168.31.133:3000，用 ADMIN_USERNAME/ADMIN_PASSWORD 登录
 ```
 
-- 数据（SQLite）持久化在 `./data/app.db`（含 `-wal`/`-shm`）。
+- 数据（SQLite）持久化在 `./data/app.db`（含 `-wal`/`-shm`）；**插件安装目录 `./data/plugins`** 也在该卷下——备份 `./data` 即覆盖一切。
 - `CREDENTIALS_MASTER_KEY` **必须妥善保存**：丢失后已存第三方凭证无法解密（只能重录）。
 - 健康检查：`GET /api/health`（compose 内置 HEALTHCHECK）。
+- **内网出站（SEC4）**：应用入口探活 / iframe 禁嵌检测 / OpenCode 探测**默认放行内网目标**（服务聚合核心场景，D22/D32）；**custom-api、邮件组件**以本机/内网服务为目标时需设 `ALLOW_PRIVATE_OUTBOUND=1`，否则被 SSRF 基线拒绝。
 
 ## 备份 / 恢复
 
