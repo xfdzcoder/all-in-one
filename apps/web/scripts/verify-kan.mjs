@@ -118,11 +118,8 @@ const dragCardToColumn = (cardTitle, colTitle) =>
       const cardEl = [...document.querySelectorAll(".mantine-Card-root")].find((c) =>
         c.textContent.trim().startsWith(card),
       );
-      const header = [...document.querySelectorAll("input")].find((i) => i.value === col);
-      let colDiv = header ? header.parentElement : null;
-      while (colDiv && colDiv.querySelectorAll('input[placeholder="新卡片"]').length < 1) {
-        colDiv = colDiv.parentElement;
-      }
+      // Q19c：列标题改文本+点击编辑 —— 列容器用 data-col-title 锚定
+      const colDiv = document.querySelector(`[data-col-title="${col}"]`);
       if (!cardEl || !colDiv) return false;
       const dt = new DataTransfer();
       cardEl.dispatchEvent(new DragEvent("dragstart", { dataTransfer: dt, bubbles: true, cancelable: true }));
@@ -136,13 +133,8 @@ const dragCardToColumn = (cardTitle, colTitle) =>
 const cardInColumn = (colTitle, cardTitle) =>
   page.evaluate(
     ({ col, card }) => {
-      const inputs = [...document.querySelectorAll("input")];
-      const header = inputs.find((i) => i.value === col);
-      // 向上找到第一个含"新卡片"输入框的容器 = 该列（避免把整个组件当列）
-      let colDiv = header ? header.parentElement : null;
-      while (colDiv && colDiv.querySelectorAll('input[placeholder="新卡片"]').length < 1) {
-        colDiv = colDiv.parentElement;
-      }
+      // Q19c：列标题改文本+点击编辑 —— 列容器用 data-col-title 锚定
+      const colDiv = document.querySelector(`[data-col-title="${col}"]`);
       return (colDiv?.textContent ?? "").includes(card);
     },
     { col: colTitle, card: cardTitle },
@@ -222,8 +214,11 @@ try {
   ok(
     "KAN columns rendered",
     await page.evaluate(() => {
-      const values = [...document.querySelectorAll("input")].map((i) => i.value);
-      return values.includes("待办") && values.includes("进行中");
+      // Q19c：列标题改文本+点击编辑 —— 按 data-col-title 断言列已渲染
+      const titles = [...document.querySelectorAll("[data-col-title]")].map((e) =>
+        e.getAttribute("data-col-title"),
+      );
+      return titles.includes("待办") && titles.includes("进行中");
     }),
   );
   ok("KAN add card", await fillNth("新卡片", 0, cardA));

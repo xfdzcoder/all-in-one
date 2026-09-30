@@ -4,7 +4,7 @@ import { GridStack, useGridStack } from "gridstack/dist/react";
 import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/dist/react";
 import { Utils } from "gridstack";
 import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/widget-sdk";
-import { Alert, Button, Group, Modal, Text } from "@mantine/core";
+import { Button, Group, Modal, Text } from "@mantine/core";
 
 import { api } from "./api";
 import { FALLBACK_LAYOUT, manifestForComponent, widgetComponents } from "./widget-registry";
@@ -15,6 +15,7 @@ import { ConfigForm } from "./ConfigForm";
 import { PluginFrame } from "./plugin-frame";
 import { usePlugins } from "./data-hooks";
 import { propsWithSecretRefs } from "./config-form-utils";
+import { WbAlert } from "./ui";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -126,7 +127,7 @@ function BoardToolbar({
         </Text>
       )}
       {dirty && (
-        <Text size="xs" c="orange">
+        <Text size="xs" c="dimmed">
           保存中…
         </Text>
       )}
@@ -316,11 +317,7 @@ export function Board({
 
   return (
     <div>
-      {saveError && (
-        <Alert color="red" mb="sm">
-          {saveError}
-        </Alert>
-      )}
+      {saveError && <WbAlert tone="error">{saveError}</WbAlert>}
       <WidgetEditContext.Provider
         value={{ editMode: effectiveEditMode, onConfigure: openConfig, requestSave: scheduleSave }}
       >
@@ -358,11 +355,7 @@ export function Board({
             submitLabel="保存配置"
             refresh={configManifest.capabilities?.refresh}
           />
-          {configError && (
-            <Text size="xs" c="red">
-              {configError}
-            </Text>
-          )}
+          {configError && <WbAlert tone="error" size="sm">{configError}</WbAlert>}
         </Modal>
       )}
     </div>

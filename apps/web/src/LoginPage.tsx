@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, Button, Paper, PasswordInput, Stack, Text, TextInput, Title } from "@mantine/core";
+import { Button, Paper, PasswordInput, Stack, Text, TextInput, Title } from "@mantine/core";
 
 import { api, ApiError } from "./api";
+import { WbAlert } from "./ui";
 
 export function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [username, setUsername] = useState("");
@@ -48,7 +49,7 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
           required
           autoComplete="current-password"
         />
-        {error && <Alert color="red">{error}</Alert>}
+        {error && <WbAlert tone="error">{error}</WbAlert>}
         <Button type="submit" loading={busy}>
           登录
         </Button>

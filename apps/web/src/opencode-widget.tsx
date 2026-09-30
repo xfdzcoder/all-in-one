@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { useOpencodeData, type OpencodeSession } from "./data-hooks";
+import { WbAlert } from "./ui";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -56,16 +57,12 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
         </Text>
       )}
       {error && (
-        <Text size="xs" c="red">
-          {error}
-        </Text>
+        <WbAlert tone="error" size="sm">{error}</WbAlert>
       )}
       {data && !data.probe?.ok && (
-        <Alert color="yellow">
-          <Text size="xs">
-            无法读取 opencode API：{data.probe?.error ?? "未知原因"}（实验性接口，版本不兼容时会在此提示）
-          </Text>
-        </Alert>
+        <WbAlert tone="warning" size="sm">
+          无法读取 opencode API：{data.probe?.error ?? "未知原因"}（实验性接口，版本不兼容时会在此提示）
+        </WbAlert>
       )}
       {loading && (
         <Text size="xs" c="dimmed">

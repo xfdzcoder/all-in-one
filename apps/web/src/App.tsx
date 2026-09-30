@@ -168,12 +168,12 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               onChange={(e) => setNewTitle(e.currentTarget.value)}
               style={{ width: 140 }}
             />
-            <Button size="xs" variant="light" onClick={() => void addDashboard()}>
+            <Button size="xs" onClick={() => void addDashboard()}>
               新建页面
             </Button>
             <Button
               size="xs"
-              variant="light"
+              variant="default"
               disabled={!active}
               onClick={() => {
                 setSettingsTitle(active?.title ?? "");
@@ -184,16 +184,17 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             >
               页面设置
             </Button>
-            <Button size="xs" variant="light" disabled={!active} onClick={() => void moveActive(-1)}>
+            <Button size="xs" variant="default" disabled={!active} onClick={() => void moveActive(-1)}>
               上移
             </Button>
-            <Button size="xs" variant="light" disabled={!active} onClick={() => void moveActive(1)}>
+            <Button size="xs" variant="default" disabled={!active} onClick={() => void moveActive(1)}>
               下移
             </Button>
             {active && dashboards.length > 1 && (
               <ConfirmAction
                 label="删除此页"
                 size="xs"
+                variant="subtle"
                 message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
                 onConfirm={() => void removeActive()}
               />

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Alert, Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
+import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
 import { useMonitorData } from "./data-hooks";
+import { WbAlert } from "./ui";
 
 /**
  * 服务器监控组件（FR：服务器监控；**D36 打通第三方服务，只做连接与展示**）。
@@ -75,15 +76,11 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
           配置监控源地址（如 Glances）后显示指标
         </Text>
       )}
-      {error && (
-        <Text size="xs" c="red">
-          {error}
-        </Text>
-      )}
+      {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {data && !data.probe?.ok && (
-        <Alert color="yellow">
-          <Text size="xs">无法读取监控源：{data.probe?.error ?? "未知原因"}（D36：只做连接与展示）</Text>
-        </Alert>
+        <WbAlert tone="warning" size="sm">
+          无法读取监控源：{data.probe?.error ?? "未知原因"}（D36：只做连接与展示）
+        </WbAlert>
       )}
       {loading && (
         <Text size="xs" c="dimmed">

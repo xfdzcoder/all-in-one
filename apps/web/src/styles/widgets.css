@@ -179,3 +179,180 @@
   flex-wrap: wrap;
   margin-bottom: var(--wb-space-3);
 }
+/* ── 提示条（P1-3 统一错误/警告/信息/成功）──────────────────
+ * 结构：图标（语义色）+ 正文（--wb-color-text，AA 稳）+ 可关。
+ * 三档尺寸靠 .wb-alert--sm/--lg 调节内边距与字号。 */
+.wb-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border: 1px solid var(--wb-color-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-raised);
+  color: var(--wb-color-text);
+  font-size: var(--wb-text-sm);
+}
+
+.wb-alert--sm {
+  padding: var(--wb-space-1) var(--wb-space-2);
+  font-size: var(--wb-text-xs);
+}
+
+.wb-alert__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.wb-alert__text {
+  flex: 1;
+  min-width: 0;
+  line-height: var(--wb-leading);
+}
+
+.wb-alert__close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--wb-radius-sm);
+  color: var(--wb-color-text-muted);
+  font-size: var(--wb-text-md);
+  line-height: 1;
+}
+
+.wb-alert__close:hover {
+  color: var(--wb-color-text);
+  background: var(--wb-color-surface-hover);
+}
+
+.wb-alert--error {
+  border-color: color-mix(in srgb, var(--wb-color-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--wb-color-danger) 12%, var(--wb-color-surface));
+}
+.wb-alert--error .wb-alert__icon { color: var(--wb-color-danger); }
+
+.wb-alert--warning {
+  border-color: color-mix(in srgb, var(--wb-color-warning) 45%, transparent);
+  background: color-mix(in srgb, var(--wb-color-warning) 12%, var(--wb-color-surface));
+}
+.wb-alert--warning .wb-alert__icon { color: var(--wb-color-warning); }
+
+.wb-alert--info {
+  border-color: color-mix(in srgb, var(--wb-color-info) 45%, transparent);
+  background: color-mix(in srgb, var(--wb-color-info) 12%, var(--wb-color-surface));
+}
+.wb-alert--info .wb-alert__icon { color: var(--wb-color-info); }
+
+.wb-alert--success {
+  border-color: color-mix(in srgb, var(--wb-color-success) 45%, transparent);
+  background: color-mix(in srgb, var(--wb-color-success) 12%, var(--wb-color-surface));
+}
+.wb-alert--success .wb-alert__icon { color: var(--wb-color-success); }
+
+/* ── 统计卡网格（P2-5 stat 预设）：标签在上、数值大 ────────── */
+.wb-stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wb-space-2);
+}
+
+.wb-stat-grid .wb-metric {
+  flex: 1 1 110px;
+}
+
+/* ── 占位组件（P2-6）：底色 = 实例配置（数据），经变量绑入可被 CSS 覆盖 ── */
+.wb-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wb-space-2);
+  height: 100%;
+  padding: var(--wb-space-4);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-placeholder-bg, var(--wb-color-accent));
+  color: #fff;
+}
+
+.wb-placeholder__title {
+  font-size: var(--wb-text-xl);
+  font-weight: var(--wb-weight-semibold);
+}
+
+/* ── 看板列头（P1-2）：标题为文本，点击进入编辑 ───────────── */
+.wb-kanban__col {
+  width: 190px;
+  flex-shrink: 0;
+  padding: var(--wb-space-2);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-raised);
+}
+
+.wb-kanban__col-title {
+  flex: 1;
+  min-width: 0;
+  cursor: text;
+  font-size: var(--wb-text-sm);
+  font-weight: var(--wb-weight-semibold);
+  color: var(--wb-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wb-kanban__col-title:hover {
+  color: var(--wb-color-accent-hover);
+}
+
+/* ── iframe 面板（P2-7）：边框 + 加载态；URL 小号次级等宽 ──── */
+.wb-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-raised);
+}
+
+.wb-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.wb-frame__loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wb-color-surface-raised);
+}
+
+.wb-url {
+  font-family: var(--wb-font-mono);
+  font-size: var(--wb-text-xs);
+  color: var(--wb-color-text-muted);
+}
+
+/* ── 工具类（少量，语义明确） ─────────────────────────────── */
+.wb-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-clickable {
+  cursor: pointer;
+}
+
+/* 禁嵌时仍留在 DOM（hidden 判定读元素自身 display），仅视觉移除；
+ * 选择器带上 .wb-frame iframe 以在特异性上压过基础规则（不引入 !important） */
+.wb-frame iframe.wb-frame__el--hidden {
+  display: none;
+}

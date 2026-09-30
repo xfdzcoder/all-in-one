@@ -4,6 +4,7 @@ import { Badge, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/co
 import type { FeedItem, FeedSource } from "./api";
 import { useDraft, useFeeds, useFeedSources, useFeedMutations } from "./data-hooks";
 import { HtmlSandbox } from "./html-sandbox";
+import { WbAlert } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -22,6 +23,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
   const [newTitle, setNewTitle] = useDraft();
   const [detail, setDetail] = useState<FeedItem | null>(null);
   const [unsub, setUnsub] = useState<FeedSource | null>(null);
+  const [subOpen, setSubOpen] = useState(false);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -34,45 +36,51 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
         </Button>
+        <Button size="compact-xs" variant="subtle" onClick={() => setSubOpen((v) => !v)}>
+          {subOpen ? "收起" : "+ 订阅源"}
+        </Button>
         <Badge size="xs" variant="light">
           未读 {data?.unread ?? 0}
         </Badge>
       </Group>
 
-      <Group gap={4} wrap="nowrap">
-        <TextInput
-          size="compact-xs"
-          placeholder="标题"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.currentTarget.value)}
-          style={{ width: 70 }}
-        />
-        <TextInput
-          size="compact-xs"
-          placeholder="https://…/feed.xml"
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.currentTarget.value)}
-          style={{ flex: 1 }}
-        />
-        <Button
-          size="compact-xs"
-          disabled={!newUrl.trim()}
-          onClick={() => {
-            addSource.mutate({ title: newTitle.trim() || "订阅", url: newUrl.trim() });
-            setNewUrl("");
-            setNewTitle("");
-          }}
-        >
-          订阅
-        </Button>
-      </Group>
+      {subOpen && (
+        <Group gap={4} wrap="nowrap">
+          <TextInput
+            size="compact-xs"
+            placeholder="标题"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.currentTarget.value)}
+            style={{ width: 70 }}
+          />
+          <TextInput
+            size="compact-xs"
+            placeholder="https://…/feed.xml"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.currentTarget.value)}
+            style={{ flex: 1 }}
+          />
+          <Button
+            size="compact-xs"
+            disabled={!newUrl.trim()}
+            onClick={() => {
+              addSource.mutate({ title: newTitle.trim() || "订阅", url: newUrl.trim() });
+              setNewUrl("");
+              setNewTitle("");
+              setSubOpen(false);
+            }}
+          >
+            订阅
+          </Button>
+        </Group>
+      )}
 
       {loading && <Text size="xs" c="dimmed">加载中…</Text>}
-      {error && <Text size="xs" c="red">{error}</Text>}
+      {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {(data?.errors?.length ?? 0) > 0 && (
-        <Text size="xs" c="orange">
+        <WbAlert tone="warning" size="sm">
           {data?.errors.length} 个源拉取失败
-        </Text>
+        </WbAlert>
       )}
 
       {items.map((it: FeedItem) => (
@@ -80,11 +88,11 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
           <Badge size="xs" circle color={it.read ? "gray" : "blue"} style={{ marginTop: 4 }}>
             &nbsp;
           </Badge>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="wb-grow">
             <Text
               size="xs"
               fw={it.read ? 400 : 700}
-              style={{ cursor: "pointer" }}
+              className="wb-clickable"
               onClick={() => {
                 // FR-I4：点开详情（弹层）；跳转原文在详情内（S6）
                 if (!it.read) markRead.mutate(it.itemKey);

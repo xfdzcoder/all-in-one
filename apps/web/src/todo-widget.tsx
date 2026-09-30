@@ -4,6 +4,7 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
+import { WbAlert } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
  *  gridstack 直接把布局 JSON 的 props 展开传入，即扁平 config 形态。 */
@@ -62,7 +63,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
         </Button>
       </Group>
       {loading && <Text size="xs" c="dimmed">加载中…</Text>}
-      {error && <Text size="xs" c="red">{error}</Text>}
+      {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <List listStyleType="none" style={{ flex: 1, overflow: "auto" }}>
         {items.map((t) => (
           <List.Item key={t.id}>

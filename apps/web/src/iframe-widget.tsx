@@ -1,6 +1,8 @@
-import { Alert, Badge, Group, Text } from "@mantine/core";
+import { useState } from "react";
+import { Loader, Text } from "@mantine/core";
 
 import { useEmbedCheck } from "./data-hooks";
+import { WbAlert } from "./ui";
 
 /**
  * iframe Widget（FR-J7：sandbox 属性 + CSP + 禁嵌明确提示）。
@@ -20,6 +22,7 @@ const DEFAULT_SANDBOX = "allow-scripts";
 
 export function IframeWidget({ url, sandbox }: IframeConfig) {
   const check = useEmbedCheck(url ?? "");
+  const [loaded, setLoaded] = useState(false);
 
   if (!url) {
     return <Text size="xs" c="dimmed">配置 url 后显示嵌入页面</Text>;
@@ -31,31 +34,36 @@ export function IframeWidget({ url, sandbox }: IframeConfig) {
 
   return (
     <div className="wb-widget">
-      <Group gap={6} mb={4}>
-        <Badge size="xs" variant="light" style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <div className="wb-widget__header">
+        <Text className="wb-url wb-grow" truncate>
           {url}
-        </Badge>
-      </Group>
+        </Text>
+      </div>
       {blocked && (
-        <Alert color="yellow" title="无法嵌入此页面">
+        <WbAlert tone="warning">
+          <strong>无法嵌入此页面</strong>
+          <br />
           目标站点禁止被嵌入（{check.reason}）。请
           <a href={url} target="_blank" rel="noopener noreferrer"> 在新标签页打开</a>
           ，或在目标服务的设置中允许嵌入当前地址。
-        </Alert>
+        </WbAlert>
       )}
-      <iframe
-        src={url}
-        sandbox={sandboxAttr}
-        title="embedded-page"
-        style={{
-          flex: 1,
-          width: "100%",
-          border: 0,
-          borderRadius: 6,
-          background: "#fff",
-          display: blocked ? "none" : "block",
-        }}
-      />
+      <div className="wb-widget__body">
+        <div className="wb-frame">
+          {!loaded && !blocked && (
+            <div className="wb-frame__loader">
+              <Loader size="sm" />
+            </div>
+          )}
+          <iframe
+            src={url}
+            sandbox={sandboxAttr}
+            title="embedded-page"
+            className={blocked ? "wb-frame__el--hidden" : undefined}
+            onLoad={() => setLoaded(true)}
+          />
+        </div>
+      </div>
     </div>
   );
 }

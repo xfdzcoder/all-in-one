@@ -17,6 +17,7 @@ import type { KanbanCardRow } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
 import { WidgetEditContext } from "./widget-edit-context";
+import { WbAlert } from "./ui";
 
 /**
  * Kanban 组件（二期 Q6b）：多项目看板、列与卡片、卡片操作（编辑/移动/归档/删除）。
@@ -38,6 +39,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const [newColumn, setNewColumn] = useState("");
   const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
+  const [editingCol, setEditingCol] = useState<string | null>(null);
 
   /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
   const selectBoard = (id: string) => {
@@ -95,7 +97,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           }}
           style={{ width: 110 }}
         />
-        <Button size="compact-xs" variant="light" onClick={() => void createBoardAndSelect()}>
+        <Button size="compact-xs" variant="default" onClick={() => void createBoardAndSelect()}>
           新建看板
         </Button>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
@@ -123,24 +125,15 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           加载中…
         </Text>
       )}
-      {error && (
-        <Text size="xs" c="red">
-          {error}
-        </Text>
-      )}
+      {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {boardId && (
         <Group gap="xs" align="flex-start" wrap="nowrap" style={{ flex: 1, overflow: "auto" }}>
           {(tree?.columns ?? []).map((col) => (
             <div
               key={col.id}
-              style={{
-                width: 190,
-                flexShrink: 0,
-                background: "rgba(255,255,255,0.04)",
-                borderRadius: 8,
-                padding: 6,
-              }}
+              className="wb-kanban__col"
+              data-col-title={col.title}
               onDragOver={(e) => {
                 // Q6c 拖拽冲突方案（D29）：仅浏览模式接卡片拖放；编辑模式让位布局拖拽
                 if (!editMode) e.preventDefault();
@@ -153,15 +146,31 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               }}
             >
               <Group gap={4} wrap="nowrap" mb={4}>
-                <TextInput
-                  size="compact-xs"
-                  defaultValue={col.title}
-                  style={{ flex: 1 }}
-                  onBlur={(e) => {
-                    const t = e.currentTarget.value.trim();
-                    if (t && t !== col.title) void m.renameColumn(col.id, t);
-                  }}
-                />
+                {editingCol === col.id ? (
+                  <TextInput
+                    size="compact-xs"
+                    defaultValue={col.title}
+                    className="wb-grow"
+                    autoFocus
+                    onBlur={(e) => {
+                      const t = e.currentTarget.value.trim();
+                      setEditingCol(null);
+                      if (t && t !== col.title) void m.renameColumn(col.id, t);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") setEditingCol(null);
+                    }}
+                  />
+                ) : (
+                  <Text
+                    className="wb-kanban__col-title"
+                    title="点击重命名"
+                    onClick={() => setEditingCol(col.id)}
+                  >
+                    {col.title}
+                  </Text>
+                )}
                 <ConfirmAction
                   label="×"
                   size="compact-xs"
@@ -216,7 +225,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                   />
                   <Button
                     size="compact-xs"
-                    variant="light"
+                    variant="subtle"
                     onClick={() => {
                       const t = (cardDrafts[col.id] ?? "").trim();
                       if (t) {
@@ -248,7 +257,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               />
               <Button
                 size="compact-xs"
-                variant="light"
+                variant="subtle"
                 onClick={() => {
                   const t = newColumn.trim();
                   if (t) {
@@ -302,7 +311,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               </Button>
               <Button
                 size="xs"
-                variant="light"
+                variant="default"
                 onClick={() => {
                   void m.patchCard(editing.id, { archived: !editing.archived });
                   setEditing(null);
@@ -313,6 +322,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               <ConfirmAction
                 label="删除"
                 size="xs"
+                variant="default"
                 message={`确认删除卡片「${editing.title}」？（不可恢复）`}
                 onConfirm={() => {
                   void m.deleteCard(editing.id);

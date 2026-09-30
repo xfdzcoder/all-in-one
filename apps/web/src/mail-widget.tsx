@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Badge,
   Button,
   Card,
@@ -16,6 +15,7 @@ import type { MailListEntry } from "./api";
 import { api } from "./api";
 import { ConfirmAction } from "./confirm";
 import { HtmlSandbox } from "./html-sandbox";
+import { WbAlert } from "./ui";
 import {
   useMailAccounts,
   useMailMessage,
@@ -82,7 +82,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           style={{ width: 140 }}
           aria-label="邮件账号过滤"
         />
-        <Button size="compact-xs" variant="light" onClick={() => setAccountsOpen(true)}>
+        <Button size="compact-xs" variant="default" onClick={() => setAccountsOpen(true)}>
           管理账号
         </Button>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
@@ -91,17 +91,11 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
       </Group>
 
       {(agg?.errors ?? []).map((e) => (
-        <Alert key={e.accountId} color="yellow" py={2}>
-          <Text size="xs">
-            {e.accountName}：{e.error}
-          </Text>
-        </Alert>
+        <WbAlert key={e.accountId} tone="warning" size="sm">
+          {e.accountName}：{e.error}
+        </WbAlert>
       ))}
-      {error && (
-        <Text size="xs" c="red">
-          {error}
-        </Text>
-      )}
+      {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {!open && (
         <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
@@ -161,11 +155,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           <Text size="xs" c="dimmed">
             {open.from} · {open.date.slice(0, 16).replace("T", " ")} · {open.accountName}
           </Text>
-          {detailError && (
-            <Text size="xs" c="red">
-              {detailError}
-            </Text>
-          )}
+          {detailError && <WbAlert tone="error" size="sm">{detailError}</WbAlert>}
           {!detail && (
             <Text size="xs" c="dimmed">
               正文加载中…
@@ -227,11 +217,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           >
             绑定 Gmail 账号（OAuth）
           </Button>
-          {formError && (
-            <Text size="xs" c="red">
-              {formError}
-            </Text>
-          )}
+          {formError && <WbAlert tone="error" size="sm">{formError}</WbAlert>}
           <Button size="xs" onClick={() => void submitAccount()}>
             添加账号
           </Button>
