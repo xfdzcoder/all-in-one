@@ -637,7 +637,11 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                           type={f.type === "secret" ? "password" : "text"}
                           placeholder={f.label}
                           value={dsConfig[f.key] ?? ""}
-                          onChange={(e) => setDsConfig((c) => ({ ...c, [f.key]: e.currentTarget.value }))}
+                          onChange={(e) => {
+                            // 事件属性先取值：updater 延迟执行时 e.currentTarget 已回收（黑屏崩溃根因）
+                            const v = e.currentTarget.value;
+                            setDsConfig((c) => ({ ...c, [f.key]: v }));
+                          }}
                           style={{ width: 160 }}
                         />
                       ),

@@ -797,3 +797,15 @@
   align-items: center;
   gap: var(--wb-space-1);
 }
+
+/* ── Mantine v9 缺陷补丁：InputClearButton 无 compact-* 尺寸变量 ──
+ * inline 设置 --cb-size: var(--cb-size-compact-xs)，但官方 CSS 只定义
+ * xs/sm/md/lg/xl —— compact 变量未定义 → var 链失效 → 清除钮 94×66 巨钮。
+ * 按同族比例补齐（compact-xs ≈ 16px）。 */
+:root[data-mantine-color-scheme] .mantine-InputClearButton-root {
+  --cb-size-compact-xs: calc(1rem * var(--mantine-scale, 1));
+  --cb-size-compact-sm: calc(1.125rem * var(--mantine-scale, 1));
+  --cb-size-compact-md: calc(1.375rem * var(--mantine-scale, 1));
+  --cb-size-compact-lg: calc(1.75rem * var(--mantine-scale, 1));
+  --cb-size-compact-xl: calc(2.125rem * var(--mantine-scale, 1));
+}
