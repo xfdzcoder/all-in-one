@@ -17,6 +17,8 @@ export type TodoItem = {
   list: string;
   title: string;
   done: boolean;
+  /** Q29b：归档项不在组件显示。 */
+  archived?: boolean;
   sortOrder: number;
   createdAt: number | string;
   updatedAt: number | string;
@@ -162,10 +164,11 @@ export const api = {
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),
   deleteDashboard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/dashboards/${id}`),
-  listTodos: (list?: string, tagIds?: string[]) => {
+  listTodos: (list?: string, tagIds?: string[], includeArchived?: boolean) => {
     const q = new URLSearchParams();
     if (list) q.set("list", list);
     if (tagIds && tagIds.length > 0) q.set("tagIds", tagIds.join(","));
+    if (includeArchived) q.set("includeArchived", "1");
     const qs = q.toString();
     return req<TodoItem[]>("GET", `/api/todos${qs ? `?${qs}` : ""}`);
   },
@@ -173,7 +176,7 @@ export const api = {
     req<TodoItem>("POST", "/api/todos", { title, list }),
   deleteTodoGroup: (name: string) =>
     req<{ ok: boolean; deleted: number }>("POST", "/api/todos/delete-group", { name }),
-  patchTodo: (id: string, patch: { done?: boolean; title?: string }) =>
+  patchTodo: (id: string, patch: { done?: boolean; title?: string; archived?: boolean }) =>
     req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
   widgetData: (type: string, config: Record<string, unknown>, force = false) =>

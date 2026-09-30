@@ -194,85 +194,11 @@ try {
     "TAG created tag listed",
   );
 
-  // ② 任务页签：给任务打标（TagInput：输入搜索 + 回车选中）
-  await page.evaluate(() => {
-    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "任务");
-    tab?.click();
-  });
-  await sleep(300);
-  const assigned = await page.evaluate(async (t) => {
-    const leaf = [...document.querySelectorAll(".wb-admin [data-admin-row=todo]")].find((r) =>
-      (r.textContent ?? "").includes(t),
-    );
-    const input = leaf?.querySelector("input[placeholder=标签]");
-    if (!input) return false;
-    input.focus();
-    return true;
-  }, taskTagged);
-  ok(assigned, "TAG focus tag input on task row");
-  await page.keyboard.type(tagName);
-  await sleep(400);
-  await page.keyboard.press("Enter");
-  // 轮询等待（打标 → 失效 → 重取 → 行内 chip 刷新，链路有 2 个往返）
-  let assignedOk = false;
-  for (let i = 0; i < 15 && !assignedOk; i += 1) {
-    await sleep(300);
-    assignedOk = await page.evaluate(
-      ({ t, n }) => {
-        const row = [...document.querySelectorAll(".wb-admin [data-admin-row=todo]")].find((r) =>
-          (r.textContent ?? "").includes(t),
-        );
-        return (row?.textContent ?? "").includes(n);
-      },
-      { t: taskTagged, n: tagName },
-    );
-  }
-  ok(assignedOk, "TAG assign tag to task via TagInput");
+  // ②（Q29b：ToDo 去标签/去筛选 —— 标签仅用于信息源，旅程改为源级）
   await page.evaluate(() =>
     [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
   );
-  await sleep(400);
-
-  // ③ Todo 组件筛选：勾选标签 → 只显示打标任务
-  ok(await clickBtn("筛选"), "TAG todo widget open filter");
-  await sleep(400);
-  ok(
-    await page.evaluate((n) => {
-      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
-      const root = roots[roots.length - 1];
-      const cb = [...(root?.querySelectorAll(".mantine-Checkbox-root") ?? [])].find((c) =>
-        c.textContent.includes(n),
-      );
-      cb?.querySelector("input")?.click();
-      return Boolean(cb);
-    }, tagName),
-    "TAG select tag in todo filter",
-  );
-  await sleep(800);
-  const afterFilter = await page.evaluate(
-    ({ a, b }) => ({
-      a: document.body.textContent.includes(a),
-      b: document.body.textContent.includes(b),
-    }),
-    { a: taskTagged, b: taskPlain },
-  );
-  ok(afterFilter.a && !afterFilter.b, "TAG todo filtered (only tagged task)", JSON.stringify(afterFilter));
-  ok(await clickBtn("清除筛选", true), "TAG todo clear filter");
-  await sleep(400);
-  await page.evaluate(() => {
-    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
-    const root = roots[roots.length - 1];
-    root?.querySelector(".mantine-Modal-close")?.click();
-  });
   await sleep(500);
-  const afterClear = await page.evaluate(
-    ({ a, b }) => ({
-      a: document.body.textContent.includes(a),
-      b: document.body.textContent.includes(b),
-    }),
-    { a: taskTagged, b: taskPlain },
-  );
-  ok(afterClear.a && afterClear.b, "TAG todo filter cleared (all back)", JSON.stringify(afterClear));
 
   // ④ RSS 组件筛选：按标签选源（先给源 A 打标 —— 走 API 精确播种）
   const linked = await page.evaluate(async ({ s1, tName }) => {
@@ -291,8 +217,7 @@ try {
   const rssBtns = await page.evaluate(() =>
     [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "筛选").length,
   );
-  ok(rssBtns >= 2, "TAG both widgets have filter buttons", String(rssBtns));
-  // 点第二个「筛选」（RSS 组件）
+  ok(rssBtns >= 1, "TAG rss widget has filter button", String(rssBtns));
   await page.evaluate(() => {
     const btns = [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "筛选");
     btns[btns.length - 1]?.click();

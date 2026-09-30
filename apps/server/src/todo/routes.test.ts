@@ -147,4 +147,16 @@ describe("todo API (Workspace-level data, D21)", () => {
     const gone = await app.inject({ method: "GET", url: "/api/todos?list=组甲", cookies: { sid } });
     expect((gone.json() as unknown[]).length).toBe(0);
   });
+
+  it("Q29b: archived items hidden by default, visible with includeArchived=1", async () => {
+    const a = await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "arch-1", list: "archtest" } });
+    const id = a.json().id as string;
+    await app.inject({ method: "PATCH", url: `/api/todos/${id}`, cookies: { sid }, payload: { archived: true } });
+    const hidden = await app.inject({ method: "GET", url: "/api/todos?list=archtest", cookies: { sid } });
+    expect((hidden.json() as unknown[]).length).toBe(0);
+    const shown = await app.inject({ method: "GET", url: "/api/todos?list=archtest&includeArchived=1", cookies: { sid } });
+    const rows = shown.json() as Array<{ archived: boolean }>;
+    expect(rows.length).toBe(1);
+    expect(rows[0].archived).toBe(true);
+  });
 });

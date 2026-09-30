@@ -97,6 +97,8 @@ export const todo = sqliteTable(
     list: text("list").notNull().default("inbox"),
     title: text("title").notNull(),
     done: integer("done", { mode: "boolean" }).notNull().default(false),
+    /** 归档（Q29b/D44）：归档项不在组件显示，仅数据源管理可见/可恢复。 */
+    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),

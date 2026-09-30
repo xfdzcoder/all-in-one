@@ -16,6 +16,7 @@ const patchBody = z
   .object({
     title: z.string().min(1).max(500).optional(),
     done: z.boolean().optional(),
+    archived: z.boolean().optional(),
     list: z.string().min(1).max(64).optional(),
     sortOrder: z.number().int().optional(),
   })
@@ -27,14 +28,16 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
   // GET /api/todos?list=xxx — Workspace 级数据（D21：user_id 归属）
   app.get("/api/todos", { preHandler: authGuard }, async (req) => {
     const q = (typeof req.query === "object" && req.query) ? (req.query as Record<string, unknown>) : {};
+    const includeArchived = q.includeArchived === "1";
     const list = q.list != null ? String(q.list) : undefined;
     // FR-D3/D40：组件按标签选数据 —— 服务端过滤（OR 语义，逗号分隔；空 = 全部）
     const tagIds = typeof q.tagIds === "string" && q.tagIds
       ? q.tagIds.split(",").map((x) => x.trim()).filter(Boolean)
       : [];
-    const where = list
-      ? and(eq(todo.userId, req.user!.id), eq(todo.list, list))
-      : eq(todo.userId, req.user!.id);
+    const conds = [eq(todo.userId, req.user!.id)];
+    if (list) conds.push(eq(todo.list, list));
+    if (!includeArchived) conds.push(eq(todo.archived, false)); // Q29b：归档项仅管理面可见
+    const where = and(...conds);
     let rows = await app.db
       .select()
       .from(todo)
@@ -89,6 +92,7 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
     if (body.data.done !== undefined) set.done = body.data.done;
     if (body.data.list !== undefined) set.list = body.data.list;
     if (body.data.sortOrder !== undefined) set.sortOrder = body.data.sortOrder;
+    if (body.data.archived !== undefined) set.archived = body.data.archived; // Q29b
 
     const [row] = await app.db
       .update(todo)

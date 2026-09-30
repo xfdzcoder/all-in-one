@@ -93,7 +93,20 @@ export function ConfigForm({
                 onChange={(nv) => onChange(f.key, typeof nv === "number" ? nv : undefined)}
               />
             );
-          case "select":
+          case "select": {
+            if (f.creatable && f.dynamic) {
+              return (
+                <CreatableSelect
+                  key={f.key}
+                  label={f.label}
+                  options={dynamicOptions[f.dynamic] ?? []}
+                  value={typeof v === "string" ? v : ""}
+                  onChange={(nv) => onChange(f.key, nv || undefined)}
+                  placeholder={f.placeholder}
+                  description={f.help}
+                />
+              );
+            }
             return (
               <Select
                 key={f.key}
@@ -104,6 +117,7 @@ export function ConfigForm({
                 onChange={(nv) => onChange(f.key, nv ?? undefined)}
               />
             );
+          }
           case "json":
             return (
               <Textarea
@@ -162,5 +176,49 @@ export function ConfigForm({
         {submitLabel}
       </Button>
     </Stack>
+  );
+}
+
+/** Q29b：可选已有或输入新建（Mantine v9 无内建 creatable —— 搜索无匹配时注入「＋ 新建」项）。 */
+function CreatableSelect({
+  label,
+  options,
+  value,
+  onChange,
+  placeholder,
+  description,
+}: {
+  label: string;
+  options: Array<{ value: string; label: string }>;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  description?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const data = [...options];
+  // 已选的新建值不在已有列表 → 保持为可显示选项
+  if (value && !options.some((o) => o.value === value)) data.push({ value, label: value });
+  // 搜索无匹配 → 注入「＋ 新建」
+  if (query && query !== value && !options.some((o) => o.value === query)) {
+    data.push({ value: query, label: `＋ 新建「${query}」` });
+  }
+  return (
+    <Select
+      label={label}
+      size="xs"
+      searchable
+      data={data}
+      value={value || null}
+      onChange={(nv) => {
+        onChange(nv ?? "");
+        setQuery("");
+      }}
+      searchValue={query}
+      onSearchChange={setQuery}
+      placeholder={placeholder}
+      description={description}
+      nothingFoundMessage="输入名称可新建"
+    />
   );
 }

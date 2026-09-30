@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 61 轴 · Q29a ✅ 数据连接黑屏崩溃 + 邮箱巨钮修复；进行中 Q29b ToDo 重构） |
+| 最近更新 | 2026-09-30（第 61 轮 · Q29a+b ✅ 缺陷修复 + ToDo 重构（归档/三档筛选/可选已有或新建/单 ToDo 管理视图）；余 Q29c–f） |
 
 ## 迭代队列
 
@@ -95,7 +95,7 @@
 
 - [ ] Q29 · 用户反馈⑩（6 大块）：缺陷修复 / ToDo 重构 / RSS 改造 / Dashboard 编辑态 / 邮箱+看板 / 收口
   - [x] Q29a · 缺陷修复：**六**数据连接黑屏（setState updater 读 e.currentTarget —— updater 延迟执行时事件已回收 → 全树卸载；事件属性先取值修复）+ **四.1**邮箱超大 X（Mantine v9 InputClearButton **未定义 --cb-size-compact-\\*** 变量 → inline var 链失效 → 94×66 巨钮；补齐 compact 变量后 16×16）+ 验证栈重启（PORT=3001 漏设撞用户 :3000）**✅ 2026-09-30**
-  - [ ] Q29b · ToDo 重构（一）：项加 archived；widget 去标签/去筛选按钮（显示三档：未完成/已完成/全部）；picker 名称改可选已有/新建；管理页=单 ToDo 下拉切换 + 快捷筛选 + 总数 + 删除（确认）+ 所在 Dashboard 标注
+  - [x] Q29b · ToDo 重构（一）：`archived` 列+迁移 0011（归档项仅管理面可见 includeArchived）；widget 去标签/去筛选按钮、显示三档（未完成/已完成/全部）；picker「名称」= creatable 下拉（可选已有/输入新建）；管理页 = **单 ToDo 视图**（下拉切换 + 快捷筛选 SegmentedControl + 总数 + 所在 Dashboard/未挂载标注 + 删除 ToDo 带确认）**✅ 2026-09-30**
   - [ ] Q29c · RSS 改造（二）：失败兜底本地缓存；去详情弹窗（新标签开原文+标已读）；标签筛选并入配置
   - [ ] Q29d · Dashboard 编辑态（三）：编辑时隐藏组件自身按钮；添加组件移头部；编辑页面（内联页面设置）
   - [ ] Q29e · 邮箱+看板（四五）：picker 多选邮箱（缓存）；邮箱/看板管理页添加入右上角；看板空态引导/禁删列/列宽等分
@@ -181,3 +181,4 @@
 | 58 | 2026-09-30 | **Q27d Dashboard 导航重构（二.1/2/3）**：① **页签 → 右上角弹出切换器**——头部「当前页 ▾」Popover：页面列表（当前高亮）+ 新建页面/页面设置/上移/下移/删除此页整组收纳（弹层外无布局工具）；主区去 Tabs 直接渲染活动页 Board；② 看板**加列移除出 Dashboard**（空列噪音）→ 头部「管理」跳「数据源管理 · 看板」，**管理页补「添加列」**（发现缺口：两处都没有加列口）；**整列点按空白 = 添加卡片**（卡片/按钮/输入不触发）；③ Todo 撤销条计数累计（「已完成 n 项」，撤销回滚本轮全部）。脚本全迁移：m1/j4/j3/journeys 的页签旅程 → 切换器（openSwitcher **幂等**：弹层已开不重复点）；verify-kan 加列改走管理页 + 显式选板（管理页默认 boards[0] 陷阱） | 全量 26 脚本 428 项 ✅（kan 44/44）；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `cf78b53` / `17b9a12` / `ef0204d` / `7784295` |
 | 59 | 2026-09-30 | **Q28 Todo 归属=卡片名称（D43，用户确认三点）**：① **D43** 落盘（01-requirements §2.3 同步）——任务归属 = 卡片名称（`name` 必填、**全站唯一**、废除清单下拉）；`todo.list` 列语义改组名（旧值成组名零迁移），组件读 `name ?? list` 回落；② **唯一性通用机制**：widget-sdk manifest 增 `uniqueField` 声明 → Board 通用校验（`uniqueFieldTaken`，同 type 全站唯一、重名拒绝）——**宿主零组件特判**（j8「核心零耦合」断言曾被 type==="todo" 硬编码破坏，泛化后恢复 12/12）；③ 数据边界：删卡片/删页面保留任务（移除按钮/删除确认均注明「数据源管理可查/删」）；数据源管理任务页签**按卡片名称分组**（组头 + 组内添加 + **删除分组真删全组**（确认），`POST /api/todos/delete-group` 契约测试）；④ 修**隐蔽 bug**：TodoWidget 解构漏 `name` → 命中全局 `window.name`（空串，TS 不报）→ 组名恒空、建任务被 API 拒；⑤ J4 旅程按 D43 语义重写（verify-j4 15/15、Playwright J4）：归属=卡片名、**数据源管理跨视图同步（SSE）**、异名卡片隔离 | server Vitest 150/150（+1）✅；全量 26 脚本 437 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `bd4ae1b` |
 | 60 | 2026-09-30 | **Q28b 看板管理页列排布（用户反馈⑨）**：数据源管理·看板的列/卡由「一组一行」列表改为**真·看板式列排布**——各列并排横排（`wb-admin__board` 横向滚动）、列内卡片纵排（`wb-admin__card` 块 + 归档/删除元信息行）、列头=名称/删列、「＋ 卡片」列内 ghost；「添加列」收为**末列 ghost 列**（虚线，管理页仍是加列唯一入口） | 全量 26 脚本 437 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `3f11226` |
+| 61 | 2026-09-30 | **Q29a+b**：① **六 数据连接黑屏**——setState updater 内读 `e.currentTarget`（延迟执行时事件已回收）→ TypeError → React 卸载全树；事件属性先取值修复。② **四.1 邮箱巨钮**——Mantine v9 InputClearButton 未定义 `--cb-size-compact-*` → var 链失效 94×66；补齐 compact 变量（16×16）。③ **Q29b ToDo 重构**——`archived` 归档（仅管理面可见）；组件去标签/筛选按钮、显示三档；picker 名称 creatable（Mantine v9 无内建 creatable —— 搜索注入「＋ 新建」项 + 已选新值保持显示）；管理页单 ToDo 视图（下拉+快捷筛选+所在 Dashboard 标注）；`ConfigField.creatable` 契约扩展。旅程适配：j4/w4（creatable 交互=聚焦→键入→点新建）、verify-tag 去 ToDo 标签段（Q29b 后标签仅信息源）| server Vitest 151/151（+1 归档契约）；全量 26 脚本 431 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |

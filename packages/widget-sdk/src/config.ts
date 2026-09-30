@@ -28,6 +28,8 @@ export interface ConfigField {
    * 约定 key："kanban-boards" | "data-source:monitor" | "data-source:opencode" | "data-source:http"。
    */
   dynamic?: string;
+  /** type=select 且 dynamic：允许输入新值创建（Q29b，如 ToDo 名称选已有或新建）。 */
+  creatable?: boolean;
   placeholder?: string;
   help?: string;
 }

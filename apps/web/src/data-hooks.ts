@@ -108,15 +108,18 @@ export function useSseInvalidation(): void {
 export function useTodos(
   list?: string,
   refreshSec?: unknown,
-  tagIds?: string[],
+  includeArchivedOrTagIds?: boolean | string[],
 ): WidgetDataState<TodoItem[]> & {
   refresh: () => void;
 } {
   const qc = useQueryClient();
+  // Q29b：第三参兼容旧 tagIds（string[]）与新 includeArchived（boolean）
+  const tagIds = Array.isArray(includeArchivedOrTagIds) ? includeArchivedOrTagIds : undefined;
+  const includeArchived = includeArchivedOrTagIds === true;
   const tagKey = (tagIds ?? []).join(",") || "all";
   const query = useQuery({
-    queryKey: ["todos", list ?? "all", tagKey],
-    queryFn: () => api.listTodos(list, tagIds),
+    queryKey: ["todos", list ?? "all", tagKey, includeArchived ? "arch" : "live"],
+    queryFn: () => api.listTodos(list, tagIds, includeArchived),
     refetchInterval: refreshInterval(refreshSec, 60_000),
   });
   return {
@@ -140,6 +143,11 @@ export function useTodoMutations() {
     mutationFn: (v: { id: string; done: boolean }) => api.patchTodo(v.id, { done: v.done }),
     onSuccess: invalidate,
   });
+  // Q29b：归档/恢复（归档项不在组件显示）
+  const toggleArchive = useMutation({
+    mutationFn: (v: { id: string; archived: boolean }) => api.patchTodo(v.id, { archived: v.archived }),
+    onSuccess: invalidate,
+  });
   const remove = useMutation({
     mutationFn: (id: string) => api.deleteTodo(id),
     onSuccess: invalidate,
@@ -149,7 +157,7 @@ export function useTodoMutations() {
     mutationFn: (name: string) => api.deleteTodoGroup(name),
     onSuccess: invalidate,
   });
-  return { create, toggle, remove, deleteGroup };
+  return { create, toggle, toggleArchive, remove, deleteGroup };
 }
 
 /** 组件卸载安全的本地输入状态。 */
@@ -592,12 +600,20 @@ export function useDataSourceMutations() {
 
 /** 动态选项源（Q26b / D42）：ConfigForm 的 select.dynamic 取数（一次取全，按 key 查表）。 */
 export function useDynamicOptionsMap(): Record<string, Array<{ value: string; label: string }>> {
+  const todosAll = useQuery({
+    queryKey: ["todos", "all", "__names__"],
+    queryFn: () => api.listTodos(undefined, undefined, true),
+  });
   const boards = useKanbanBoards();
   const monitor = useDataSources("monitor");
   const opencode = useDataSources("opencode");
   const http = useDataSources("http");
   return {
     "kanban-boards": boards.boards.map((b) => ({ value: b.id, label: b.title })),
+    "todo-names": [...new Set((todosAll.data ?? []).map((t: { list: string }) => t.list))].map((n: string) => ({
+      value: n,
+      label: n,
+    })),
     "data-source:monitor": (monitor.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:opencode": (opencode.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:http": (http.data ?? []).map((r) => ({ value: r.id, label: r.name })),
@@ -623,4 +639,10 @@ export function useResolvedSourceConfig<T extends Record<string, unknown>>(
       : source.config;
     return { ...config, ...from } as T;
   }, [config, source, pick]);
+}
+
+/** 页面列表（Q29b：任务页签标注所在 Dashboard）。 */
+export function useDashboards() {
+  const query = useQuery({ queryKey: ["dashboards"], queryFn: () => api.listDashboards() });
+  return { data: query.data };
 }

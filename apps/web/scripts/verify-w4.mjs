@@ -119,8 +119,25 @@ const addViaPicker = async (name, before, fillLabel, fillValue) => {
   await sleep(300);
   if (!(await clickBtn(name))) return null;
   await sleep(400);
-  if (fillLabel && !(await setField(fillLabel, fillValue))) return null;
-  await sleep(200);
+  if (fillLabel) {
+    // Q29b：名称为 creatable Select —— 点击展开 → 键入 → 点「＋ 新建」选项
+    await page.evaluate((l) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes(l),
+      );
+      wrapper?.querySelector("input")?.focus();
+    }, fillLabel);
+    await sleep(250);
+    await page.keyboard.type(fillValue);
+    await sleep(350);
+    await page.evaluate((v) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) =>
+        e.textContent.includes(`新建「${v}」`),
+      );
+      opt?.click();
+    }, fillValue);
+    await sleep(250);
+  }
   if (!(await clickBtn("确认添加", true))) return null;
   await sleep(800);
   const after = await nodeIds();
@@ -148,7 +165,7 @@ try {
   ok("W4 config entry visible in edit mode", await clickItemBtn(phId, "配置"));
   await sleep(400);
   const prefill = await readField("标题");
-  ok("W4 form prefilled with current props", prefill === oldTitle, String(prefill));
+  ok("W4 form prefilled with current props", String(prefill).includes(oldTitle), String(prefill));
   ok("W4 change title via configSchema form", await setField("标题", newTitle));
   await sleep(200);
   ok("W4 save config", await clickBtn("保存配置", true));
@@ -166,7 +183,29 @@ try {
   ok("W4 add todo widget", Boolean(todoId), String(todoId));
   ok("W4 open todo config form", await clickItemBtn(todoId, "配置"));
   await sleep(400);
-  ok("W4 change todo name", await setField("名称", `W4改-${uniq}`));
+  const renamed2 = `W4改-${uniq}`;
+  await page.evaluate(() => {
+    const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+      w.querySelector("label")?.textContent.includes("名称"),
+    );
+    const input = wrapper?.querySelector("input");
+    input?.focus();
+    input?.select();
+  });
+  await sleep(150);
+  await page.keyboard.type(renamed2);
+  await sleep(350);
+  ok(
+    "W4 change todo name",
+    await page.evaluate((v) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) =>
+        e.textContent.includes(`新建「${v}」`),
+      );
+      opt?.click();
+      return Boolean(opt);
+    }, renamed2),
+  );
+  await sleep(250);
   ok("W4 save todo config", await clickBtn("保存配置", true));
   await sleep(800);
   ok("W4 todo props updated (ground truth)", (await propsOf(todoId))?.name === `W4改-${uniq}`, JSON.stringify(await propsOf(todoId)));

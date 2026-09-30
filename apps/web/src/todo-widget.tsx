@@ -4,7 +4,6 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
-import { TagFilter } from "./tag-filter";
 import { RelativeTime, WbAlert } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
@@ -14,9 +13,7 @@ export type TodoConfig = {
   name?: string;
   /** 兼容旧布局（Q28 前为「清单」）—— 读取回落 name ?? list。 */
   list?: string;
-  filter?: "open" | "all";
-  /** FR-D3：按标签选数据（OR 语义；空/缺省 = 全部）。 */
-  tagIds?: string[];
+  filter?: "open" | "done" | "all";
 };
 
 // D43：名称即分组名 —— 原样显示（用户自由命名）
@@ -27,17 +24,20 @@ export type TodoConfig = {
  * 注：M2 内置组件直接消费工作台 REST + SSE（业务数据通道）；
  * 第三方数据类组件（custom-api）走服务端 connector 数据通道（M2-⑤）。
  */
-export function TodoWidget({ name, list = "inbox", filter = "open", tagIds, refreshSec }: TodoConfig & { refreshSec?: number }) {
+export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }: TodoConfig & { refreshSec?: number }) {
   // D43：分组名 = 卡片名称（旧布局回落 list）
   const group = name ?? list ?? "我的待办";
-  const { data, loading, error, refresh } = useTodos(group, refreshSec, tagIds);
+  const { data, loading, error, refresh } = useTodos(group, refreshSec);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
   const [detail, setDetail] = useState<TodoItem | null>(null);
   // ISS-14 修复：勾完即消失的过滤下提供「撤销」——文案只报计数不带标题（契约：完成后标题不可再见）
   const [undo, setUndo] = useState<{ ids: string[]; count: number } | null>(null);
 
-  const items = (data ?? []).filter((t) => (filter === "open" ? !t.done : true));
+  // Q29b：归档项不在组件显示（仅数据源管理可见）；filter 三档
+  const items = (data ?? []).filter((t) =>
+    filter === "open" ? !t.done : filter === "done" ? t.done : true,
+  );
 
   // 撤销条 6 秒后自动消失
   useEffect(() => {
@@ -52,7 +52,6 @@ export function TodoWidget({ name, list = "inbox", filter = "open", tagIds, refr
         <Text size="sm" fw={600} style={{ flex: 1 }}>
           Todo · {group}
         </Text>
-        <TagFilter value={tagIds} targetLabel="任务" />
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
         </Button>

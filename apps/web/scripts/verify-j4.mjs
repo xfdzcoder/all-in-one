@@ -65,20 +65,23 @@ const addWidgetViaPicker = async (name, fillLabel, fillValue) => {
   if (!(await clickBtn(name))) return false;
   await sleep(300);
   if (fillLabel) {
-    // D43：Todo 名称必填（全站唯一）
-    await page.evaluate(
-      ({ l, v }) => {
-        const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
-          w.querySelector("label")?.textContent.includes(l),
-        );
-        const input = wrapper?.querySelector("input");
-        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-        setter.call(input, v);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      },
-      { l: fillLabel, v: fillValue },
-    );
-    await sleep(200);
+    // Q29b：名称为 creatable Select —— 点击展开 → 键入 → 点「＋ 新建」选项
+    await page.evaluate((l) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes(l),
+      );
+      wrapper?.querySelector("input")?.focus();
+    }, fillLabel);
+    await sleep(250);
+    await page.keyboard.type(fillValue);
+    await sleep(350);
+    await page.evaluate((v) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) =>
+        e.textContent.includes(`新建「${v}」`),
+      );
+      opt?.click();
+    }, fillValue);
+    await sleep(250);
   }
   return clickBtn("确认添加", true);
 };
@@ -126,28 +129,43 @@ try {
   // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
   ok("J4 open data admin", await clickBtn("数据源管理"));
   await sleep(600);
+  // Q29b：任务页签 = 单 ToDo 视图（下拉切换）—— 选中目标 ToDo
+  ok(
+    "J4 data admin select ToDo",
+    await page.evaluate((n) => {
+      const sel = document.querySelector('[aria-label="ToDo 选择"]');
+      sel?.click();
+      return Boolean(sel);
+    }, `J4A-${uniqA}`),
+  );
+  await sleep(350);
+  ok(
+    "J4 data admin pick ToDo",
+    await page.evaluate((n) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) => e.textContent.trim() === n);
+      opt?.click();
+      return Boolean(opt);
+    }, `J4A-${uniqA}`),
+  );
+  await sleep(400);
   ok(
     "J4 data admin shows task under group (data/view separation)",
-    await page.evaluate(
-      ({ n, t }) => {
-        const g = document.querySelector(`[data-admin-group="${n}"]`);
-        return (g?.textContent ?? "").includes(t);
-      },
-      { n: `J4A-${uniqA}`, t: title },
-    ),
+    await page.evaluate((t) => (document.body.textContent ?? "").includes(t), title),
   );
 
   // 数据源管理新建 → 组件无刷新即可见（SSE + 查询失效）
-  const sseAdded = await page.evaluate((n) => {
-    const g = document.querySelector(`[data-admin-group="${n}"]`);
-    const input = [...(g?.querySelectorAll("input") ?? [])].find((i) => i.placeholder.includes("新任务"));
+  const sseAdded = await page.evaluate(() => {
+    const input = [...document.querySelectorAll(".wb-admin input")].find((i) =>
+      i.placeholder.includes("新任务"),
+    );
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     setter.call(input, "SSE-sync-task");
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    [...g.querySelectorAll("button")].find((b) => b.textContent.trim() === "添加")?.click();
-    return true;
-  }, `J4A-${uniqA}`);
+    const btn = [...document.querySelectorAll(".wb-admin button")].find((b) => b.textContent.trim() === "添加");
+    btn?.click();
+    return Boolean(btn);
+  });
   ok("J4 add task via data admin", sseAdded);
   await page.evaluate(() =>
     [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),

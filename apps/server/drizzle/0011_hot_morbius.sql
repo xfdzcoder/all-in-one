@@ -1,0 +1,1 @@
+ALTER TABLE `todo` ADD `archived` integer DEFAULT false NOT NULL;

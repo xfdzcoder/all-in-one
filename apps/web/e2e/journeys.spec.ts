@@ -130,7 +130,11 @@ test("J4 data/view separation: card name = task group, data admin shares state (
   await page.waitForTimeout(400);
   await page.getByRole("button", { name: "添加组件" }).click();
   await page.getByRole("button", { name: "个人 Todo" }).click();
-  await page.locator(".mantine-Modal-root").getByLabel("名称").fill(nm); // D43 名称必填
+  // Q29b：名称 = creatable Select（键入 → 点「＋ 新建」）
+  const nameInput = page.locator(".mantine-Modal-root").getByLabel("名称");
+  await nameInput.click();
+  await nameInput.type(nm);
+  await page.locator("[data-combobox-option]", { hasText: `新建「${nm}」` }).click();
   await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(800);
   await page.getByRole("button", { name: "完成编辑" }).click();
@@ -150,12 +154,15 @@ test("J4 data/view separation: card name = task group, data admin shares state (
   // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
   await page.getByRole("button", { name: "数据源管理" }).click();
   await page.waitForTimeout(600);
-  await expect(page.locator(`[data-admin-group="${nm}"]`)).toContainText(title, { timeout: 5000 });
+  // Q29b：任务页签 = 单 ToDo 视图 —— 下拉选中目标
+  await page.getByRole("combobox", { name: "ToDo 选择" }).click();
+  await page.locator("[data-combobox-option]", { hasText: nm }).first().click();
+  await page.waitForTimeout(400);
+  await expect(page.locator('[data-admin-row="todo"]', { hasText: title })).toBeVisible({ timeout: 5000 });
 
   // 数据源管理新建 → 组件无刷新即可见（SSE + 查询失效）
-  const grp = page.locator(`[data-admin-group="${nm}"]`);
-  await grp.locator('input[placeholder*="新任务"]').fill("playwright-sse-task");
-  await grp.getByRole("button", { name: "添加", exact: true }).click();
+  await page.locator('.wb-admin input[placeholder*="新任务"]').fill("playwright-sse-task");
+  await page.locator('.wb-admin button:visible', { hasText: /^添加$/ }).first().click();
   await page.getByRole("button", { name: "返回工作台" }).click();
   await page.waitForTimeout(1200);
   await expect(page.getByText("playwright-sse-task")).toBeVisible({ timeout: 5000 });
