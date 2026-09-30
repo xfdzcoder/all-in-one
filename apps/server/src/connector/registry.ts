@@ -80,7 +80,8 @@ export function cacheKeyOf(query: WidgetDataQuery): string {
     .digest("hex");
 }
 
-/** 供 http-connector 复用的出站 GET/POST 封装（SSRF + 超时 + 体积上限）。 */
+/** 供 http-connector 复用的出站 GET/POST 封装（SSRF + 超时 + 体积上限）。
+ *  allowPrivate：服务聚合场景（app-launcher/OpenCode/监控源）目标即内网服务（D22/D32/D36）。 */
 export async function outboundRequest(
   rawUrl: string,
   opts: {
@@ -89,9 +90,10 @@ export async function outboundRequest(
     body?: string;
     timeoutMs?: number;
     maxBytes?: number;
+    allowPrivate?: boolean;
   } = {},
 ): Promise<{ status: number; text: string }> {
-  const url = await assertSafeOutboundUrl(rawUrl, config.allowPrivateOutbound);
+  const url = await assertSafeOutboundUrl(rawUrl, opts.allowPrivate ?? config.allowPrivateOutbound);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000);
   try {

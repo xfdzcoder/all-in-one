@@ -107,21 +107,20 @@ describe("opencode connector (FR-E4, D32)", () => {
     expect(data.probe.error).toBeTruthy();
   });
 
-  it("reports missing config and enforces the SSRF baseline", async () => {
+  it("reports missing config and unreachable targets without throwing", async () => {
     const empty = (await opencodeConnector.fetch(query({}), ctx)) as {
       probe: { ok: boolean; error?: string };
     };
     expect(empty.probe.ok).toBe(false);
     expect(empty.probe.error).toContain("未配置");
 
-    // 内网目标 + 未开逃生阀（SEC4）→ 基线拒绝（probe.error 明示 SSRF 原因）
+    // 内网目标属服务聚合核心场景（D32 allowPrivate 通道）：不可达时报 probe 错误而非 SSRF 拒绝
     delete process.env.ALLOW_PRIVATE_OUTBOUND;
-    const blocked = (await opencodeConnector.fetch(
-      query({ url: "http://10.0.0.1:4096" }),
+    const down = (await opencodeConnector.fetch(
+      query({ url: `http://127.0.0.1:${downPort}` }),
       ctx,
     )) as { probe: { ok: boolean; error?: string } };
-    expect(blocked.probe.ok).toBe(false);
-    expect(blocked.probe.error).toMatch(/SSRF/i);
-    process.env.ALLOW_PRIVATE_OUTBOUND = "1";
+    expect(down.probe.ok).toBe(false);
+    expect(down.probe.error).toBeTruthy();
   });
 });

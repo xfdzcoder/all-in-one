@@ -9,6 +9,7 @@ import { IframeWidget } from "./iframe-widget";
 import { KanbanWidget } from "./kanban-widget";
 import { MailWidget } from "./mail-widget";
 import { OpencodeWidget } from "./opencode-widget";
+import { MonitorWidget } from "./monitor-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -211,6 +212,37 @@ export const opencodeManifest: WidgetManifest = {
   },
 };
 
+/** 服务器监控组件（Q9/D36）：打通 Glances 等第三方监控源，只做连接与展示。 */
+export const monitorManifest: WidgetManifest = {
+  type: "monitor",
+  name: "服务器监控",
+  description: "Glances 等监控源打通：CPU / 内存 / 负载 / 磁盘（只做连接与展示）",
+  category: "服务",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "url", label: "监控源地址", type: "text", required: true, placeholder: "http://127.0.0.1:61208" },
+    {
+      key: "authMode",
+      label: "认证方式",
+      type: "select",
+      default: "none",
+      options: [
+        { value: "none", label: "无认证" },
+        { value: "basic", label: "Basic（用户名+口令）" },
+        { value: "bearer", label: "Bearer（令牌）" },
+      ],
+    },
+    { key: "username", label: "用户名（Basic）", type: "text" },
+    { key: "apiToken", label: "口令 / 令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
 /** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
 export const mailManifest: WidgetManifest = {
   type: "mail",
@@ -234,6 +266,7 @@ export const widgetComponents = {
   kanban: KanbanWidget,
   mail: MailWidget,
   opencode: OpencodeWidget,
+  monitor: MonitorWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -252,6 +285,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   kanban: kanbanManifest,
   mail: mailManifest,
   opencode: opencodeManifest,
+  monitor: monitorManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -272,6 +306,7 @@ export const builtinManifests: WidgetManifest[] = [
   kanbanManifest,
   mailManifest,
   opencodeManifest,
+  monitorManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

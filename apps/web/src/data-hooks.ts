@@ -308,6 +308,41 @@ export function useOpencodeData(config: Record<string, unknown>) {
   };
 }
 
+/** 监控源数据（FR：服务器监控，D36 打通第三方服务只做连接与展示）。 */
+export type MonitorMetrics = {
+  probe: { ok: boolean; source: string; version?: string; error?: string };
+  cpuName?: string;
+  cores?: number;
+  cpu?: { percent: number };
+  mem?: { percent: number; usedBytes?: number; totalBytes?: number };
+  load?: { min1?: number; min5?: number; min15?: number };
+  uptime?: string;
+  disks: Array<{ point: string; percent: number; usedBytes?: number; totalBytes?: number }>;
+};
+
+export function useMonitorData(config: Record<string, unknown>) {
+  const qc = useQueryClient();
+  const key = ["monitor", JSON.stringify(config)];
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => api.widgetData("monitor", config) as Promise<MonitorMetrics>,
+    enabled: Boolean(config.url),
+    staleTime: 30_000,
+    refetchInterval: refreshInterval(config.refreshSec, 60_000),
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
+    refresh: () => {
+      void (api.widgetData("monitor", config, true) as Promise<MonitorMetrics>).then((d) =>
+        qc.setQueryData(key, d),
+      );
+    },
+  };
+}
+
 /** 邮件账号清单（Q7b）。 */
 export function useMailAccounts() {
   const query = useQuery({

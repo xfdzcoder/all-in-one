@@ -66,6 +66,7 @@ export const opencodeConnector: WidgetConnector = {
         headers,
         timeoutMs: TIMEOUT_MS,
         maxBytes: 200_000,
+        allowPrivate: true, // D32：opencode server 即本机/内网服务（服务聚合族）
       });
       if (app.status < 400) {
         const parsed = JSON.parse(app.text) as Record<string, unknown>;
@@ -81,6 +82,7 @@ export const opencodeConnector: WidgetConnector = {
         headers,
         timeoutMs: TIMEOUT_MS,
         maxBytes: 1_000_000,
+        allowPrivate: true, // D32：opencode server 即本机/内网服务（服务聚合族）
       });
       if (res.status >= 400) {
         return {
