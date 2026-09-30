@@ -18,6 +18,9 @@ import {
   useDraft,
   useFeedMutations,
   useFeedSources,
+  useKanbanBoards,
+  useKanbanMutations,
+  useKanbanTree,
   useTagMutations,
   useTags,
   useTodoMutations,
@@ -58,6 +61,13 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   // Q25c/#2：搜索（标题/URL/清单名/标签名）
   const [q, setQ] = useState("");
+  // Q26a/#1：看板管理（看板/列/卡片 CRUD + 归档恢复）
+  const boards = useKanbanBoards();
+  const [boardId, setBoardId] = useState<string | undefined>(undefined);
+  const activeBoardId = boardId ?? boards.boards[0]?.id;
+  const tree = useKanbanTree(activeBoardId);
+  const m = useKanbanMutations(activeBoardId);
+  const [newBoard, setNewBoard] = useState("");
 
   const tagRows = tags.data ?? [];
 
@@ -87,6 +97,7 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
         <Tabs.List>
           <Tabs.Tab value="todo">任务</Tabs.Tab>
           <Tabs.Tab value="feeds">信息源</Tabs.Tab>
+          <Tabs.Tab value="kanban">看板</Tabs.Tab>
           <Tabs.Tab value="tags">标签</Tabs.Tab>
         </Tabs.List>
 
@@ -239,6 +250,150 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
                 </Text>
               )}
             </div>
+          </Stack>
+        </Tabs.Panel>
+
+        {/* ── 看板（Q26a/#1：看板/列/卡片管理 + 归档恢复） ── */}
+        <Tabs.Panel value="kanban" pt="xs">
+          <Stack gap="xs">
+            <Group gap="xs" wrap="nowrap">
+              <Select
+                size="xs"
+                placeholder="选择看板"
+                data={boards.boards.map((b) => ({ value: b.id, label: b.title }))}
+                value={activeBoardId ?? null}
+                onChange={(v) => v && setBoardId(v)}
+                nothingFoundMessage="暂无看板"
+                style={{ width: 180 }}
+                aria-label="看板选择"
+              />
+              <TextInput
+                size="xs"
+                placeholder="新看板名"
+                value={newBoard}
+                onChange={(e) => setNewBoard(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newBoard.trim()) {
+                    void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                    setNewBoard("");
+                  }
+                }}
+                style={{ width: 160 }}
+              />
+              <Button
+                size="xs"
+                disabled={!newBoard.trim()}
+                onClick={() => {
+                  void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                  setNewBoard("");
+                }}
+              >
+                新建看板
+              </Button>
+            </Group>
+
+            {activeBoardId && (
+              <>
+                <Group gap="xs" wrap="nowrap">
+                  <TextInput
+                    size="xs"
+                    className="wb-grow"
+                    defaultValue={boards.boards.find((b) => b.id === activeBoardId)?.title ?? ""}
+                    aria-label="看板名称"
+                    onBlur={(e) => {
+                      const v = e.currentTarget.value.trim();
+                      const cur = boards.boards.find((b) => b.id === activeBoardId);
+                      if (v && cur && v !== cur.title) void m.renameBoard(activeBoardId, v);
+                    }}
+                  />
+                  <ConfirmAction
+                    label="删除看板"
+                    size="compact-xs"
+                    variant="subtle"
+                    title="删除看板？"
+                    message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
+                    onConfirm={() => {
+                      void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
+                    }}
+                  />
+                </Group>
+
+                {(tree.tree?.columns ?? [])
+                  .filter((c) => !q || c.title.includes(q))
+                  .map((col) => (
+                    <div key={col.id} className="wb-admin__group" data-admin-col={col.title}>
+                      <Group gap="xs" wrap="nowrap">
+                        <TextInput
+                          size="xs"
+                          defaultValue={col.title}
+                          className="wb-grow"
+                          aria-label={`列名 ${col.title}`}
+                          onBlur={(e) => {
+                            const v = e.currentTarget.value.trim();
+                            if (v && v !== col.title) void m.renameColumn(col.id, v);
+                          }}
+                        />
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          onClick={() => void m.createCard(col.id, "新卡片")}
+                        >
+                          ＋ 卡片
+                        </Button>
+                        <ConfirmAction
+                          label="×"
+                          size="compact-xs"
+                          variant="subtle"
+                          title="删除列？"
+                          message={`删除列「${col.title}」将一并删除其中卡片（不可恢复）。确认删除？`}
+                          onConfirm={() => void m.deleteColumn(col.id)}
+                        />
+                      </Group>
+                      {(tree.tree?.cards ?? [])
+                        .filter((c) => c.columnId === col.id && (!q || c.title.includes(q)))
+                        .map((card) => (
+                          <div key={card.id} className="wb-admin__row" data-admin-card={card.title}>
+                            <TextInput
+                              size="xs"
+                              defaultValue={card.title}
+                              className="wb-grow"
+                              onBlur={(e) => {
+                                const v = e.currentTarget.value.trim();
+                                if (v && v !== card.title) void m.patchCard(card.id, { title: v });
+                              }}
+                            />
+                            {card.archived && <Badge size="xs" variant="outline">已归档</Badge>}
+                            <Button
+                              size="compact-xs"
+                              variant="subtle"
+                              onClick={() => void m.patchCard(card.id, { archived: !card.archived })}
+                            >
+                              {card.archived ? "恢复" : "归档"}
+                            </Button>
+                            <ConfirmAction
+                              label="删除"
+                              size="compact-xs"
+                              variant="subtle"
+                              title="删除卡片？"
+                              message={`确认删除卡片「${card.title}」？（不可恢复）`}
+                              onConfirm={() => void m.deleteCard(card.id)}
+                            />
+                          </div>
+                        ))}
+                    </div>
+                  ))}
+                {(tree.tree?.columns ?? []).length === 0 && (
+                  <Text size="xs" c="dimmed">
+                    暂无列 —— 在组件里「＋ 添加列」，或于此管理卡片
+                  </Text>
+                )}
+              </>
+            )}
+            {!activeBoardId && (
+              <Text size="xs" c="dimmed">
+                暂无看板 —— 新建后即可管理列与卡片
+              </Text>
+            )}
           </Stack>
         </Tabs.Panel>
 

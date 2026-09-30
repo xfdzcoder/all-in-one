@@ -121,7 +121,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
               withBorder
               padding={6}
               radius={6}
-              className="wb-card--interactive"
+              className="wb-card--interactive wb-mail-row"
               style={{ cursor: "pointer" }}
               onClick={() => setOpen(item)}
               role="button"
