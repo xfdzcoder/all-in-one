@@ -10,8 +10,6 @@ import {
   Textarea,
   TextInput,
 } from "@mantine/core";
-import { useGridStack, useGridStackItem } from "gridstack/dist/react";
-import type { GridStackWidget } from "gridstack/dist/react";
 
 import type { KanbanCardRow } from "./api";
 import { ConfirmAction } from "./confirm";
@@ -26,17 +24,15 @@ import { WbAlert } from "./ui";
  * 卡片拖拽/嵌套手势见 Q6c（拖拽 vs 布局拖拽的冲突方案单独设计）。
  */
 
-type NodeLike = { el?: HTMLElement; props?: Record<string, unknown> };
-
 export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refreshSec?: number }) {
-  const { editMode, requestSave } = useContext(WidgetEditContext);
-  const { grid } = useGridStack();
-  const { node } = useGridStackItem();
-  const { boards, refresh: refreshBoards } = useKanbanBoards();
+  const { editMode } = useContext(WidgetEditContext);
+  const { boards } = useKanbanBoards();
   const { tree, error, loading, refresh } = useKanbanTree(boardId, refreshSec);
   const m = useKanbanMutations(boardId);
-  const [newBoard, setNewBoard] = useState("");
+  // Q26c#2：ghost→composer 新建交互（列/卡片）
+  const [addColOpen, setAddColOpen] = useState(false);
   const [newColumn, setNewColumn] = useState("");
+  const [addingCardCol, setAddingCardCol] = useState<string | null>(null);
   const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
@@ -49,14 +45,6 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const draggingIdRef = useRef<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
-  const selectBoard = (id: string) => {
-    const n = node as NodeLike | undefined;
-    if (grid && n?.el) {
-      grid.update(n.el, { props: { ...(n.props ?? {}), boardId: id } } as GridStackWidget);
-    }
-    requestSave();
-  };
 
   /** 卡片移动到目标列末尾（sortOrder = 该列最大 + 1；拖拽与「移动到」共用）。 */
   const moveCardTo = (cardId: string, columnId: string) => {
@@ -87,14 +75,6 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
     void Promise.all(ops.filter(Boolean));
   };
 
-  const createBoardAndSelect = async () => {
-    const title = newBoard.trim();
-    if (!title) return;
-    const row = await m.createBoard(title);
-    setNewBoard("");
-    refreshBoards();
-    selectBoard(row.id);
-  };
 
   const cardsOf = (columnId: string) =>
     (tree?.cards ?? []).filter((c) => c.columnId === columnId && !c.archived);
@@ -103,29 +83,9 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   return (
     <div className="wb-widget">
       <Group gap={6} wrap="nowrap">
-        <Select
-          size="compact-xs"
-          placeholder="选择看板"
-          data={boards.map((b) => ({ value: b.id, label: b.title }))}
-          value={boardId ?? null}
-          onChange={(v) => v && selectBoard(v)}
-          nothingFoundMessage="暂无看板"
-          style={{ width: 150 }}
-          aria-label="看板选择"
-        />
-        <TextInput
-          size="compact-xs"
-          placeholder="新看板名"
-          value={newBoard}
-          onChange={(e) => setNewBoard(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void createBoardAndSelect();
-          }}
-          style={{ width: 110 }}
-        />
-        <Button size="compact-xs" variant="default" disabled={!newBoard.trim()} onClick={() => void createBoardAndSelect()}>
-          新建看板
-        </Button>
+        <Text size="xs" fw={600} className="wb-grow wb-kanban__board-title" truncate>
+          {boards.find((b) => b.id === boardId)?.title ?? "看板"}
+        </Text>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
           刷新
         </Button>
@@ -139,7 +99,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
 
       {!boardId && (
         <Text size="xs" c="dimmed">
-          选择或新建看板后显示列与卡片
+          在组件「配置」里选择看板（看板在「数据源管理 · 看板」创建）
         </Text>
       )}
       {boardId && editMode && (
@@ -319,75 +279,102 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     <div className="wb-kanban__drop-slot wb-kanban__drop-slot--inline">放在这里</div>
                   ) : null;
                 })()}
-                <Group gap={4} wrap="nowrap">
-                  <TextInput
-                    size="compact-xs"
-                    placeholder="新卡片"
-                    style={{ flex: 1 }}
-                    value={cardDrafts[col.id] ?? ""}
-                    onChange={(e) => {
-                      // 注意：updater 会在渲染期被重放 —— 事件属性要先取值（currentTarget 事后为 null）
-                      const v = e.currentTarget.value;
-                      setCardDrafts((d) => ({ ...d, [col.id]: v }));
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const t = (cardDrafts[col.id] ?? "").trim();
-                        if (t) {
-                          void m.createCard(col.id, t);
-                          setCardDrafts((d) => ({ ...d, [col.id]: "" }));
+                {addingCardCol === col.id ? (
+                  <div className="wb-composer">
+                    <TextInput
+                      size="compact-xs"
+                      placeholder="卡片标题"
+                      autoFocus
+                      value={cardDrafts[col.id] ?? ""}
+                      onChange={(e) => {
+                        const v = e.currentTarget.value;
+                        setCardDrafts((d) => ({ ...d, [col.id]: v }));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const t = (cardDrafts[col.id] ?? "").trim();
+                          if (t) {
+                            void m.createCard(col.id, t);
+                            setCardDrafts((d) => ({ ...d, [col.id]: "" }));
+                          }
                         }
-                      }
-                    }}
-                  />
+                        if (e.key === "Escape") setAddingCardCol(null);
+                      }}
+                    />
+                    <Group gap={4}>
+                      <Button
+                        size="compact-xs"
+                        disabled={!(cardDrafts[col.id] ?? "").trim()}
+                        onClick={() => {
+                          const t = (cardDrafts[col.id] ?? "").trim();
+                          if (t) {
+                            void m.createCard(col.id, t);
+                            setCardDrafts((d) => ({ ...d, [col.id]: "" }));
+                          }
+                        }}
+                      >
+                        添加
+                      </Button>
+                      <Button size="compact-xs" variant="subtle" onClick={() => setAddingCardCol(null)}>
+                        取消
+                      </Button>
+                    </Group>
+                  </div>
+                ) : (
                   <Button
                     size="compact-xs"
                     variant="subtle"
-                    disabled={!(cardDrafts[col.id] ?? "").trim()}
-                    onClick={() => {
-                      const t = (cardDrafts[col.id] ?? "").trim();
-                      if (t) {
-                        void m.createCard(col.id, t);
-                        setCardDrafts((d) => ({ ...d, [col.id]: "" }));
-                      }
-                    }}
+                    className="wb-ghost-add"
+                    onClick={() => setAddingCardCol(col.id)}
                   >
-                    +
+                    ＋ 添加卡片
                   </Button>
-                </Group>
+                )}
               </Stack>
             </div>
           ))}
-          <div style={{ width: 190, flexShrink: 0 }}>
-            <Group gap={4} wrap="nowrap">
-              <TextInput
-                size="compact-xs"
-                placeholder="新列名"
-                style={{ flex: 1 }}
-                value={newColumn}
-                onChange={(e) => setNewColumn(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newColumn.trim()) {
-                    void m.createColumn(newColumn.trim());
-                    setNewColumn("");
-                  }
-                }}
-              />
-              <Button
-                size="compact-xs"
-                variant="subtle"
-                disabled={!newColumn.trim()}
-                onClick={() => {
-                  const t = newColumn.trim();
-                  if (t) {
-                    void m.createColumn(t);
-                    setNewColumn("");
-                  }
-                }}
-              >
-                +
+          <div className="wb-kanban__col wb-kanban__col--ghost">
+            {addColOpen ? (
+              <div className="wb-composer">
+                <TextInput
+                  size="compact-xs"
+                  placeholder="列名"
+                  autoFocus
+                  value={newColumn}
+                  onChange={(e) => setNewColumn(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newColumn.trim()) {
+                      void m.createColumn(newColumn.trim());
+                      setNewColumn("");
+                      setAddColOpen(false);
+                    }
+                    if (e.key === "Escape") setAddColOpen(false);
+                  }}
+                />
+                <Group gap={4}>
+                  <Button
+                    size="compact-xs"
+                    disabled={!newColumn.trim()}
+                    onClick={() => {
+                      if (newColumn.trim()) {
+                        void m.createColumn(newColumn.trim());
+                        setNewColumn("");
+                        setAddColOpen(false);
+                      }
+                    }}
+                  >
+                    添加
+                  </Button>
+                  <Button size="compact-xs" variant="subtle" onClick={() => setAddColOpen(false)}>
+                    取消
+                  </Button>
+                </Group>
+              </div>
+            ) : (
+              <Button size="compact-xs" variant="subtle" className="wb-ghost-add" onClick={() => setAddColOpen(true)}>
+                ＋ 添加列
               </Button>
-            </Group>
+            )}
           </div>
         </Group>
       )}

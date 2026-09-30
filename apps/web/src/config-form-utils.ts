@@ -44,7 +44,8 @@ export function validateForm(schema: ConfigSchema, values: ConfigValues): FieldE
         errors.push({ key: f.key, message: `${f.label} 需为合法 JSON` });
       }
     }
-    if (!empty && f.type === "select") {
+    if (!empty && f.type === "select" && !f.dynamic) {
+      // dynamic 选项（看板/数据连接下拉）运行时取数 —— 不做静态白名单校验（Q26c）
       const okOpt = f.options?.some((o) => o.value === v);
       if (!okOpt) errors.push({ key: f.key, message: `${f.label} 取值非法` });
     }

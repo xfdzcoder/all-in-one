@@ -156,19 +156,64 @@ try {
   await sleep(400);
   ok("FR3 kanban submit", await clickBtn("确认添加", true));
   await sleep(1500);
-  // 看板组件需选定看板才会拉取看板树（否则查询 disabled）
-  const filled = await page.evaluate(() => {
-    const inputs = [...document.querySelectorAll("input")].filter((i) => i.placeholder === "新看板名");
-    const target = inputs[inputs.length - 1];
-    if (!target) return false;
-    target.focus();
-    target.click();
-    return true;
+  // 看板组件需选定看板才会拉取看板树（Q26c：建板 API 播种、组件配置里选板）
+  await page.evaluate(async () => {
+    await fetch("/api/kanban/boards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "fr3-board" }),
+    });
   });
-  ok("FR3 kanban board name field", filled);
-  await page.keyboard.type("fr3-board");
-  await sleep(200);
-  ok("FR3 kanban create board", await clickBtn("新建看板"));
+  await sleep(400);
+  const opened = await page.evaluate(() => {
+    const title = document.querySelector(".wb-kanban__board-title");
+    const chrome = title?.closest(".wb-chrome");
+    const btn = [...(chrome?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "配置");
+    btn?.click();
+    return Boolean(btn);
+  });
+  ok("FR3 kanban open config", opened);
+  await sleep(400);
+  ok(
+    "FR3 kanban select board in config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+        (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+      );
+      const root = roots[roots.length - 1];
+      const wrapper = [...(root?.querySelectorAll(".mantine-InputWrapper-root") ?? [])].find((w) =>
+        w.querySelector("label")?.textContent.includes("看板"),
+      );
+      wrapper?.querySelector("[role=combobox]")?.click();
+      return Boolean(wrapper);
+    }),
+  );
+  await sleep(500);
+  ok(
+    "FR3 kanban pick board",
+    await page.evaluate(() => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) =>
+        e.textContent.includes("fr3-board"),
+      );
+      opt?.click();
+      return Boolean(opt);
+    }),
+  );
+  await sleep(300);
+  ok(
+    "FR3 kanban save config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+        (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+      );
+      const root = roots[roots.length - 1];
+      const btn = [...(root?.querySelectorAll("button") ?? [])].find(
+        (b) => b.textContent.trim() === "保存配置" && b.offsetParent !== null,
+      );
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
   await sleep(1500);
 
   // 浏览模式（手动刷新 = 组件内操作，不应依赖编辑模式）
@@ -180,7 +225,7 @@ try {
   ok("FR3 rss has 刷新", await hasRefreshIn("信息流"));
   ok("FR3 custom-api has 刷新", await hasRefreshIn("自定义 API"));
   ok("FR3 launcher has 刷新", await hasRefreshIn("应用入口"));
-  ok("FR3 kanban has 刷新", await hasRefreshIn("新建看板"));
+  ok("FR3 kanban has 刷新", await hasRefreshIn("fr3-board"));
 
   // ② 点击即回源（force 穿透服务端缓存 / REST 重新取数）
   const t0 = todoHits;
@@ -189,7 +234,7 @@ try {
   ok("FR3 todo refetched", todoHits > t0, `${t0} -> ${todoHits}`);
 
   const k0 = kanbanHits;
-  ok("FR3 kanban refresh", await clickRefreshIn("新建看板"));
+  ok("FR3 kanban refresh", await clickRefreshIn("fr3-board"));
   await sleep(1200);
   ok("FR3 kanban refetched", kanbanHits > k0, `${k0} -> ${kanbanHits}`);
 

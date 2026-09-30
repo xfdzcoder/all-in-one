@@ -195,7 +195,9 @@ export const kanbanManifest: WidgetManifest = {
   category: "数据",
   defaultSize: { w: 8, h: 5 },
   minSize: { w: 4, h: 3 },
-  configSchema: [],
+  configSchema: [
+    { key: "boardId", label: "看板", type: "select", dynamic: "kanban-boards", help: "在「数据源管理 · 看板」创建与管理；组件只做视图" },
+  ],
   capabilities: {
     data: { source: "workspace", resource: "kanban" },
     refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },

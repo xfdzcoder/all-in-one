@@ -92,6 +92,32 @@ const fillNth = async (placeholder, index, text) => {
   return true;
 };
 
+/** 列内按钮点击（Q26c：ghost→composer 后按列定位）。 */
+const clickInColumn = (col, label) =>
+  page.evaluate(
+    ({ c, l }) => {
+      const colDiv = document.querySelector(`[data-col-title="${c}"]`);
+      const btn = [...(colDiv?.querySelectorAll("button") ?? [])].find((b) => b.textContent.includes(l));
+      btn?.click();
+      return Boolean(btn);
+    },
+    { c: col, l: label },
+  );
+
+/** 顶层可见弹窗内的精确按钮（关闭态空 root 不计，Q4 教训）。 */
+const clickInTopModal = (label) =>
+  page.evaluate((l) => {
+    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+      (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+    );
+    const root = roots[roots.length - 1];
+    const btn = [...(root?.querySelectorAll("button") ?? [])].find(
+      (b) => b.textContent.trim() === l && b.offsetParent !== null,
+    );
+    btn?.click();
+    return Boolean(btn);
+  }, label);
+
 const clickCard = (title) =>
   page.evaluate((t) => {
     const cards = [...document.querySelectorAll(".mantine-Card-root")].filter((c) =>
@@ -169,59 +195,90 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
-  // 添加看板组件（无表单配置项）
+  // 建板（数据源管理 · 看板 —— Q26c：组件内不再建板）
+  const boardTitle = `kan-${uniq}`;
+  ok("KAN open data source manager", await clickBtn("数据源管理"));
+  await sleep(500);
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "看板");
+    tab?.click();
+  });
+  await sleep(300);
+  ok("KAN type new board name", await fillNth("新看板名", 0, boardTitle));
+  await page.keyboard.press("Enter");
+  await sleep(800);
+  ok("KAN board created in manager", await page.evaluate((t) => (document.body.textContent ?? "").includes(t), boardTitle));
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
+  );
+  await sleep(500);
+
+  // 添加看板组件（Q26c#3：看板在「配置」里选，头部只显标题）
   ok("KAN enter edit", await clickBtn("编辑布局"));
   await sleep(300);
   ok("KAN open picker", await clickBtn("添加组件"));
   await sleep(300);
   ok("KAN pick 看板", await clickBtn("看板"));
   await sleep(400);
-  ok("KAN add kanban widget", await clickBtn("确认添加", true));
+  ok("KAN add kanban widget (no board yet)", await clickBtn("确认添加", true));
   await sleep(1000);
   ok(
     "KAN empty-state hint",
-    await page.evaluate(() => (document.body.textContent ?? "").includes("选择或新建看板后显示列与卡片")),
+    await page.evaluate(() => (document.body.textContent ?? "").includes("在组件「配置」里选择看板")),
   );
-  // 编辑态组件内容惰性（FR-P8）：输入/点击均不生效 → 浏览模式才可操作
+  // 编辑态内容惰性（FR-P8）：composer 入口点击无效
   await page.evaluate(() => {
-    const input = [...document.querySelectorAll("input")].find((i) => i.placeholder === "新看板名");
-    input?.focus();
-    input?.click();
+    const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.includes("＋ 添加列"));
+    btn?.click();
   });
-  await page.keyboard.type("should-not-appear");
   await sleep(300);
-  const inertValue = await page.evaluate(
-    () => [...document.querySelectorAll("input")].find((i) => i.placeholder === "新看板名")?.value ?? "MISSING",
+  ok(
+    "KAN composer inert in edit mode",
+    await page.evaluate(() => ![...document.querySelectorAll("input")].some((i) => i.placeholder === "列名" && i.offsetParent !== null)),
   );
-  ok("KAN typing inert in edit mode", inertValue === "", String(inertValue));
+  // 配置里选看板（scoped：页面上每个组件外框都有「配置」按钮）
+  ok(
+    "KAN open config",
+    await page.evaluate(() => {
+      const title = document.querySelector(".wb-kanban__board-title");
+      const chrome = title?.closest(".wb-chrome");
+      const btn = [...(chrome?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "配置");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(400);
+  ok("KAN select board in config", await selectOption("看板", boardTitle));
+  await sleep(300);
+  ok("KAN save config", await clickInTopModal("保存配置"));
+  await sleep(800);
   ok("KAN exit edit to operate cards", await clickBtn("完成编辑"));
   await sleep(400);
+  ok(
+    "KAN board title shown in header",
+    await page.evaluate((t) => document.querySelector(".wb-kanban__board-title")?.textContent === t, boardTitle),
+  );
 
-  // ① 新建看板（组件内选择器 = 配置写回）
-  const boardTitle = `kan-${uniq}`;
-  ok("KAN type new board name", await fillNth("新看板名", 0, boardTitle));
-  await page.keyboard.press("Enter");
-  await sleep(1000);
-  ok("KAN board created and selected", await page.evaluate((t) => [...document.querySelectorAll("input")].some((i) => i.value === t), boardTitle));
-
-  // ② 加列 / 加卡
-  ok("KAN add column 待办", await fillNth("新列名", 0, "待办"));
+  // ② 加列 / 加卡（Q26c#2：ghost→composer）
+  ok("KAN open add-column composer", await clickBtn("＋ 添加列"));
+  ok("KAN add column 待办", await fillNth("列名", 0, "待办"));
   await page.keyboard.press("Enter");
   await sleep(800);
-  ok("KAN add column 进行中", await fillNth("新列名", 0, "进行中"));
+  ok("KAN open add-column composer again", await clickBtn("＋ 添加列"));
+  ok("KAN add column 进行中", await fillNth("列名", 0, "进行中"));
   await page.keyboard.press("Enter");
   await sleep(800);
   ok(
     "KAN columns rendered",
     await page.evaluate(() => {
-      // Q19c：列标题改文本+点击编辑 —— 按 data-col-title 断言列已渲染
       const titles = [...document.querySelectorAll("[data-col-title]")].map((e) =>
         e.getAttribute("data-col-title"),
       );
       return titles.includes("待办") && titles.includes("进行中");
     }),
   );
-  ok("KAN add card", await fillNth("新卡片", 0, cardA));
+  ok("KAN open add-card composer", await clickInColumn("待办", "＋ 添加卡片"));
+  ok("KAN add card", await fillNth("卡片标题", 0, cardA));
   await page.keyboard.press("Enter");
   await sleep(800);
   ok("KAN card rendered in 待办", await cardInColumn("待办", cardA));
@@ -254,7 +311,9 @@ try {
   );
 
   // 另一列再加一张卡（刷新/拖拽断言用）
-  ok("KAN add card in 进行中", await fillNth("新卡片", 1, cardC));
+  ok("KAN add card in 进行中", await clickInColumn("进行中", "＋ 添加卡片"));
+  await sleep(200);
+  ok("KAN type card in 进行中", await fillNth("卡片标题", 0, cardC));
   await page.keyboard.press("Enter");
   await sleep(800);
 
@@ -274,7 +333,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(1200);
-  ok("KAN board selection persists (props round-trip)", await page.evaluate((t) => [...document.querySelectorAll("input")].some((i) => i.value === t), boardTitle));
+  ok("KAN board selection persists (props round-trip)", await page.evaluate((t) => document.querySelector(".wb-kanban__board-title")?.textContent === t, boardTitle));
   ok("KAN columns persist after reload", await cardInColumn("进行中", cardC));
   ok(
     "KAN archived stays archived",

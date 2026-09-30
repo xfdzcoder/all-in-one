@@ -623,3 +623,34 @@
   border-radius: var(--wb-radius-sm);
   background: var(--wb-color-surface);
 }
+
+/* ── 看板 ghost→composer 新建交互（Q26c#2）── */
+.wb-kanban__col--ghost {
+  background: transparent;
+  border: 1px dashed var(--wb-color-border-strong);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 72px;
+}
+
+.wb-ghost-add {
+  width: 100%;
+  justify-content: center;
+  color: var(--wb-color-text-muted);
+}
+
+.wb-ghost-add:hover {
+  color: var(--wb-color-text);
+}
+
+.wb-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+  width: 100%;
+}
+
+.wb-kanban__board-title {
+  min-width: 0;
+}
