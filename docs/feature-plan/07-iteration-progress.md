@@ -12,6 +12,8 @@
 
 ## 迭代队列
 
+> **维护约定**：完成勾选必须**断言 replace 命中**（历史上三次静默 no-op：Q29e hooks 守卫、monitor.md、Q30–Q39 队列勾选缩进不符）——编辑 07 后核对目标行确实变化。
+
 > 首轮（2026-09-29）由 loop 同步：先收口 05-mvp 未完成项（出口标准 J1–J8 记录），再按 [06-roadmap.md](06-roadmap.md) §1 二期候选 / §3 待定清单排入；完成项标记 `[x]`。大项在选中当轮再拆小步。
 
 - [x] Q1 · 组件选择器 + configSchema 驱动添加表单（FR-W2 收口：manifest 清单驱动选择器，替换 Board 硬编码添加按钮；同步 verify-m1/j4/j5 与 Playwright J2b/J4 用例）**✅ 2026-09-29**
@@ -101,16 +103,20 @@
   - [x] Q29e · 邮箱+看板（四五）：mail 配置多选邮箱（dynamic mail-accounts，倒序聚合，账号列表查询缓存）；邮箱「＋ 添加邮箱」/看板「＋ 新建看板」入右上角按需展开；看板空态引导跳转、widget 禁删列、列宽等分 **✅ 2026-10-01**
   - [x] Q29f · 收口：交互文档同步（todo/rss/mail/kanban/页面/按钮索引）+ 台账入账 ISS-27/28 + 全量回归 **✅ 2026-10-01**
 
-- [ ] Q30 · 数据源管理·看板页布局（一.1）：看板下拉缩短靠左、右侧紧邻「＋ 新建看板」；当前看板名称与删除看板同行、缩短、靠右
-- [ ] Q31 · 缺陷：Glances 连接后「监控源」数据连接显示一条连接但点开详情空白（一.2；https://glances.xfdzcoder.space 可验）
-- [ ] Q32 · 编辑态卡片内容保持可见、仅禁止点击修改（二.1，推翻隐藏方案）
-- [ ] Q33 · 缺陷：编辑页面模式下配置邮箱/看板时下拉列表为空（二.2）
-- [ ] Q34 · 信息流「未读」徽标编辑态隐藏（二.3）
-- [ ] Q35 · 看板列无最大宽度，始终为卡片宽度等分（二.4）
-- [ ] Q36 · 服务器监控组件配置只选已配置监控源，不再要求重新填写（二.5）
-- [ ] Q37 · 服务器监控卡片样式：CPU/内存/负载三区域等大 + 存储空间展示修正（二.6；Glances 可验）
-- [ ] Q38 · 引入图标库 + 已接入服务用官方图标（三.1，新需求）
-- [ ] Q39 · 接入更多数据源：Immich、MetacubeXD、Mihomo、Navidrome、Portainer（三.2，新需求）
+- [x] Q30 · 数据源管理·看板页布局（一.1）**✅ 2026-10-01（`1432d2e`）**：看板下拉缩短靠左、右侧紧邻「＋ 新建看板」；当前看板名称与删除看板同行、缩短、靠右
+- [x] Q31 · 缺陷：Glances 连接后「监控源」连接列表/编辑空白（GET 补解析后 config）**✅ 2026-10-01（`2fa486d`）**（一.2；https://glances.xfdzcoder.space 可验）
+- [x] Q32 · 编辑态卡片内容保持可见、仅禁止点击修改（撤销 Q29d 隐藏方案，inert 承担禁交互）**✅ 2026-10-01（`cd86b34`）**（二.1，推翻隐藏方案）
+- [x] Q33 · 缺陷：配置邮箱时「展示的邮箱」下拉为空（useDynamicOptionsMap 补 mail-accounts 选项源）**✅ 2026-10-01（`70f3000`）**（二.2）
+- [x] Q34 · 信息流「未读」徽标编辑态隐藏**✅ 2026-10-01（`38db10e`）**（二.3）
+- [x] Q35 · 看板列无最大宽度，始终为卡片宽度等分（纯 flex 1 1 0）**✅ 2026-10-01（`ee63de4`）**（二.4）
+- [x] Q36 · 服务器监控组件配置只选已配置监控源（configSchema 收敛 sourceId；修连接表单键错配）**✅ 2026-10-01（`965fd1b`）**（二.5）
+- [x] Q37 · 服务器监控卡片样式：三卡等高 + 存储同卷 bind mount 去重/设备名贴标**✅ 2026-10-01（`17f19de`）**（二.6；Glances 可验）
+- [x] Q38 · 引入图标库 + 已接入服务用官方图标（三.1）**✅ 2026-10-01**
+  - [x] Q38a · 图标基座：vendored 品牌 SVG + ServiceIcon + WidgetManifest.icon 接线（**D45**）**✅（`56a0475`）**
+  - [x] Q38b · 自定义图标库：custom_icon 表（迁移 0013）+ /api/icons（SVG 净化/CSP sandbox）+ 「图标」页签**✅（`260b6bd`）**
+- [x] Q39 · 接入更多数据源：Immich、MetacubeXD、Mihomo、Navidrome、Portainer（三.2）**✅ 2026-10-01**
+  - [x] Q39a · 连接 + 概览展示（**D46**）：四类数据连接 + ServiceOverview 适配器 + 「服务概览」组件 + 品牌图标**✅（`ca3bdfa`）**
+  - [x] Q39b · 文档收口（01 §2.7 FR-X1~X3 + 组件篇 + 全量回归）**✅（`1bf3c99`）**
 
 ## 历轮记录
 
@@ -210,3 +216,4 @@
 | 76 | 2026-10-01 | **Q39a 第三方服务接入（三.2）+ D46**：① 数据连接新增 **immich/navidrome/portainer/mihomo** 四类（metacubexd=Mihomo Web 前端归 mihomo）——认证与各 API 对齐（API Key / Subsonic salt+token md5 / Bearer secret），secret 入凭证库、allowPrivate 内网通道；② `connector/service.ts` 四适配器归一 **ServiceOverview{probe,version,stats}**（版本/计数接口缺失 best-effort 省略）+ `service-overview` 数据通道（**sourceId 服务端按连接 kind 派发**，连接细节不出服务端）；③ 「服务概览」组件（选连接 → 徽标+版本+计数+详情 JSON；空态引导跳数据源管理）；④ 品牌图标 vendored：immich/portainer（si CC0）、navidrome（dashboard-icons）、mihomo（MetaCubeX 官方 PNG，metacubexd 共用家族标）——SOURCES.md 登记。**过程修复**：builtinManifests 漏注册致选择器无卡；TS 断言语法两处；契约 kinds 钉死清单按扩展更新；假阴性选择器（img 自带 .wb-service-icon 类，`.wb-service-icon img` 找后代）。契约测试 +5（162/162）；**verify-svc.mjs 14 项**（四服务 mock 全链 + 坏连接显式失败 + 画廊官方图标） | server Vitest 162/162 ✅；verify-svc 14/14 ✅（新）；verify-j8 13/13、verify-mon 18/18、verify-icons 7/7、verify-dark 3/3 ✅ | 待提交 |
 | 77 | 2026-10-01 | **Q39b 文档收口 + 全量回归（用户反馈⑪全部完成）**：① 01-requirements 增 **§2.7 图标体系与第三方服务概览**（FR-X1 图标库/自定义图标库、FR-X2 服务概览、FR-X3 深度组件排后）；② 06-roadmap 增「更多数据源接入（FR-E5）/图标体系」兑现注记；③ 组件篇 **service-overview.md**（配置/数据流/结构/各服务 v1 指标/交互点/行为边界）+ README 组件索引补位；④ **monitor.md Q36 同步补课**——上轮 doc replace 未命中静默失败（configSchema 表仍旧），本轮改精确锚点重写（教训再现：文档 replace 也须断言命中）；⑤ **全量回归 29 脚本 448 项** + Playwright 5/5 + Vitest（server 162 + sdk 21）+ typecheck 全绿 | 29 脚本 448 项 ✅（含 verify-icons/svc）；Playwright 5/5 ✅；Vitest 183 ✅；typecheck ✅ | 待提交 |
 | 78 | 2026-10-01 | **第 78 轮：队列收口 + 自主循环暂停**：Q30–Q39（用户反馈⑪：数据源管理布局/Glances 详情空白、编辑态可见禁交互/配置下拉/未读徽标/列宽/监控选择化/监控样式、图标库+自定义图标库、五服务接入）**全部完成**。可自主推进源已尽 —— 按第 27 轮先例写 `.opencode/opencode-loop/STOP` 暂停调度（删除该文件或 `/loop-resume` 恢复） | 本轮 docs-only（状态收口） | `1bf3c99` |
+| 79 | 2026-10-01 | **第 79 轮：队列状态修复（账本维护）**：读状态发现 Q30–Q39 队列行仍为 `[ ]` —— 各完成轮的勾选 replace 用两空格缩进而文件是顶格 `- [ ]`，**静默 no-op**（与 Q29e hooks 守卫、monitor.md 同类教训，本批第三次）。按 commit 记录补齐勾选与 Q38/Q39 子项行，并在队列头部写入维护约定（replace 必须断言命中）。STOP 状态维持（队列已清空，等新指令） | docs-only（零代码变更） | 待提交 |
