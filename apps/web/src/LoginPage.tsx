@@ -9,6 +9,7 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,9 +54,19 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
         <Button type="submit" loading={busy}>
           登录
         </Button>
-        <Text size="xs" c="dimmed">
-          首次部署请设置 ADMIN_PASSWORD 环境变量（D17）
+        <Text
+          size="xs"
+          c="dimmed"
+          className="wb-clickable"
+          onClick={() => setHintOpen((v) => !v)}
+        >
+          忘记口令？
         </Text>
+        {hintOpen && (
+          <Text size="xs" c="dimmed">
+            管理员口令在部署时设置；遗忘时在服务器上修改后重启服务即可（详见部署文档）。
+          </Text>
+        )}
       </Stack>
     </Paper>
   );

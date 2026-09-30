@@ -356,3 +356,53 @@
 .wb-frame iframe.wb-frame__el--hidden {
   display: none;
 }
+
+/* ── 焦点环统一（P2-4）：可见焦点走主题强调色 ───────────────── */
+:focus-visible {
+  outline: 2px solid var(--wb-color-accent);
+  outline-offset: 2px;
+}
+
+/* ── 页签横向滚动（P1-5）：单行收纳，溢出滚动而非换行铺满 ──
+ * 双类提升特异性：Mantine 类样式运行时注入、同优先级后到即胜 */
+.wb-tabs.wb-tabs {
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.wb-tabs.wb-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.wb-tabs.wb-tabs::-webkit-scrollbar-thumb {
+  background: var(--wb-color-border-strong);
+  border-radius: 999px;
+}
+
+/* ── 拖放区（P2-8 插件安装）───────────────────────────────── */
+.wb-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--wb-space-1);
+  padding: var(--wb-space-4);
+  border: 1px dashed var(--wb-color-border-strong);
+  border-radius: var(--wb-radius-sm);
+  text-align: center;
+  transition: border-color var(--wb-transition), background var(--wb-transition);
+}
+
+.wb-dropzone--over {
+  border-color: var(--wb-color-accent);
+  background: color-mix(in srgb, var(--wb-color-accent) 10%, transparent);
+}
+
+/* ── 代码/JSON 等宽（P2-8）────────────────────────────────── */
+.wb-code,
+.wb-code textarea {
+  font-family: var(--wb-font-mono);
+}

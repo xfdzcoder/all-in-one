@@ -4,7 +4,7 @@ import { Badge, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/co
 import type { FeedItem, FeedSource } from "./api";
 import { useDraft, useFeeds, useFeedSources, useFeedMutations } from "./data-hooks";
 import { HtmlSandbox } from "./html-sandbox";
-import { WbAlert } from "./ui";
+import { RelativeTime, WbAlert } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -122,7 +122,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
         </Group>
       )}
       {unsub && (
-        <Modal opened onClose={() => setUnsub(null)} title="确认操作" size="sm">
+        <Modal opened onClose={() => setUnsub(null)} title="确认退订？" size="sm">
           <Text size="sm">
             确认退订「{unsub.title}」？（已读标记保留，可随时重新订阅）
           </Text>
@@ -150,7 +150,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
               {detail.title}
             </Text>
             <Text size="xs" c="dimmed">
-              {detail.sourceTitle} · {detail.date.slice(0, 16).replace("T", " ")}
+              {detail.sourceTitle} · <RelativeTime value={detail.date} />
             </Text>
             {/<[a-z/]/i.test(detail.summary) ? (
               <HtmlSandbox html={detail.summary} title={`rss-${detail.itemKey.slice(0, 8)}`} />

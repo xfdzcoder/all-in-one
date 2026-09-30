@@ -13,6 +13,7 @@ export function ConfirmAction({
   color = "red",
   size = "xs",
   variant = "light",
+  title = "确认操作",
 }: {
   label: string;
   message: string;
@@ -20,6 +21,8 @@ export function ConfirmAction({
   color?: string;
   size?: "compact-xs" | "xs";
   variant?: "light" | "default" | "subtle" | "filled";
+  /** 情境化标题（P2-8）："删除页面？"等短问句；缺省保持"确认操作"。 */
+  title?: string;
 }) {
   const [opened, setOpened] = useState(false);
   return (
@@ -29,7 +32,7 @@ export function ConfirmAction({
       </Button>
       {/* 条件挂载：Mantine 关闭态 Modal 会留空 root（Q4 教训），按需挂载避免 DOM 膨胀 */}
       {opened && (
-        <Modal opened onClose={() => setOpened(false)} title="确认操作" size="sm">
+        <Modal opened onClose={() => setOpened(false)} title={title} size="sm">
           <Text size="sm">{message}</Text>
           <Group gap="xs" mt="sm">
             <Button

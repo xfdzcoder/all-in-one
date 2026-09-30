@@ -69,6 +69,7 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
   const { plugins, refresh } = usePlugins();
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -157,9 +158,27 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
         <List size="xs" spacing="xs">
           {plugins.length === 0 && (
             <List.Item>
-              <Text size="xs" c="dimmed">
-                尚未安装插件
-              </Text>
+              <div
+                className={`wb-dropzone${dragOver ? " wb-dropzone--over" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) setFile(f);
+                }}
+              >
+                <Text size="xs" c="dimmed">
+                  尚未安装插件
+                </Text>
+                <Text size="xs" c="dimmed">
+                  把插件包（zip：manifest.json + 入口模块）拖到这里，或用上方「选择 .zip 文件」安装。
+                </Text>
+              </div>
             </List.Item>
           )}
           {plugins.map((row) => {
@@ -195,6 +214,7 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
                     <ConfirmAction
                       label="卸载"
                       size="compact-xs"
+                      title="卸载插件？"
                       message={`确认卸载插件「${row.name}」？（删除安装文件与登记；已添加的插件组件将失效）`}
                       onConfirm={() => void uninstall(row)}
                     />

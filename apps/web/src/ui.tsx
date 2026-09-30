@@ -54,3 +54,28 @@ export function WbAlert({
     </div>
   );
 }
+
+/** 相对时间（P1-4）："刚刚 / n 分钟前 / n 小时前 / n 天前 / 日期"；悬浮显示绝对时间。 */
+export function formatRelative(value: string | number | Date): string {
+  const t = new Date(value).getTime();
+  if (!Number.isFinite(t)) return "";
+  const diff = Date.now() - t;
+  const min = 60_000;
+  const hour = 3_600_000;
+  const day = 86_400_000;
+  if (diff < min) return "刚刚";
+  if (diff < hour) return `${Math.floor(diff / min)} 分钟前`;
+  if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
+  if (diff < 30 * day) return `${Math.floor(diff / day)} 天前`;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+export function RelativeTime({ value, prefix }: { value: string | number | Date; prefix?: string }) {
+  const abs = new Date(value).toISOString().slice(0, 16).replace("T", " ");
+  return (
+    <span title={abs}>
+      {prefix}
+      {formatRelative(value)}
+    </span>
+  );
+}

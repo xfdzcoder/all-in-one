@@ -175,6 +175,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                   label="×"
                   size="compact-xs"
                   variant="subtle"
+                  title="删除列？"
                   message={`删除列「${col.title}」将一并删除其中 ${cardsOf(col.id).length} 张卡片（不可恢复）。确认删除？`}
                   onConfirm={() => void m.deleteColumn(col.id)}
                 />
@@ -186,6 +187,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     withBorder
                     padding={6}
                     radius={6}
+                    className="wb-card--interactive"
                     style={{ cursor: "pointer" }}
                     draggable={!editMode}
                     onDragStart={(e) => {
@@ -323,6 +325,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                 label="删除"
                 size="xs"
                 variant="default"
+                title="删除卡片？"
                 message={`确认删除卡片「${editing.title}」？（不可恢复）`}
                 onConfirm={() => {
                   void m.deleteCard(editing.id);

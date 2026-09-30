@@ -15,7 +15,7 @@ import type { MailListEntry } from "./api";
 import { api } from "./api";
 import { ConfirmAction } from "./confirm";
 import { HtmlSandbox } from "./html-sandbox";
-import { WbAlert } from "./ui";
+import { RelativeTime, WbAlert } from "./ui";
 import {
   useMailAccounts,
   useMailMessage,
@@ -115,6 +115,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
               withBorder
               padding={6}
               radius={6}
+              className="wb-card--interactive"
               style={{ cursor: "pointer" }}
               onClick={() => setOpen(item)}
             >
@@ -134,7 +135,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
                   {item.from}
                 </Text>
                 <Text size="xs" c="dimmed">
-                  {item.date.slice(0, 10)}
+                  <RelativeTime value={item.date} />
                 </Text>
               </Group>
             </Card>
@@ -153,7 +154,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
             </Text>
           </Group>
           <Text size="xs" c="dimmed">
-            {open.from} · {open.date.slice(0, 16).replace("T", " ")} · {open.accountName}
+            {open.from} · <RelativeTime value={open.date} /> · {open.accountName}
           </Text>
           {detailError && <WbAlert tone="error" size="sm">{detailError}</WbAlert>}
           {!detail && (
@@ -230,6 +231,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
                 <ConfirmAction
                   label="删除"
                   size="compact-xs"
+                  title="删除账号？"
                   message={`确认删除邮件账号「${a.name}」？（仅移除账号配置与凭证引用，邮件保留在邮件服务器）`}
                   onConfirm={() => void m.deleteAccount(a.id).then(() => refreshAccounts())}
                 />

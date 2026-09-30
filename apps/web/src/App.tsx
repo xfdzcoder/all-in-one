@@ -128,7 +128,10 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group gap="md">
-            <Text fw={700}>个人工作台</Text>
+            <Group gap={6}>
+              <img src="/favicon.svg" alt="" width={18} height={18} />
+              <Text fw={700}>个人工作台</Text>
+            </Group>
             <Text size="sm" c="dimmed">
               {me.username}
             </Text>
@@ -153,8 +156,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
           onChange={(v) => setActiveId(v)}
           keepMounted={false}
         >
-          <Group mb="sm" gap="xs">
-            <Tabs.List>
+          <Group mb="sm" gap="xs" wrap="nowrap">
+            <Tabs.List className="wb-tabs">
               {dashboards.map((d) => (
                 <Tabs.Tab key={d.id} value={d.id}>
                   {d.icon ? `${d.icon} ${d.title}` : d.title}
@@ -195,6 +198,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 label="删除此页"
                 size="xs"
                 variant="subtle"
+                title="删除页面？"
                 message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
                 onConfirm={() => void removeActive()}
               />

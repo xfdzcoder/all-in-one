@@ -41,6 +41,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
   const display = props.display ?? "stat";
   const { data, loading, error, refresh } = useCustomApiData(props);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // 三层展示（D35）：声明式预设 → 受限 JSX → Raw；模板解析失败显式报错不白屏
   const templateSrc = typeof props.templateJsx === "string" ? props.templateJsx : "";
@@ -77,7 +78,27 @@ export function CustomApiWidget(props: CustomApiConfig) {
       )}
       {detailOpen && (
         <Modal opened onClose={() => setDetailOpen(false)} title="详情 · 完整响应（FR-I4）" size="lg">
-          <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />
+          <Group justify="flex-end" mb="xs">
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              onClick={() => {
+                void navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+                setCopied(true);
+              }}
+            >
+              {copied ? "已复制" : "复制 JSON"}
+            </Button>
+          </Group>
+          <JsonInput
+            className="wb-code"
+            value={JSON.stringify(data, null, 2)}
+            readOnly
+            autosize
+            minRows={6}
+            maxRows={20}
+            size="xs"
+          />
         </Modal>
       )}
     </div>

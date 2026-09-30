@@ -4,7 +4,7 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { RelativeTime, WbAlert } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
  *  gridstack 直接把布局 JSON 的 props 展开传入，即扁平 config 形态。 */
@@ -12,6 +12,15 @@ export type TodoConfig = {
   list?: string;
   filter?: "open" | "all";
 };
+
+/** 清单显示名映射（P1-4）：默认键的人话名；未收录的键原样显示（用户自定义清单）。 */
+const LIST_NAMES: Record<string, string> = {
+  inbox: "收件箱",
+  work: "工作",
+  home: "家庭",
+  personal: "个人",
+};
+const listLabel = (key: string) => LIST_NAMES[key] ?? key;
 
 /**
  * Todo Widget（FR：Workspace 级数据、勾选完成/新增）。
@@ -31,7 +40,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
     <div className="wb-widget">
       <Group gap={6}>
         <Text size="sm" fw={600} style={{ flex: 1 }}>
-          Todo · {list}
+          Todo · {listLabel(list)}
         </Text>
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
@@ -84,6 +93,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
                 label="×"
                 size="compact-xs"
                 variant="subtle"
+                title="删除任务？"
                 message={`确认删除任务「${t.title}」？（不可恢复）`}
                 onConfirm={() => remove.mutate(t.id)}
               />
@@ -101,11 +111,10 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
               {detail.title}
             </Text>
             <Text size="xs" c="dimmed">
-              清单：{detail.list} · 状态：{detail.done ? "已完成" : "未完成"}
+              清单：{listLabel(detail.list)} · 状态：{detail.done ? "已完成" : "未完成"}
             </Text>
             <Text size="xs" c="dimmed">
-              创建 {new Date(detail.createdAt).toISOString().slice(0, 16).replace("T", " ")} · 更新{" "}
-              {new Date(detail.updatedAt).toISOString().slice(0, 16).replace("T", " ")}
+              创建 <RelativeTime value={detail.createdAt} /> · 更新 <RelativeTime value={detail.updatedAt} />
             </Text>
           </Stack>
         </Modal>

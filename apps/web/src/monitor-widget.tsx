@@ -43,6 +43,7 @@ function MetricCard({ label, value, hint }: { label: string; value: string; hint
 export function MonitorWidget(config: { url?: string; refreshSec?: number } & Record<string, unknown>) {
   const { data, loading, error, refresh } = useMonitorData(config);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const url = config.url;
 
   return (
@@ -144,7 +145,27 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
 
       {detailOpen && data && (
         <Modal opened onClose={() => setDetailOpen(false)} title="详情 · 监控原始指标（FR-I4）" size="lg">
-          <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />
+          <Group justify="flex-end" mb="xs">
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              onClick={() => {
+                void navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+                setCopied(true);
+              }}
+            >
+              {copied ? "已复制" : "复制 JSON"}
+            </Button>
+          </Group>
+          <JsonInput
+            className="wb-code"
+            value={JSON.stringify(data, null, 2)}
+            readOnly
+            autosize
+            minRows={6}
+            maxRows={20}
+            size="xs"
+          />
         </Modal>
       )}
     </div>

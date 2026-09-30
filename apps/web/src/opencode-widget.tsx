@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { useOpencodeData, type OpencodeSession } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { RelativeTime, WbAlert } from "./ui";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -18,11 +18,6 @@ function formatDuration(ms: number): string {
   const m = Math.floor(s / 60);
   if (m < 60) return `${m} 分 ${s % 60} 秒`;
   return `${Math.floor(m / 60)} 时 ${m % 60} 分`;
-}
-
-function formatTime(ms: number): string {
-  if (!ms) return "—";
-  return new Date(ms).toISOString().slice(0, 16).replace("T", " ");
 }
 
 export function OpencodeWidget(config: { url?: string; limit?: number } & Record<string, unknown>) {
@@ -94,7 +89,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
               </Badge>
             </Group>
             <Text size="xs" c="dimmed">
-              更新于 {formatTime(s.updatedAt)}
+              更新于 <RelativeTime value={s.updatedAt} />
             </Text>
           </Card>
         ))}
@@ -110,7 +105,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
               ID：{detail.id}
             </Text>
             <Text size="xs" c="dimmed">
-              创建 {formatTime(detail.createdAt)} · 更新 {formatTime(detail.updatedAt)}
+              创建 <RelativeTime value={detail.createdAt} /> · 更新 <RelativeTime value={detail.updatedAt} />
             </Text>
             <Text size="xs" c="dimmed">
               耗时 {formatDuration(detail.durationMs)}
