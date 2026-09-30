@@ -31,7 +31,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
   const [draft, setDraft] = useDraft();
   const [detail, setDetail] = useState<TodoItem | null>(null);
   // ISS-14 修复：勾完即消失的过滤下提供「撤销」——文案只报计数不带标题（契约：完成后标题不可再见）
-  const [undo, setUndo] = useState<{ id: string } | null>(null);
+  const [undo, setUndo] = useState<{ ids: string[]; count: number } | null>(null);
 
   const items = (data ?? []).filter((t) => (filter === "open" ? !t.done : true));
 
@@ -78,14 +78,14 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           添加
         </Button>
       </Group>
-      {undo && (
+      {undo && undo.count > 0 && (
         <div className="wb-undo">
-          <Text size="xs">已完成 1 项任务</Text>
+          <Text size="xs">已完成 {undo.count} 项任务</Text>
           <Button
             size="compact-xs"
             variant="subtle"
             onClick={() => {
-              if (undo) toggle.mutate({ id: undo.id, done: false });
+              for (const id of undo.ids) toggle.mutate({ id, done: false });
               setUndo(null);
             }}
           >
@@ -104,8 +104,9 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
                 onChange={(e) => {
                   const done = e.currentTarget.checked;
                   toggle.mutate({ id: t.id, done });
-                  if (done) setUndo({ id: t.id });
-                  else setUndo((u) => (u?.id === t.id ? null : u));
+                  // Q27d#3：计数累计（完成多项不再恒显 1 项）；撤销回滚本轮全部
+                  if (done) setUndo((u) => ({ ids: [...(u?.ids ?? []), t.id], count: (u?.count ?? 0) + 1 }));
+                  else setUndo((u) => (u ? { ids: u.ids.filter((x) => x !== t.id), count: Math.max(0, u.count - 1) } : null));
                 }}
                 aria-label={`toggle ${t.title}`}
               />

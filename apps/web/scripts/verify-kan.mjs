@@ -259,15 +259,34 @@ try {
     await page.evaluate((t) => document.querySelector(".wb-kanban__board-title")?.textContent === t, boardTitle),
   );
 
-  // ② 加列 / 加卡（Q26c#2：ghost→composer）
-  ok("KAN open add-column composer", await clickBtn("＋ 添加列"));
-  ok("KAN add column 待办", await fillNth("列名", 0, "待办"));
-  await page.keyboard.press("Enter");
-  await sleep(800);
-  ok("KAN open add-column composer again", await clickBtn("＋ 添加列"));
-  ok("KAN add column 进行中", await fillNth("列名", 0, "进行中"));
-  await page.keyboard.press("Enter");
-  await sleep(800);
+  // ② 加列（Q27d：唯一入口 = 数据源管理 · 看板）/ 加卡（整列点按）
+  const addColumnViaAdmin = async (name) => {
+    await clickBtn("数据源管理");
+    await sleep(500);
+    await page.evaluate(() => {
+      const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "看板");
+      tab?.click();
+    });
+    await sleep(300);
+    // 显式选板（管理页默认 boards[0]，未必是本旅程的看板）
+    await page.evaluate(() => document.querySelector('[aria-label="看板选择"]')?.click());
+    await sleep(300);
+    await page.evaluate((t) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) => e.textContent.includes(t));
+      opt?.click();
+    }, boardTitle);
+    await sleep(300);
+    await fillNth("列名", 0, name);
+    await page.keyboard.press("Enter");
+    await sleep(600);
+    await page.evaluate(() =>
+      [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
+    );
+    await sleep(500);
+    return true;
+  };
+  ok("KAN add column 待办", await addColumnViaAdmin("待办"));
+  ok("KAN add column 进行中", await addColumnViaAdmin("进行中"));
   ok(
     "KAN columns rendered",
     await page.evaluate(() => {
@@ -277,7 +296,7 @@ try {
       return titles.includes("待办") && titles.includes("进行中");
     }),
   );
-  ok("KAN open add-card composer", await clickInColumn("待办", "＋ 添加卡片"));
+  ok("KAN open add-card composer (click column)", await clickInColumn("待办", "＋ 添加卡片"));
   ok("KAN add card", await fillNth("卡片标题", 0, cardA));
   await page.keyboard.press("Enter");
   await sleep(800);

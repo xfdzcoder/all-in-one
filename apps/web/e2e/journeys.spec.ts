@@ -146,6 +146,7 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
 
   // 页面 B：新建页面 + Todo 组件 → 无需刷新即可见（SSE + 查询缓存）
   const uniq = `J4-${Date.now().toString(36).slice(-4)}`;
+  await page.getByRole("button", { name: "切换页面" }).click(); // Q27d#1：页面切换器弹层
   await page.getByPlaceholder("新页面名").fill(uniq);
   await page.getByRole("button", { name: "新建页面" }).click();
   await page.waitForTimeout(800);
@@ -170,7 +171,8 @@ test("J4 data/view separation: two todo widgets share Workspace state", async ({
   await expect(todoB.getByText(title)).toBeHidden({ timeout: 8000 });
 
   // 切回页面 A：完成态同步（同一 Workspace 数据 —— 任务带删除线显示）
-  await page.getByRole("tab", { name: "首页" }).click();
+  await page.getByRole("button", { name: "切换页面" }).click();
+  await page.locator('[data-page-item="首页"]').click();
   await page.waitForTimeout(800);
   const doneOnA = await page.evaluate((t: string) => {
     const rows = [...document.querySelectorAll(".grid-stack-item p")];

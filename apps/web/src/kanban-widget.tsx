@@ -29,9 +29,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const { boards } = useKanbanBoards();
   const { tree, error, loading, refresh } = useKanbanTree(boardId, refreshSec);
   const m = useKanbanMutations(boardId);
-  // Q26c#2：ghost→composer 新建交互（列/卡片）
-  const [addColOpen, setAddColOpen] = useState(false);
-  const [newColumn, setNewColumn] = useState("");
+  // Q26c#2/Q27d#2：卡片 composer（整列点按触发）；加列在「数据源管理 · 看板」
   const [addingCardCol, setAddingCardCol] = useState<string | null>(null);
   const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
@@ -86,6 +84,13 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         <Text size="xs" fw={600} className="wb-grow wb-kanban__board-title" truncate>
           {boards.find((b) => b.id === boardId)?.title ?? "看板"}
         </Text>
+        <Button
+          size="compact-xs"
+          variant="subtle"
+          onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "kanban" } }))}
+        >
+          管理
+        </Button>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
           刷新
         </Button>
@@ -333,49 +338,6 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               </Stack>
             </div>
           ))}
-          <div className="wb-kanban__col wb-kanban__col--ghost">
-            {addColOpen ? (
-              <div className="wb-composer">
-                <TextInput
-                  size="compact-xs"
-                  placeholder="列名"
-                  autoFocus
-                  value={newColumn}
-                  onChange={(e) => setNewColumn(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newColumn.trim()) {
-                      void m.createColumn(newColumn.trim());
-                      setNewColumn("");
-                      setAddColOpen(false);
-                    }
-                    if (e.key === "Escape") setAddColOpen(false);
-                  }}
-                />
-                <Group gap={4}>
-                  <Button
-                    size="compact-xs"
-                    disabled={!newColumn.trim()}
-                    onClick={() => {
-                      if (newColumn.trim()) {
-                        void m.createColumn(newColumn.trim());
-                        setNewColumn("");
-                        setAddColOpen(false);
-                      }
-                    }}
-                  >
-                    添加
-                  </Button>
-                  <Button size="compact-xs" variant="subtle" onClick={() => setAddColOpen(false)}>
-                    取消
-                  </Button>
-                </Group>
-              </div>
-            ) : (
-              <Button size="compact-xs" variant="subtle" className="wb-ghost-add" onClick={() => setAddColOpen(true)}>
-                ＋ 添加列
-              </Button>
-            )}
-          </div>
         </Group>
       )}
 

@@ -19,6 +19,26 @@ const browser = await puppeteer.launch({
   args: ["--no-sandbox", "--window-size=1400,900"],
 });
 const page = await browser.newPage();
+/** Q27d#1：页面切换器弹层。 */
+const openSwitcher = async () => {
+  // 幂等：弹层已开则不再点（点击是开/关切换）
+  await page.evaluate(() => {
+    const open = [...document.querySelectorAll("[data-page-item]")].some((b) => b.offsetParent !== null);
+    if (!open) document.querySelector('[aria-label="切换页面"]')?.click();
+  });
+  await sleep(300);
+};
+const switchPage = async (title) => {
+  await openSwitcher();
+  return page.evaluate((t) => {
+    const btn = [...document.querySelectorAll("[data-page-item]")].find(
+      (b) => b.getAttribute("data-page-item") === t,
+    );
+    btn?.click();
+    return Boolean(btn);
+  }, title);
+};
+
 await page.setViewport({ width: 1400, height: 900 });
 
 const clickBtn = (label, exact = false) =>
@@ -89,6 +109,7 @@ try {
   // create page B with its own Todo widget
   await page.setViewport({ width: 1400, height: 900 });
   const uniq = `J4-${Date.now().toString(36).slice(-4)}`;
+  await openSwitcher();
   await page.type('input[placeholder="新页面名"]', uniq);
   ok("J4 create page B", await clickBtn("新建页面"));
   await sleep(800);
@@ -101,11 +122,9 @@ try {
 
   // task created on A must appear on B WITHOUT reload (SSE invalidation + query)
   const state = await page.evaluate((t) => {
-    const onB = [...document.querySelectorAll('[role="tab"]')].find(
-      (tab) => tab.getAttribute("aria-selected") === "true",
-    )?.textContent;
+    const onB = document.querySelector('[aria-label="切换页面"]')?.textContent ?? "";
     return {
-      activeTab: onB ?? "",
+      activeTab: onB,
       taskVisible: document.body.textContent.includes(t),
       todoWidgets: document.querySelectorAll('.grid-stack-item input[placeholder="新任务…"]').length,
     };
@@ -137,10 +156,7 @@ try {
   }
 
   // back to page A: completion must reflect there too (same Workspace data)
-  await page.evaluate(() => {
-    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent === "首页");
-    tab?.click();
-  });
+  await switchPage("首页");
   await sleep(1200);
   const doneOnA = await page.evaluate((t) => {
     const rows = [...document.querySelectorAll(".grid-stack-item p")];

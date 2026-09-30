@@ -20,6 +20,27 @@ const browser = await puppeteer.launch({
   args: ["--no-sandbox", "--window-size=1400,900"],
 });
 const page = await browser.newPage();
+
+/** Q27d#1：页面切换 = 右上角弹出下拉（页面管理在弹层内）。 */
+const openSwitcher = async () => {
+  // 幂等：弹层已开则不再点（点击是开/关切换）
+  await page.evaluate(() => {
+    const open = [...document.querySelectorAll("[data-page-item]")].some((b) => b.offsetParent !== null);
+    if (!open) document.querySelector('[aria-label="切换页面"]')?.click();
+  });
+  await sleep(300);
+};
+const switchPage = async (title) => {
+  await openSwitcher();
+  return page.evaluate((t) => {
+    const btn = [...document.querySelectorAll("[data-page-item]")].find(
+      (b) => b.getAttribute("data-page-item") === t,
+    );
+    btn?.click();
+    return Boolean(btn);
+  }, title);
+};
+
 await page.setViewport({ width: 1400, height: 900 });
 
 const clickBtn = (label, exact = false) =>
@@ -72,7 +93,7 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   // 显式选中「首页」（J1 默认页）——不依赖 tab 顺序
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === "首页");
+    const tab = [...document.querySelectorAll("[data-page-item]")].find((t) => t.getAttribute("data-page-item") === "首页");
     tab?.click();
   });
   await sleep(400);
@@ -161,27 +182,28 @@ try {
   await page.setViewport({ width: 1400, height: 900 });
   await sleep(400);
   const uniq = `开发-${Date.now().toString(36).slice(-4)}`;
+  await openSwitcher();
   await page.type('input[placeholder="新页面名"]', uniq);
   ok("multi-dashboard create", await clickBtn("新建页面"));
   await sleep(800);
-  const tabs = await page.$$eval('[role="tab"]', (els) => els.map((e) => e.textContent));
+  await openSwitcher();
+  const tabs = await page.$$eval("[data-page-item]", (els) => els.map((e) => e.getAttribute("data-page-item")));
   ok("multi-dashboard tab appears", tabs.includes(uniq), JSON.stringify(tabs));
 
   // multi-dashboard: new page is empty (no seed), switch back to 首页 keeps widgets
   const countHome = await page.$$eval(".grid-stack-item", (els) => els.length);
-  await page.evaluate(() => {
-    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent === "首页");
-    tab?.click();
-  });
+  await switchPage("首页");
   await sleep(600);
   const countHome2 = await page.$$eval(".grid-stack-item", (els) => els.length);
   ok("multi-dashboard switch keeps widgets", countHome2 >= countBefore, `new page=${countHome} home=${countHome2}`);
 
   // D31：破坏性操作二次确认 —— 删除此页（误触不丢布局）
   const delName = `删除-${Date.now().toString(36).slice(-4)}`;
+  await openSwitcher();
   await page.type('input[placeholder="新页面名"]', delName);
   ok("D31 create page for delete", await clickBtn("新建页面"));
   await sleep(800);
+  await openSwitcher();
   ok("D31 open delete confirm", await clickBtn("删除此页"));
   await sleep(400);
   ok(
@@ -192,23 +214,26 @@ try {
   await sleep(600);
   ok(
     "D31 page survives cancel",
-    await page.evaluate((n) => [...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
+    await page.evaluate((n) => [...document.querySelectorAll("[data-page-item]")].some((t) => t.getAttribute("data-page-item") === n), delName),
   );
+  await openSwitcher();
   ok("D31 reopen delete confirm", await clickBtn("删除此页"));
   await sleep(400);
   ok("D31 confirm delete", await clickBtn("确认", true));
   await sleep(1000);
   ok(
     "D31 page deleted after confirm",
-    await page.evaluate((n) => ![...document.querySelectorAll('[role="tab"]')].some((t) => t.textContent.trim() === n), delName),
+    await page.evaluate((n) => ![...document.querySelectorAll("[data-page-item]")].some((t) => t.getAttribute("data-page-item") === n), delName),
   );
 
   // FR-P1/P9：页面设置（名称/图标/背景）+ 排序（在临时页上验证，不动首页 fixture）
   const p1 = `P1-${Date.now().toString(36).slice(-4)}`;
   const renamed = `改名-${Date.now().toString(36).slice(-4)}`;
+  await openSwitcher();
   await page.type('input[placeholder="新页面名"]', p1);
   ok("P1 create page", await clickBtn("新建页面"));
   await sleep(800);
+  await openSwitcher();
   ok("P1 open page settings", await clickBtn("页面设置"));
   await sleep(400);
   ok(
@@ -227,25 +252,28 @@ try {
   );
   ok("P1 save settings", await clickBtn("保存", true));
   await sleep(1000);
+  await openSwitcher();
   ok(
     "P1 tab renamed",
-    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(t)), renamed),
+    await page.evaluate((t) => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.getAttribute("data-page-item") ?? "").includes(t)), renamed),
   );
 
   const orderBefore = await page.evaluate(() =>
-    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+    [...document.querySelectorAll("[data-page-item]")].map((t) => t.getAttribute("data-page-item")),
   );
+  await openSwitcher();
   ok("P1 move up", await clickBtn("上移"));
   await sleep(1200);
   const orderAfter = await page.evaluate(() =>
-    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+    [...document.querySelectorAll("[data-page-item]")].map((t) => t.getAttribute("data-page-item")),
   );
   ok("P1 order changed", JSON.stringify(orderBefore) !== JSON.stringify(orderAfter), JSON.stringify(orderAfter));
   await page.reload({ waitUntil: "domcontentloaded" }); // SSE long-poll keeps network busy
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(600);
+  await openSwitcher();
   const orderReload = await page.evaluate(() =>
-    [...document.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()),
+    [...document.querySelectorAll("[data-page-item]")].map((t) => t.getAttribute("data-page-item")),
   );
   ok(
     "P1 rename + order persist after reload",
@@ -254,16 +282,18 @@ try {
   );
 
   // FR-P9：图标 + 背景色（页面级设置）——刷新后活动页回到第一个，先选中目标 tab！
+  await openSwitcher();
   ok(
     "P9 select renamed tab",
     await page.evaluate((t) => {
-      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => (x.textContent ?? "").includes(t));
+      const tab = [...document.querySelectorAll("[data-page-item]")].find((x) => (x.getAttribute("data-page-item") ?? "").includes(t));
       if (!tab) return false;
       tab.click();
       return true;
     }, renamed),
   );
   await sleep(600);
+  await openSwitcher();
   ok("P9 open page settings", await clickBtn("页面设置"));
   await sleep(400);
   ok(
@@ -298,7 +328,10 @@ try {
   await sleep(1000);
   ok(
     "P9 icon shown on tab",
-    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed),
+    await (async () => {
+      await openSwitcher();
+      return page.evaluate((t) => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed);
+    })(),
   );
   const bgApplied = await page.evaluate(() => {
     const main = document.querySelector(".mantine-AppShell-main");
@@ -310,20 +343,25 @@ try {
   await sleep(600);
   ok(
     "P9 settings persist after reload",
-    await page.evaluate((t) => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed),
+    await (async () => {
+      await openSwitcher();
+      return page.evaluate((t) => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed);
+    })(),
   );
 
   // 清理临时页：先选中目标 tab（刷新后活动页会回到第一个！），并核对确认弹窗点名的是它
+  await openSwitcher();
   ok(
     "P1 select renamed tab before cleanup",
     await page.evaluate((t) => {
-      const tab = [...document.querySelectorAll('[role="tab"]')].find((x) => (x.textContent ?? "").includes(t));
+      const tab = [...document.querySelectorAll("[data-page-item]")].find((x) => (x.getAttribute("data-page-item") ?? "").includes(t));
       if (!tab) return false;
       tab.click();
       return true;
     }, renamed),
   );
   await sleep(600);
+  await openSwitcher();
   ok("P1 cleanup open confirm", await clickBtn("删除此页"));
   await sleep(400);
   ok(
@@ -332,13 +370,17 @@ try {
   );
   ok("P1 cleanup confirm", await clickBtn("确认", true));
   await sleep(800);
+  await openSwitcher();
   ok(
     "P1 cleanup done",
-    await page.evaluate((t) => ![...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes(t)), renamed),
+    await page.evaluate((t) => ![...document.querySelectorAll("[data-page-item]")].some((x) => (x.getAttribute("data-page-item") ?? "").includes(t)), renamed),
   );
   ok(
     "P1 首页 fixture untouched",
-    await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].some((x) => (x.textContent ?? "").includes("首页"))),
+    await (async () => {
+      await openSwitcher();
+      return page.evaluate(() => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes("首页")));
+    })(),
   );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));

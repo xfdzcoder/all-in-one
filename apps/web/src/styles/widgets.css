@@ -711,3 +711,41 @@
   width: 24px;
   height: 24px;
 }
+
+/* ── 页面切换器弹层（Q27d#1）── */
+.wb-pagelist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow: auto;
+  margin-bottom: var(--wb-space-2);
+}
+
+.wb-pageitem {
+  text-align: left;
+  padding: var(--wb-space-2) var(--wb-space-2);
+  border: none;
+  border-radius: var(--wb-radius-sm);
+  background: none;
+  color: var(--wb-color-text);
+  cursor: pointer;
+  font-size: var(--wb-text-sm);
+}
+
+.wb-pageitem:hover {
+  background: var(--wb-color-surface-hover);
+}
+
+.wb-pageitem--active {
+  background: color-mix(in srgb, var(--wb-color-accent) 18%, transparent);
+  font-weight: var(--wb-weight-semibold);
+}
+
+.wb-pagemenu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+  border-top: var(--wb-border);
+  padding-top: var(--wb-space-2);
+}

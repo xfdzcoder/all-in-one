@@ -8,8 +8,8 @@ import {
   Loader,
   MantineProvider,
   Modal,
+  Popover,
   Stack,
-  Tabs,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -59,6 +59,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [layoutEdit, setLayoutEdit] = useState(false);
   // FR-D2 / Q25c：数据源管理 = 独立全页视图（大数量好展示；?view=data 深链）
   const [dataTab, setDataTab] = useState<string | undefined>(undefined);
+  // Q27d#1：页面切换器弹层
+  const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<"workspace" | "data">(() =>
     new URLSearchParams(window.location.search).get("view") === "data" ? "data" : "workspace",
   );
@@ -198,6 +200,83 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             </Text>
           </Group>
           <Group gap="xs">
+            {/* Q27d#1：页面切换 = 右上角弹出下拉（页面管理一并收纳） */}
+            {view === "workspace" && (
+              <Popover opened={menuOpen} onChange={setMenuOpen} width={280} shadow="md" position="bottom-end">
+                <Popover.Target>
+                  <Button variant="default" size="xs" aria-label="切换页面" onClick={() => setMenuOpen((o) => !o)}>
+                    {active?.icon ? `${active.icon} ` : ""}
+                    {active?.title ?? "页面"} ▾
+                  </Button>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <div className="wb-pagelist">
+                    {dashboards.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        data-page-item={d.title}
+                        className={`wb-pageitem${d.id === activeId ? " wb-pageitem--active" : ""}`}
+                        onClick={() => {
+                          setActiveId(d.id);
+                          setMenuOpen(false);
+                          window.history.replaceState(null, "", `?page=${d.id}`);
+                        }}
+                      >
+                        {d.icon ? `${d.icon} ` : ""}
+                        {d.title}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="wb-pagemenu">
+                    <TextInput
+                      size="xs"
+                      placeholder="新页面名"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.currentTarget.value)}
+                    />
+                    <Button size="xs" disabled={!newTitle.trim()} onClick={() => void addDashboard()}>
+                      新建页面
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="default"
+                      disabled={!active}
+                      onClick={() => {
+                        setSettingsTitle(active?.title ?? "");
+                        setSettingsIcon(active?.icon ?? "");
+                        setSettingsBackground(active?.background ?? "");
+                        setSettingsOpen(true);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      页面设置
+                    </Button>
+                    <Button size="xs" variant="default" disabled={!active || activeIndex <= 0} onClick={() => void moveActive(-1)}>
+                      上移
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="default"
+                      disabled={!active || activeIndex >= (dashboards?.length ?? 0) - 1}
+                      onClick={() => void moveActive(1)}
+                    >
+                      下移
+                    </Button>
+                    {active && dashboards.length > 1 && (
+                      <ConfirmAction
+                        label="删除此页"
+                        size="xs"
+                        variant="subtle"
+                        title="删除页面？"
+                        message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
+                        onConfirm={() => void removeActive()}
+                      />
+                    )}
+                  </div>
+                </Popover.Dropdown>
+              </Popover>
+            )}
             {isDesktop && view === "workspace" && (
               // Q27b#4：数据源管理页不显示布局编辑入口
               <Button
@@ -233,65 +312,20 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
       >
         {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />}
         {view === "workspace" && (
-        <Tabs
-          value={activeId}
-          onChange={(v) => {
-            setActiveId(v);
-            // ISS-3：活动页进 URL（replaceState 不产生历史项）
-            if (v) window.history.replaceState(null, "", `?page=${v}`);
-          }}
-          keepMounted={false}
-        >
-          {pageError && (
-            <WbAlert tone="error" size="sm" onClose={() => setPageError(null)}>
-              {pageError}
-            </WbAlert>
-          )}
-          <Group mb="sm" gap="xs" wrap="nowrap">
-            <Tabs.List className="wb-tabs">
-              {dashboards.map((d) => (
-                <Tabs.Tab key={d.id} value={d.id}>
-                  {d.icon ? `${d.icon} ${d.title}` : d.title}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-            <TextInput
-              size="xs"
-              placeholder="新页面名"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.currentTarget.value)}
-              style={{ width: 140 }}
-            />
-            <Button size="xs" disabled={!newTitle.trim()} onClick={() => void addDashboard()}>
-              新建页面
-            </Button>
-            <Button
-              size="xs"
-              variant="default"
-              disabled={!active}
-              onClick={() => {
-                setSettingsTitle(active?.title ?? "");
-                setSettingsIcon(active?.icon ?? "");
-                setSettingsBackground(active?.background ?? "");
-                setSettingsOpen(true);
-              }}
-            >
-              页面设置
-            </Button>
-            <Button size="xs" variant="default" disabled={!active || activeIndex <= 0} onClick={() => void moveActive(-1)}>
-              上移
-            </Button>
-            <Button size="xs" variant="default" disabled={!active || activeIndex >= (dashboards?.length ?? 0) - 1} onClick={() => void moveActive(1)}>
-              下移
-            </Button>
-            {active && dashboards.length > 1 && (
-              <ConfirmAction
-                label="删除此页"
-                size="xs"
-                variant="subtle"
-                title="删除页面？"
-                message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
-                onConfirm={() => void removeActive()}
+          <>
+            {pageError && (
+              <WbAlert tone="error" size="sm" onClose={() => setPageError(null)}>
+                {pageError}
+              </WbAlert>
+            )}
+            {active && (
+              <Board
+                key={active.id}
+                dashboardId={active.id}
+                layoutJson={active.layoutJson}
+                canEdit={isDesktop}
+                editMode={layoutEdit}
+                onLayoutSaved={handleLayoutSaved}
               />
             )}
             {settingsOpen && (
@@ -302,9 +336,6 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                     label="页面名称"
                     value={settingsTitle}
                     onChange={(e) => setSettingsTitle(e.currentTarget.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void savePageSettings();
-                    }}
                   />
                   <TextInput
                     size="xs"
@@ -331,26 +362,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 </Stack>
               </Modal>
             )}
-          </Group>
-
-          {dashboards.map((d) => (
-            <Tabs.Panel key={d.id} value={d.id}>
-              <Board
-                dashboardId={d.id}
-                layoutJson={d.layoutJson}
-                canEdit={isDesktop}
-                editMode={layoutEdit}
-                onLayoutSaved={handleLayoutSaved}
-              />
-            </Tabs.Panel>
-          ))}
-
-          {dashboards.length === 0 && (
-            <Center h="30vh">
-              <Text c="dimmed">还没有页面，输入名称创建一个</Text>
-            </Center>
-          )}
-        </Tabs>
+          </>
         )}
       </AppShell.Main>
     </AppShell>

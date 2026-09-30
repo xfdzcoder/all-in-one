@@ -186,7 +186,7 @@ try {
   await sleep(500);
   await shot("s-data-admin-todo");
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find(
       (t) => t.offsetParent !== null && t.textContent.trim() === "信息源",
     );
     tab?.click();
@@ -194,7 +194,7 @@ try {
   await sleep(300);
   await shot("s-data-admin-feeds");
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find(
       (t) => t.offsetParent !== null && t.textContent.trim() === "标签",
     );
     tab?.click();

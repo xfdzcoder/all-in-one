@@ -34,7 +34,9 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   // 显式选中「首页」——不依赖 tab 顺序
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll('[role="tab"]')].find((t) => t.textContent.trim() === "首页");
+    const switcher = document.querySelector('[aria-label="切换页面"]');
+    switcher?.click();
+    const tab = [...document.querySelectorAll("[data-page-item]")].find((t) => t.getAttribute("data-page-item") === "首页");
     tab?.click();
   });
   await sleep(600);

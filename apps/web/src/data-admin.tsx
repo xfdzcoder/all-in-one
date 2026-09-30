@@ -75,6 +75,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const tree = useKanbanTree(activeBoardId);
   const m = useKanbanMutations(activeBoardId);
   const [newBoard, setNewBoard] = useState("");
+  const [newColumn, setNewColumn] = useState("");
   // Q26b/D42：命名数据连接（monitor / opencode / http）
   const dsMut = useDataSourceMutations();
   const [dsKind, setDsKind] = useState<string>("monitor");
@@ -410,6 +411,37 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                         void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
                       }}
                     />
+                  </Group>
+                </div>
+
+                <div className="wb-admin__section">
+                  <Text size="xs" c="dimmed">添加列</Text>
+                  <Group gap="xs" wrap="nowrap">
+                    <TextInput
+                      size="xs"
+                      placeholder="列名"
+                      value={newColumn}
+                      onChange={(e) => setNewColumn(e.currentTarget.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newColumn.trim()) {
+                          void m.createColumn(newColumn.trim());
+                          setNewColumn("");
+                        }
+                      }}
+                      className="wb-grow"
+                    />
+                    <Button
+                      size="xs"
+                      disabled={!newColumn.trim()}
+                      onClick={() => {
+                        if (newColumn.trim()) {
+                          void m.createColumn(newColumn.trim());
+                          setNewColumn("");
+                        }
+                      }}
+                    >
+                      添加列
+                    </Button>
                   </Group>
                 </div>
 
