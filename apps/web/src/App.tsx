@@ -20,6 +20,7 @@ import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
 import { LoginPage } from "./LoginPage";
+import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
 
@@ -55,6 +56,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
   const [layoutEdit, setLayoutEdit] = useState(false);
+  // FR-D2：Workspace 数据管理面（Todo / 信息源 / 标签）
+  const [dataAdminOpen, setDataAdminOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const rows = await api.listDashboards();
@@ -149,6 +152,11 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               </Button>
             )}
             {isDesktop && (
+              <Button variant="default" size="xs" onClick={() => setDataAdminOpen(true)}>
+                数据管理
+              </Button>
+            )}
+            {isDesktop && (
               <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
                 插件管理
               </Button>
@@ -159,6 +167,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Group>
         </Group>
       </AppShell.Header>
+      <DataAdmin opened={dataAdminOpen} onClose={() => setDataAdminOpen(false)} />
       <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
       <AppShell.Main style={{ background: active?.background ?? "transparent", minHeight: "100vh" }}>

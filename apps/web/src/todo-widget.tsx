@@ -4,6 +4,7 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
+import { TagFilter } from "./tag-filter";
 import { RelativeTime, WbAlert } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
@@ -11,6 +12,8 @@ import { RelativeTime, WbAlert } from "./ui";
 export type TodoConfig = {
   list?: string;
   filter?: "open" | "all";
+  /** FR-D3：按标签选数据（OR 语义；空/缺省 = 全部）。 */
+  tagIds?: string[];
 };
 
 /** 清单显示名映射（P1-4）：默认键的人话名；未收录的键原样显示（用户自定义清单）。 */
@@ -28,8 +31,8 @@ const listLabel = (key: string) => LIST_NAMES[key] ?? key;
  * 注：M2 内置组件直接消费工作台 REST + SSE（业务数据通道）；
  * 第三方数据类组件（custom-api）走服务端 connector 数据通道（M2-⑤）。
  */
-export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: TodoConfig & { refreshSec?: number }) {
-  const { data, loading, error, refresh } = useTodos(list, refreshSec);
+export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec }: TodoConfig & { refreshSec?: number }) {
+  const { data, loading, error, refresh } = useTodos(list, refreshSec, tagIds);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
   const [detail, setDetail] = useState<TodoItem | null>(null);
@@ -42,6 +45,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
         <Text size="sm" fw={600} style={{ flex: 1 }}>
           Todo · {listLabel(list)}
         </Text>
+        <TagFilter value={tagIds} targetLabel="任务" />
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
         </Button>

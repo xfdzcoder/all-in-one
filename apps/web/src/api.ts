@@ -20,6 +20,8 @@ export type TodoItem = {
   sortOrder: number;
   createdAt: number | string;
   updatedAt: number | string;
+  /** FR-D1/D3：标签（服务端内嵌；组件按标签选数据）。 */
+  tagIds?: string[];
 };
 
 export type FeedItem = {
@@ -37,6 +39,16 @@ export type FeedSource = {
   title: string;
   url: string;
   createdAt: number | string;
+  /** FR-D1/D3：标签（服务端内嵌；组件按标签选源）。 */
+  tagIds?: string[];
+};
+
+/** Workspace 标签（FR-D1 / D40）。 */
+export type TagRow = {
+  id: string;
+  name: string;
+  color: string | null;
+  targetCount: number;
 };
 
 export type FeedAgg = {
@@ -140,8 +152,13 @@ export const api = {
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),
   deleteDashboard: (id: string) => req<{ ok: boolean }>("DELETE", `/api/dashboards/${id}`),
-  listTodos: (list?: string) =>
-    req<TodoItem[]>("GET", `/api/todos${list ? `?list=${encodeURIComponent(list)}` : ""}`),
+  listTodos: (list?: string, tagIds?: string[]) => {
+    const q = new URLSearchParams();
+    if (list) q.set("list", list);
+    if (tagIds && tagIds.length > 0) q.set("tagIds", tagIds.join(","));
+    const qs = q.toString();
+    return req<TodoItem[]>("GET", `/api/todos${qs ? `?${qs}` : ""}`);
+  },
   createTodo: (title: string, list = "inbox") =>
     req<TodoItem>("POST", "/api/todos", { title, list }),
   patchTodo: (id: string, patch: { done?: boolean; title?: string }) =>
@@ -152,6 +169,14 @@ export const api = {
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
   listFeeds: () => req<FeedSource[]>("GET", "/api/feeds"),
+  // ── Workspace 标签（FR-D1/D2/D3，D40）──
+  listTags: () => req<TagRow[]>("GET", "/api/tags"),
+  createTag: (name: string, color?: string) => req<TagRow>("POST", "/api/tags", { name, color }),
+  updateTag: (id: string, patch: { name?: string; color?: string | null }) =>
+    req<{ ok: boolean }>("PATCH", `/api/tags/${id}`, patch),
+  deleteTag: (id: string) => req<{ ok: boolean }>("DELETE", `/api/tags/${id}`),
+  setTargetTags: (targetType: "todo" | "feed", targetId: string, tagIds: string[]) =>
+    req<{ ok: boolean; tagIds: string[] }>("PUT", "/api/tags/targets", { targetType, targetId, tagIds }),
   createFeed: (title: string, url: string) => req<FeedSource>("POST", "/api/feeds", { title, url }),
   deleteFeed: (id: string) => req<{ ok: boolean }>("DELETE", `/api/feeds/${id}`),
   markFeedRead: (itemKey: string) => req<{ ok: boolean }>("POST", "/api/feeds/read", { itemKey }),

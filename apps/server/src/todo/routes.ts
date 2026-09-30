@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
-import { todo } from "../db/schema.ts";
+import { tagTarget, todo } from "../db/schema.ts";
 import { deleteTargetLinks, tagLinksFor } from "../tag/routes.ts";
 
 const createBody = z.object({
@@ -26,17 +26,34 @@ const idParams = z.object({ id: z.string().min(1).max(64) });
 export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void): void {
   // GET /api/todos?list=xxx — Workspace 级数据（D21：user_id 归属）
   app.get("/api/todos", { preHandler: authGuard }, async (req) => {
-    const list = typeof req.query === "object" && req.query && "list" in req.query
-      ? String((req.query as Record<string, unknown>).list)
-      : undefined;
+    const q = (typeof req.query === "object" && req.query) ? (req.query as Record<string, unknown>) : {};
+    const list = q.list != null ? String(q.list) : undefined;
+    // FR-D3/D40：组件按标签选数据 —— 服务端过滤（OR 语义，逗号分隔；空 = 全部）
+    const tagIds = typeof q.tagIds === "string" && q.tagIds
+      ? q.tagIds.split(",").map((x) => x.trim()).filter(Boolean)
+      : [];
     const where = list
       ? and(eq(todo.userId, req.user!.id), eq(todo.list, list))
       : eq(todo.userId, req.user!.id);
-    const rows = await app.db
+    let rows = await app.db
       .select()
       .from(todo)
       .where(where)
       .orderBy(asc(todo.sortOrder), asc(todo.createdAt));
+    if (tagIds.length > 0) {
+      const linked = await app.db
+        .select({ targetId: tagTarget.targetId })
+        .from(tagTarget)
+        .where(
+          and(
+            eq(tagTarget.userId, req.user!.id),
+            eq(tagTarget.targetType, "todo"),
+            inArray(tagTarget.tagId, tagIds),
+          ),
+        );
+      const allow = new Set(linked.map((l) => l.targetId));
+      rows = rows.filter((r) => allow.has(r.id));
+    }
     // FR-D3：内嵌标签（组件按标签选数据；管理面打标签展示）
     const links = await tagLinksFor(app.db, req.user!.id, "todo", rows.map((r) => r.id));
     return rows.map((r) => ({ ...r, tagIds: links.get(r.id) ?? [] }));

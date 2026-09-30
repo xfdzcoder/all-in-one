@@ -1,7 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import type { WidgetDataQuery, WidgetConnector, FetchContext } from "../connector/registry.ts";
-import { todo } from "../db/schema.ts";
+import { tagTarget, todo } from "../db/schema.ts";
 
 /**
  * Todo connector — 数据通道的 workspace 资源实现（FR-W3）。
@@ -15,11 +15,29 @@ export const todoConnector: WidgetConnector = {
     const where = list
       ? and(eq(todo.userId, ctx.userId), eq(todo.list, list))
       : eq(todo.userId, ctx.userId);
-    const rows = await ctx.db
+    let rows = await ctx.db
       .select()
       .from(todo)
       .where(where)
       .orderBy(asc(todo.sortOrder), asc(todo.createdAt));
+    // FR-D3/D40：按标签选数据（OR 语义；空 = 全部）—— 与 REST 列表同口径
+    const tagIds = Array.isArray(query.config.tagIds)
+      ? query.config.tagIds.filter((x): x is string => typeof x === "string")
+      : [];
+    if (tagIds.length > 0) {
+      const linked = await ctx.db
+        .select({ targetId: tagTarget.targetId })
+        .from(tagTarget)
+        .where(
+          and(
+            eq(tagTarget.userId, ctx.userId),
+            eq(tagTarget.targetType, "todo"),
+            inArray(tagTarget.tagId, tagIds),
+          ),
+        );
+      const allow = new Set(linked.map((l) => l.targetId));
+      rows = rows.filter((r) => allow.has(r.id));
+    }
     return {
       items: rows,
       open: rows.filter((r) => !r.done).length,

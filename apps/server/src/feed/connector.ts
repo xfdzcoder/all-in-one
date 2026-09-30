@@ -5,7 +5,7 @@ import { XMLParser } from "fast-xml-parser";
 
 import type { WidgetConnector, WidgetDataQuery, FetchContext } from "../connector/registry.ts";
 import { outboundRequest } from "../connector/registry.ts";
-import { feedRead, feedSource } from "../db/schema.ts";
+import { feedRead, feedSource, tagTarget } from "../db/schema.ts";
 
 /**
  * RSS connector —— 多源聚合 + 摘要 + 已读标记（FR：未读标记归 Workspace）。
@@ -80,10 +80,28 @@ export const rssConnector: WidgetConnector = {
     const parsedLimit = typeof rawLimit === "number" ? rawLimit : Number(rawLimit);
     const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.floor(parsedLimit)) : 20;
     const onlyUnread = query.config.filter === "unread";
-    const sources = await ctx.db
+    // FR-D3/D40：按标签选源（OR 语义；空 = 全部）
+    const tagIds = Array.isArray(query.config.tagIds)
+      ? query.config.tagIds.filter((x): x is string => typeof x === "string")
+      : [];
+    let sources = await ctx.db
       .select()
       .from(feedSource)
       .where(eq(feedSource.userId, ctx.userId));
+    if (tagIds.length > 0) {
+      const linked = await ctx.db
+        .select({ targetId: tagTarget.targetId })
+        .from(tagTarget)
+        .where(
+          and(
+            eq(tagTarget.userId, ctx.userId),
+            eq(tagTarget.targetType, "feed"),
+            inArray(tagTarget.tagId, tagIds),
+          ),
+        );
+      const allow = new Set(linked.map((l) => l.targetId));
+      sources = sources.filter((s) => allow.has(s.id));
+    }
 
     const entries: Array<Record<string, unknown>> = [];
     const errors: Array<{ title: string; error: string }> = [];

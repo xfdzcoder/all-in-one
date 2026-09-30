@@ -1,29 +1,33 @@
 import { useState } from "react";
-import { Badge, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
+import { Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
 
-import type { FeedItem, FeedSource } from "./api";
-import { useDraft, useFeeds, useFeedSources, useFeedMutations } from "./data-hooks";
+import type { FeedItem } from "./api";
+import { useFeeds, useFeedMutations } from "./data-hooks";
 import { HtmlSandbox } from "./html-sandbox";
+import { TagFilter } from "./tag-filter";
 import { RelativeTime, WbAlert } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
  * 已读态是 Workspace 数据 —— 任一组件标记，其它组件经 SSE 同步（FR-I6）。
+ * 订阅源管理与打标签在「数据管理」（FR-D2/D40）；本组件按标签选源（FR-D3）。
  */
 export type RssConfig = {
   limit?: number;
   filter?: "all" | "unread";
+  /** FR-D3：按标签选源（OR 语义；空/缺省 = 全部）。 */
+  tagIds?: string[];
 };
 
-export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig & { refreshSec?: number }) {
-  const { data, loading, error, refresh } = useFeeds(limit, refreshSec, filter);
-  const sources = useFeedSources();
-  const { markRead, addSource, removeSource } = useFeedMutations();
-  const [newUrl, setNewUrl] = useDraft();
-  const [newTitle, setNewTitle] = useDraft();
+export function RssWidget({
+  limit = 10,
+  filter = "all",
+  tagIds,
+  refreshSec,
+}: RssConfig & { refreshSec?: number }) {
+  const { data, loading, error, refresh } = useFeeds(limit, refreshSec, filter, tagIds);
+  const { markRead } = useFeedMutations();
   const [detail, setDetail] = useState<FeedItem | null>(null);
-  const [unsub, setUnsub] = useState<FeedSource | null>(null);
-  const [subOpen, setSubOpen] = useState(false);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -33,47 +37,14 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           信息流
         </Text>
+        <TagFilter value={tagIds} targetLabel="订阅源条目" />
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
-        </Button>
-        <Button size="compact-xs" variant="subtle" onClick={() => setSubOpen((v) => !v)}>
-          {subOpen ? "收起" : "+ 订阅源"}
         </Button>
         <Badge size="xs" variant="light">
           未读 {data?.unread ?? 0}
         </Badge>
       </Group>
-
-      {subOpen && (
-        <Group gap={4} wrap="nowrap">
-          <TextInput
-            size="compact-xs"
-            placeholder="标题"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.currentTarget.value)}
-            style={{ width: 70 }}
-          />
-          <TextInput
-            size="compact-xs"
-            placeholder="https://…/feed.xml"
-            value={newUrl}
-            onChange={(e) => setNewUrl(e.currentTarget.value)}
-            style={{ flex: 1 }}
-          />
-          <Button
-            size="compact-xs"
-            disabled={!newUrl.trim()}
-            onClick={() => {
-              addSource.mutate({ title: newTitle.trim() || "订阅", url: newUrl.trim() });
-              setNewUrl("");
-              setNewTitle("");
-              setSubOpen(false);
-            }}
-          >
-            订阅
-          </Button>
-        </Group>
-      )}
 
       {loading && <Text size="xs" c="dimmed">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
@@ -109,40 +80,6 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
       ))}
       {items.length === 0 && !loading && <Text size="xs" c="dimmed">暂无条目</Text>}
 
-      {(sources.data ?? []).length > 0 && (
-        <Group gap={4}>
-          {(sources.data ?? []).map((s: FeedSource) => (
-            <Badge key={s.id} size="xs" variant="outline" style={{ cursor: "pointer" }}
-              onClick={() => setUnsub(s)}
-              title="点击退订"
-            >
-              {s.title} ×
-            </Badge>
-          ))}
-        </Group>
-      )}
-      {unsub && (
-        <Modal opened onClose={() => setUnsub(null)} title="确认退订？" size="sm">
-          <Text size="sm">
-            确认退订「{unsub.title}」？（已读标记保留，可随时重新订阅）
-          </Text>
-          <Group gap="xs" mt="sm">
-            <Button
-              size="xs"
-              color="red"
-              onClick={() => {
-                removeSource.mutate(unsub.id);
-                setUnsub(null);
-              }}
-            >
-              确认
-            </Button>
-            <Button size="xs" variant="default" onClick={() => setUnsub(null)}>
-              取消
-            </Button>
-          </Group>
-        </Modal>
-      )}
       {detail && (
         <Modal opened onClose={() => setDetail(null)} title="文章详情" size="lg">
           <Stack gap="xs">

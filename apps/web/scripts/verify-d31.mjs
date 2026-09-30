@@ -125,8 +125,33 @@ try {
   await sleep(1000);
   ok("D31 task gone after confirm", await page.evaluate((t) => !(document.body.textContent ?? "").includes(t), taskTitle));
 
-  // ② 信息流源退订二次确认
-  const openUnsub = () => clickLeaf(`${sourceTitle} ×`);
+  // ② 信息流源退订二次确认（Q22b-2：退订入口移至「数据管理 · 信息源」——点击按钮，非药丸）
+  const openUnsub = async () => {
+    await clickBtn("数据管理"); // 幂等：已开时点击仍保持打开
+    await sleep(400);
+    await page.evaluate(() => {
+      const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+        (t) => t.offsetParent !== null && t.textContent.trim() === "信息源",
+      );
+      tab?.click();
+    });
+    await sleep(300);
+    return page.evaluate((t) => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
+      const root = roots[roots.length - 1];
+      const leaf = [...(root?.querySelectorAll("*") ?? [])].find(
+        (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),
+      );
+      if (!leaf) return false;
+      let row = leaf.parentElement;
+      while (row && ![...row.querySelectorAll("button")].some((b) => b.textContent.trim() === "退订")) {
+        row = row.parentElement;
+      }
+      const btn = [...(row?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "退订");
+      btn?.click();
+      return Boolean(btn);
+    }, sourceTitle);
+  };
   ok("D31 rss unsubscribe opens confirm", await openUnsub());
   await sleep(400);
   ok(

@@ -105,13 +105,18 @@ export function useSseInvalidation(): void {
 }
 
 /** Todo 数据（走 REST，变更经 SSE 让其它页面的组件同步 —— J4）。 */
-export function useTodos(list?: string, refreshSec?: unknown): WidgetDataState<TodoItem[]> & {
+export function useTodos(
+  list?: string,
+  refreshSec?: unknown,
+  tagIds?: string[],
+): WidgetDataState<TodoItem[]> & {
   refresh: () => void;
 } {
   const qc = useQueryClient();
+  const tagKey = (tagIds ?? []).join(",") || "all";
   const query = useQuery({
-    queryKey: ["todos", list ?? "all"],
-    queryFn: () => api.listTodos(list),
+    queryKey: ["todos", list ?? "all", tagKey],
+    queryFn: () => api.listTodos(list, tagIds),
     refetchInterval: refreshInterval(refreshSec, 60_000),
   });
   return {
@@ -457,12 +462,17 @@ export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
 }
 
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
-export function useFeeds(limit: number, refreshSec?: unknown, filter?: "all" | "unread") {
+export function useFeeds(
+  limit: number,
+  refreshSec?: unknown,
+  filter?: "all" | "unread",
+  tagIds?: string[],
+) {
   const qc = useQueryClient();
-  const key = ["feeds", limit, filter ?? "all"];
+  const key = ["feeds", limit, filter ?? "all", (tagIds ?? []).join(",") || "all"];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("rss", { limit, filter }) as Promise<import("./api").FeedAgg>,
+    queryFn: () => api.widgetData("rss", { limit, filter, tagIds }) as Promise<import("./api").FeedAgg>,
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });
@@ -472,7 +482,7 @@ export function useFeeds(limit: number, refreshSec?: unknown, filter?: "all" | "
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("rss", { limit }, true) as Promise<unknown>).then((d) =>
+      void (api.widgetData("rss", { limit, filter, tagIds }, true) as Promise<unknown>).then((d) =>
         qc.setQueryData(key, d),
       );
     },
@@ -499,4 +509,42 @@ export function useFeedMutations() {
     }),
     removeSource: useMutation({ mutationFn: (id: string) => api.deleteFeed(id), onSuccess: invalidate }),
   };
+}
+
+/** Workspace 标签（FR-D1/D2，D40）：列表 + 变更（改后失效 todos/feeds/queries）。 */
+export function useTags() {
+  const query = useQuery({ queryKey: ["tags"], queryFn: () => api.listTags() });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
+export function useTagMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ["tags"] });
+    void qc.invalidateQueries({ queryKey: ["todos"] });
+    void qc.invalidateQueries({ queryKey: ["feeds"] });
+  };
+  const create = useMutation({
+    mutationFn: (v: { name: string; color?: string }) => api.createTag(v.name, v.color),
+    onSuccess: invalidate,
+  });
+  const update = useMutation({
+    mutationFn: (v: { id: string; name?: string; color?: string | null }) =>
+      api.updateTag(v.id, { name: v.name, color: v.color }),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteTag(id),
+    onSuccess: invalidate,
+  });
+  const setTarget = useMutation({
+    mutationFn: (v: { targetType: "todo" | "feed"; targetId: string; tagIds: string[] }) =>
+      api.setTargetTags(v.targetType, v.targetId, v.tagIds),
+    onSuccess: invalidate,
+  });
+  return { create, update, remove, setTarget };
 }
