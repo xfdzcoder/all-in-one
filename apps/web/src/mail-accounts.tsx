@@ -16,6 +16,8 @@ export function MailAccountsPanel() {
   const m = useMailMutations();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  // Q27b#2：表单按需展开（列表为主）
+  const [formOpenNew, setFormOpenNew] = useState(false);
   const [form, setForm] = useState({
     name: "",
     host: "",
@@ -53,8 +55,24 @@ export function MailAccountsPanel() {
     }
   };
 
+  const formOpen = Boolean(editingId) || formOpenNew;
   return (
     <Stack gap="xs">
+      <Group gap="xs">
+        <Button
+          size="xs"
+          variant={formOpen ? "default" : "filled"}
+          onClick={() => setFormOpenNew((v) => !v)}
+        >
+          {formOpen ? "收起表单" : "＋ 添加账号"}
+        </Button>
+        <Text size="xs" c="dimmed">
+          已添加 {accounts.length} 个账号
+        </Text>
+      </Group>
+
+      {formOpen && (
+      <div className="wb-admin__section">
       <Group gap="xs" grow>
         <TextInput size="xs" label="名称" value={form.name} onChange={(e) => setForm({ ...form, name: e.currentTarget.value })} />
         <TextInput size="xs" label="服务器" value={form.host} onChange={(e) => setForm({ ...form, host: e.currentTarget.value })} />
@@ -117,7 +135,10 @@ export function MailAccountsPanel() {
           </Button>
         )}
       </Group>
+      </div>
+      )}
 
+      <Text size="xs" c="dimmed">已添加账号</Text>
       <div className="wb-admin__table">
         {accounts.map((a) => (
           <div key={a.id} className="wb-admin__row" data-admin-row="mail">

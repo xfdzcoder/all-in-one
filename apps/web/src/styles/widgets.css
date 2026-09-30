@@ -654,3 +654,13 @@
 .wb-kanban__board-title {
   min-width: 0;
 }
+
+/* 管理页分节（Q27b#1 纵列布局） */
+.wb-admin__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+  padding: var(--wb-space-2);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+}

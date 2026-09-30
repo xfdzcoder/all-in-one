@@ -528,6 +528,8 @@ export function useTagMutations() {
     void qc.invalidateQueries({ queryKey: ["tags"] });
     void qc.invalidateQueries({ queryKey: ["todos"] });
     void qc.invalidateQueries({ queryKey: ["feeds"] });
+    // Q27b#5：订阅源列表键是 feed-sources（漏失效 → 打标"存了但选不上"）
+    void qc.invalidateQueries({ queryKey: ["feed-sources"] });
   };
   const create = useMutation({
     mutationFn: (v: { name: string; color?: string }) => api.createTag(v.name, v.color),

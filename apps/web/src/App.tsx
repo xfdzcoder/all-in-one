@@ -198,7 +198,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             </Text>
           </Group>
           <Group gap="xs">
-            {isDesktop && (
+            {isDesktop && view === "workspace" && (
+              // Q27b#4：数据源管理页不显示布局编辑入口
               <Button
                 variant={layoutEdit ? "filled" : "default"}
                 size="xs"

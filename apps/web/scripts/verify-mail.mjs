@@ -173,6 +173,14 @@ try {
 
   // 账号管理（口令 → 凭证库）
   ok("MAIL open account manager", await clickBtn("管理邮箱")); // D42：管理在数据源管理页
+  await sleep(500);
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");
+    tab?.click();
+  });
+  await sleep(300);
+  // Q27b#2：表单按需展开（列表为主布局）
+  ok("MAIL expand add-account form", await clickBtn("＋ 添加账号"));
   await sleep(400);
   ok("MAIL fill account name", await setField("名称", "测试邮箱"));
   ok("MAIL fill server", await setField("服务器", "imap.example.com"));

@@ -59,6 +59,8 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const todoMut = useTodoMutations();
   const feedMut = useFeedMutations();
   const [newTodo, setNewTodo] = useDraft();
+  // Q27b#6：新任务可选清单（此前默认收件箱且无法选择）
+  const [newTodoList, setNewTodoList] = useState("inbox");
   const [newSourceTitle, setNewSourceTitle] = useDraft();
   const [newSourceUrl, setNewSourceUrl] = useDraft();
   const [newTagName, setNewTagName] = useDraft();
@@ -181,17 +183,30 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                 onChange={(e) => setNewTodo(e.currentTarget.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && newTodo.trim()) {
-                    todoMut.create.mutate({ title: newTodo.trim() });
+                    todoMut.create.mutate({ title: newTodo.trim(), list: newTodoList });
                     setNewTodo("");
                   }
                 }}
                 style={{ flex: 1 }}
               />
+              {/* Q27b#6：清单 = 任务分组（新任务落此清单） */}
+              <Select
+                size="xs"
+                data={[
+                  { value: "inbox", label: "收件箱" },
+                  { value: "work", label: "工作" },
+                  { value: "life", label: "生活" },
+                ]}
+                value={newTodoList}
+                onChange={(v) => setNewTodoList(v ?? "inbox")}
+                style={{ width: 100 }}
+                aria-label="新任务清单"
+              />
               <Button
                 size="xs"
                 disabled={!newTodo.trim()}
                 onClick={() => {
-                  todoMut.create.mutate({ title: newTodo.trim() });
+                  todoMut.create.mutate({ title: newTodo.trim(), list: newTodoList });
                   setNewTodo("");
                 }}
               >
@@ -211,7 +226,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     <Text size="sm" className="wb-grow" truncate>
                       {t.title}
                     </Text>
-                    <Badge size="xs" variant="outline">
+                    <Badge size="xs" variant="outline" title="清单：任务分组">
                       {listLabel(t.list)}
                     </Badge>
                     <TagInput
@@ -325,7 +340,9 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
         {/* ── 看板（Q26a/#1：看板/列/卡片管理 + 归档恢复） ── */}
         <Tabs.Panel value="kanban" pt="xs">
           <Stack gap="xs">
-            <Group gap="xs" wrap="nowrap">
+            {/* Q27b#1：纵列分节（弃横向控件条） */}
+            <div className="wb-admin__section">
+              <Text size="xs" c="dimmed">选择看板</Text>
               <Select
                 size="xs"
                 placeholder="选择看板"
@@ -333,59 +350,66 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                 value={activeBoardId ?? null}
                 onChange={(v) => v && setBoardId(v)}
                 nothingFoundMessage="暂无看板"
-                style={{ width: 180 }}
                 aria-label="看板选择"
               />
-              <TextInput
-                size="xs"
-                placeholder="新看板名"
-                value={newBoard}
-                onChange={(e) => setNewBoard(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newBoard.trim()) {
+            </div>
+            <div className="wb-admin__section">
+              <Text size="xs" c="dimmed">新建看板</Text>
+              <Group gap="xs" wrap="nowrap">
+                <TextInput
+                  size="xs"
+                  placeholder="新看板名"
+                  value={newBoard}
+                  onChange={(e) => setNewBoard(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newBoard.trim()) {
+                      void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                      setNewBoard("");
+                    }
+                  }}
+                  className="wb-grow"
+                />
+                <Button
+                  size="xs"
+                  disabled={!newBoard.trim()}
+                  onClick={() => {
                     void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
                     setNewBoard("");
-                  }
-                }}
-                style={{ width: 160 }}
-              />
-              <Button
-                size="xs"
-                disabled={!newBoard.trim()}
-                onClick={() => {
-                  void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
-                  setNewBoard("");
-                }}
-              >
-                新建看板
-              </Button>
-            </Group>
+                  }}
+                >
+                  新建看板
+                </Button>
+              </Group>
+            </div>
 
             {activeBoardId && (
               <>
-                <Group gap="xs" wrap="nowrap">
-                  <TextInput
-                    size="xs"
-                    className="wb-grow"
-                    defaultValue={boards.boards.find((b) => b.id === activeBoardId)?.title ?? ""}
-                    aria-label="看板名称"
-                    onBlur={(e) => {
-                      const v = e.currentTarget.value.trim();
-                      const cur = boards.boards.find((b) => b.id === activeBoardId);
-                      if (v && cur && v !== cur.title) void m.renameBoard(activeBoardId, v);
-                    }}
-                  />
-                  <ConfirmAction
-                    label="删除看板"
-                    size="compact-xs"
-                    variant="subtle"
-                    title="删除看板？"
-                    message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
-                    onConfirm={() => {
-                      void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
-                    }}
-                  />
-                </Group>
+                <div className="wb-admin__section">
+                  <Text size="xs" c="dimmed">看板名称</Text>
+                  <Group gap="xs" wrap="nowrap">
+                    <TextInput
+                      size="xs"
+                      className="wb-grow"
+                      defaultValue={boards.boards.find((b) => b.id === activeBoardId)?.title ?? ""}
+                      aria-label="看板名称"
+                      onBlur={(e) => {
+                        const v = e.currentTarget.value.trim();
+                        const cur = boards.boards.find((b) => b.id === activeBoardId);
+                        if (v && cur && v !== cur.title) void m.renameBoard(activeBoardId, v);
+                      }}
+                    />
+                    <ConfirmAction
+                      label="删除看板"
+                      size="compact-xs"
+                      variant="subtle"
+                      title="删除看板？"
+                      message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
+                      onConfirm={() => {
+                        void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
+                      }}
+                    />
+                  </Group>
+                </div>
 
                 {(tree.tree?.columns ?? [])
                   .filter((c) => !q || c.title.includes(q))
