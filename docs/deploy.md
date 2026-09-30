@@ -33,6 +33,31 @@ rm -rf ./data && tar xzf backup-YYYY-MM-DD.tar.gz
 docker compose start all-in-one
 ```
 
+## 接入 Gmail（可选，D37 只读聚合）
+
+IMAP + 应用专用密码已可用；要用 **Gmail API（OAuth）** 专项时按下列步骤接入：
+
+1. **Google Cloud Console**：建（或选）项目 → 启用 **Gmail API**；
+2. **OAuth 同意屏幕**：External + Testing，把自己的 Google 账号加进测试用户；
+3. **凭据** → 创建 OAuth 客户端 ID（类型：Web 应用）→ 授权重定向 URI 填
+   `https://<工作台地址>/api/mail/gmail/callback`（HTTP LAN 场景用 `http://…`）；
+4. 复制 **client_id / client_secret**，配置环境变量后重启：
+   ```bash
+   export GMAIL_CLIENT_ID=xxxx.apps.googleusercontent.com
+   export GMAIL_CLIENT_SECRET=GOCSPX-xxxx
+   docker compose up -d
+   ```
+5. **绑定**：邮件组件 →「管理账号」→「绑定 Gmail 账号（OAuth）」→ Google 同意页授权 →
+   回调页显示"绑定成功"，账号自动出现在列表（只读：仅 profile / messages.list / messages.get）。
+   refresh_token 存**凭证库**（与其它凭证同级加密，SEC3）。
+
+注意：
+- 同意屏幕处于 **Testing** 状态时 Google 的 refresh_token **7 天过期**，需重新绑定
+  （或把应用"发布上线"以获得长期 token）；
+- 重定向 URI 必须与实际访问地址**逐字符一致**（含协议/端口/路径），否则 Google 报 redirect_uri_mismatch；
+- 自动化验收：`apps/web/scripts/verify-gmail.mjs`（mock Google，14 项断言，含完整绑定旅程）；
+  真实 Google 侧为一次性手工旅程（本节 1–5 步即旅程记录）。
+
 ## 公网化前必做（SEC6，D9 触发）
 
 HTTPS 强制（反代终止 TLS）、`COOKIE_SECURE=1`、速率限制、审计日志、

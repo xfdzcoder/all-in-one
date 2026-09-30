@@ -18,6 +18,9 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       # 公网化时置 1（SEC6）
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      # Gmail 接入（可选，D37）：Google Cloud OAuth 客户端（Web），见 docs/deploy.md
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID:-}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET:-}
     volumes:
       # SQLite 库文件 + 插件安装目录 + 备份落点
       - ./data:/app/data
