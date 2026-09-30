@@ -52,12 +52,13 @@ const factory: MailClientFactory = (conn: MailConnectionConfig): MailClient => (
   async body(_folder, uid) {
     calls.push(conn);
     if (conn.host === HOST_DOWN) throw new Error("connection refused");
-    const base = (messages[conn.host] ?? []).find((m) => m.uid === uid);
+    // uid 兼容数字 IMAP UID 与字符串 Gmail id（D37）
+    const base = (messages[conn.host] ?? []).find((m) => String(m.uid) === String(uid));
     if (!base) return null;
     return {
       ...base,
       text: "纯文本正文",
-      html: uid === 2 ? `<p>${"x".repeat(HTML_CAP + 1000)}</p>` : "<p>hello</p>",
+      html: String(uid) === "2" ? `<p>${"x".repeat(HTML_CAP + 1000)}</p>` : "<p>hello</p>",
     };
   },
 });

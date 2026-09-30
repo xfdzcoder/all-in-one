@@ -191,6 +191,8 @@ export const api = {
     folder?: string;
   }) => req<MailAccountRow>("POST", "/api/mail/accounts", input),
   deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
+  gmailAuthorize: (redirectUri: string) =>
+    req<{ url: string }>("POST", "/api/mail/gmail/authorize", { redirectUri }),
   mailMessages: (opts: { account?: string; limit?: number; force?: boolean } = {}) => {
     const q = new URLSearchParams();
     if (opts.account) q.set("account", opts.account);

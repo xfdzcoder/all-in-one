@@ -57,6 +57,13 @@
       "when": 1790712289636,
       "tag": "0007_youthful_santa_claus",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790727044453,
+      "tag": "0008_windy_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

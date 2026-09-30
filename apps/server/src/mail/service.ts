@@ -6,11 +6,35 @@ import { readSecret } from "../credentials/store.ts";
 import type { Db } from "../db/client.ts";
 import { mailAccount, type MailAccount } from "../db/schema.ts";
 import type {
+  MailClient,
   MailClientFactory,
+  MailConnectionConfig,
   MailMessageFull,
   MailMessageSummary,
 } from "./client.ts";
 import { createImapClient } from "./imap.ts";
+import { createGmailClient } from "./gmail.ts";
+
+/** 账号类型 → 客户端（imap / gmail-OAuth，D37）；password 位按类型承载密码或 refresh_token。 */
+export function createMailClient(conn: MailConnectionConfig): MailClient {
+  if (conn.kind === "gmail") return createGmailClient(conn);
+  return createImapClient(conn);
+}
+
+/** 组装连接配置（凭证解密值仅在连接期驻留内存；SEC3 不变）。 */
+function connOf(account: MailAccount, password: string): MailConnectionConfig {
+  return {
+    host: account.host,
+    port: account.port,
+    security: account.security,
+    username: account.username,
+    password,
+    kind: account.kind ?? "imap",
+    refreshToken: password,
+    clientId: process.env.GMAIL_CLIENT_ID ?? "",
+    clientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",
+  };
+}
 
 /**
  * 邮件只读聚合服务（Q7a）：多账号列表聚合（逐账号错误隔离，同 RSS connector 风格）、
@@ -39,6 +63,7 @@ export function clearMailCache(): void {
 }
 
 export interface MailAccountInput {
+  kind?: string;
   name: string;
   host: string;
   port?: number;
@@ -81,6 +106,7 @@ export async function createAccount(
       id: crypto.randomUUID(),
       userId,
       name: input.name,
+      kind: input.kind ?? "imap",
       host: input.host,
       port: input.port ?? 993,
       security: input.security ?? "ssl",
@@ -166,7 +192,7 @@ export async function fetchMessages(
   const selected = opts.accountIds?.length
     ? all.filter((a) => opts.accountIds!.includes(a.id))
     : all;
-  const factory = opts.clientFactory ?? createImapClient;
+  const factory = opts.clientFactory ?? createMailClient;
 
   const items: MailListEntry[] = [];
   const errors: MailAgg["errors"] = [];
@@ -181,13 +207,7 @@ export async function fetchMessages(
       try {
         await assertReachable(account);
         const password = await resolvePassword(db, userId, account);
-        const client = factory({
-          host: account.host,
-          port: account.port,
-          security: account.security,
-          username: account.username,
-          password,
-        });
+        const client = factory(connOf(account, password));
         const list = await client.list(account.folder, limit);
         listCache.set(cacheKey, { at: Date.now(), items: list });
         items.push(...list.map((i) => ({ ...i, accountId: account.id, accountName: account.name })));
@@ -212,20 +232,14 @@ export async function fetchMessageBody(
   db: Db,
   userId: string,
   accountId: string,
-  uid: number,
-  clientFactory: MailClientFactory = createImapClient,
+  uid: number | string,
+  clientFactory: MailClientFactory = createMailClient,
 ): Promise<MailMessageFull> {
   const account = await ownedAccount(db, userId, accountId);
   if (!account) throw new MailError("account not found", 404);
   await assertReachable(account);
   const password = await resolvePassword(db, userId, account);
-  const client = clientFactory({
-    host: account.host,
-    port: account.port,
-    security: account.security,
-    username: account.username,
-    password,
-  });
+  const client = clientFactory(connOf(account, password));
   const full = await client.body(account.folder, uid);
   if (!full) throw new MailError("message not found", 404);
   return { ...full, text: cap(full.text, TEXT_CAP), html: cap(full.html, HTML_CAP) };

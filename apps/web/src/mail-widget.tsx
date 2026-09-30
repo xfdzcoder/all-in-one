@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
+import { api } from "./api";
 import { ConfirmAction } from "./confirm";
 import { HtmlSandbox } from "./html-sandbox";
 import {
@@ -209,6 +210,23 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
             onChange={(e) => setForm({ ...form, password: e.currentTarget.value })}
             description="存入凭证库，账号只保存引用（SEC3）"
           />
+          <Button
+            size="xs"
+            variant="light"
+            onClick={() => {
+              void (async () => {
+                setFormError(null);
+                try {
+                  const { url } = await api.gmailAuthorize(`${window.location.origin}/api/mail/gmail/callback`);
+                  window.open(url, "_blank", "noopener");
+                } catch (e) {
+                  setFormError(e instanceof Error ? e.message : String(e));
+                }
+              })();
+            }}
+          >
+            绑定 Gmail 账号（OAuth）
+          </Button>
           {formError && (
             <Text size="xs" c="red">
               {formError}

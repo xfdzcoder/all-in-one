@@ -5,6 +5,12 @@ import { authGuard } from "../auth/guard.ts";
 import { SsrfBlockedError } from "../connector/ssrf.ts";
 import type { MailClientFactory } from "./client.ts";
 import {
+  buildGmailAuthorizeUrl,
+  exchangeGmailCode,
+  fetchGmailProfile,
+} from "./gmail.ts";
+import { createCredential } from "../credentials/store.ts";
+import {
   MailError,
   createAccount,
   deleteAccount,
@@ -32,7 +38,8 @@ const accountPatch = accountBody.partial().refine((o) => Object.keys(o).length >
 const idParams = z.object({ id: z.string().min(1).max(64) });
 const bodyParams = z.object({
   accountId: z.string().min(1).max(64),
-  uid: z.coerce.number().int().min(1),
+  /** IMAP UID（数字）或 Gmail 消息 id（字符串）。 */
+  uid: z.string().min(1).max(200),
 });
 const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
@@ -63,6 +70,72 @@ export function registerMailRoutes(
     const row = await updateAccount(app.db, req.user!.id, params.data.id, body.data);
     if (!row) return reply.code(404).send({ error: "not found" });
     return row;
+  });
+
+  /** Gmail OAuth 绑定（D37）：返回授权 URL（客户端打开）；state 防 CSRF（内存态，10 分钟有效）。 */
+  const gmailStates = new Map<string, { userId: string; redirectUri: string; at: number }>();
+  app.post("/api/mail/gmail/authorize", { preHandler: authGuard }, async (req, reply) => {
+    const body = z.object({ redirectUri: z.string().url().max(500) }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: "invalid body" });
+    const clientId = process.env.GMAIL_CLIENT_ID ?? "";
+    const clientSecret = process.env.GMAIL_CLIENT_SECRET ?? "";
+    if (!clientId || !clientSecret) {
+      return reply.code(400).send({ error: "未配置 GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET（见 docs/deploy.md）" });
+    }
+    const state = crypto.randomUUID();
+    gmailStates.set(state, { userId: req.user!.id, redirectUri: body.data.redirectUri, at: Date.now() });
+    for (const [k, v] of gmailStates) {
+      if (Date.now() - v.at > 10 * 60_000) gmailStates.delete(k);
+    }
+    return { url: buildGmailAuthorizeUrl(clientId, body.data.redirectUri, state) };
+  });
+
+  /** OAuth 回调（Google 重定向，无需会话；state 绑定发起用户）。 */
+  app.get("/api/mail/gmail/callback", async (req, reply) => {
+    const q = z
+      .object({
+        code: z.string().max(4000).optional(),
+        state: z.string().min(1).max(128),
+        error: z.string().max(200).optional(),
+      })
+      .safeParse(req.query);
+    const html = (title: string, body: string) =>
+      reply.type("text/html; charset=utf-8").send(
+        `<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:system-ui;background:#14181f;color:#e8e8e8;padding:2rem"><h3>${title}</h3><p>${body}</p></body>`,
+      );
+    if (!q.success) return html("绑定失败", "回调参数无效");
+    const st = gmailStates.get(q.data.state);
+    gmailStates.delete(q.data.state);
+    if (!st) return html("绑定失败", "state 无效或已过期，请回到工作台重新发起绑定");
+    if (q.data.error) return html("绑定失败", `Google 返回错误：${q.data.error}`);
+    if (!q.data.code) return html("绑定失败", "缺少授权码");
+    try {
+      const tokens = await exchangeGmailCode(
+        q.data.code,
+        st.redirectUri,
+        process.env.GMAIL_CLIENT_ID ?? "",
+        process.env.GMAIL_CLIENT_SECRET ?? "",
+      );
+      if (!tokens.refreshToken) {
+        return html("绑定失败", "未获得 refresh_token（Google Cloud 侧需允许离线访问）");
+      }
+      const profile = await fetchGmailProfile(tokens.accessToken).catch(() => ({ emailAddress: "" }));
+      const email = profile.emailAddress || `gmail-${Date.now()}`;
+      const cred = await createCredential(app.db, st.userId, `gmail-${email}`, "oauth2", tokens.refreshToken);
+      await createAccount(app.db, st.userId, {
+        kind: "gmail",
+        name: `Gmail · ${email}`,
+        host: "gmail",
+        port: 0,
+        security: "oauth2",
+        username: email,
+        credentialId: cred.id,
+        folder: "INBOX",
+      });
+      return html("绑定成功", `已接入 ${email}（只读）。可关闭此页回到工作台。`);
+    } catch (e) {
+      return html("绑定失败", e instanceof Error ? e.message : String(e));
+    }
   });
 
   app.delete("/api/mail/accounts/:id", { preHandler: authGuard }, async (req, reply) => {

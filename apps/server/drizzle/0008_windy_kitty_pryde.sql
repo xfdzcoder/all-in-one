@@ -1,0 +1,1 @@
+ALTER TABLE `mail_account` ADD `kind` text DEFAULT 'imap' NOT NULL;

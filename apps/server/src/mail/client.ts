@@ -11,10 +11,17 @@ export interface MailConnectionConfig {
   username: string;
   /** 明文密码（来自凭证库解密，仅在连接期驻留内存；绝不入日志）。 */
   password: string;
+  /** imap | gmail（gmail 走 OAuth：password 位存放 refresh_token）。 */
+  kind?: string;
+  /** Gmail OAuth（D37）：refresh_token 借用 password 位传入；client_id/secret 来自部署环境。 */
+  refreshToken?: string;
+  clientId?: string;
+  clientSecret?: string;
 }
 
 export interface MailMessageSummary {
-  uid: number;
+  /** IMAP UID（数字）或 Gmail 消息 id（字符串）。 */
+  uid: number | string;
   subject: string;
   from: string;
   /** ISO 时间串（解析失败时保留原串）。 */
@@ -30,7 +37,7 @@ export interface MailMessageFull extends MailMessageSummary {
 export interface MailClient {
   /** 最近 limit 封（新→旧）。 */
   list(folder: string, limit: number): Promise<MailMessageSummary[]>;
-  body(folder: string, uid: number): Promise<MailMessageFull | null>;
+  body(folder: string, uid: number | string): Promise<MailMessageFull | null>;
 }
 
 export type MailClientFactory = (conn: MailConnectionConfig) => MailClient;

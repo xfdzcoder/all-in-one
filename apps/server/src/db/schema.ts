@@ -276,7 +276,9 @@ export const mailAccount = sqliteTable("mail_account", {
   /** ssl | starttls | plain（默认 ssl:993）。 */
   security: text("security").notNull().default("ssl"),
   username: text("username").notNull(),
-  /** 凭证库引用（credential.id）——密码/应用专用密码（SEC3，软引用）。 */
+  /** imap | gmail（D37：Gmail 账号走 OAuth 授权流，凭证库存 refresh_token）。 */
+  kind: text("kind").notNull().default("imap"),
+  /** 凭证库引用（credential.id）——密码/应用专用密码/refresh_token（SEC3，软引用）。 */
   credentialId: text("credential_id"),
   /** 抓取文件夹（默认 INBOX）。 */
   folder: text("folder").notNull().default("INBOX"),
