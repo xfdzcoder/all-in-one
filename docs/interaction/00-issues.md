@@ -21,6 +21,7 @@
 | Q23b | 组件篇 ×12 | 0/0/3 | 0/2/5 | 10 |
 | Q23c | 交互面篇 ×7（含插件体系） | 1/0/1 | 0/0/3 | 5 |
 | **合计** | **Q23 全库** | **1/0/6** | **0/8/11** | **26** |
+| Q29 | 用户反馈⑩走查 | 1/0/0 | 1/0/0 | 2 |
 
 ---
 
@@ -273,3 +274,20 @@
 | ~~需拍板~~ | 涉及决策解释 | ~~ISS-7~~ **✅ 已拍板并落地（D41 方案 A）** | — |
 
 > **Q24 收口（2026-09-30）**：**26/26 全部修复**（P0×1、P1×8、P2×17）；ISS-7 经拍板按方案 A 落地（**D41**）。
+
+---
+
+## Q29 · 用户反馈⑩走查条目
+
+### ISS-27 数据连接输入第二框整页黑屏【逻辑 · P1】
+
+- **位置**：数据源管理 · 数据连接 → 任一类型的连接表单
+- **现象**：在第二个输入框打字 → `TypeError: Cannot read properties of null (reading 'value')` → React 卸载全树，页面只剩黑底。
+- **根因**：`setState` updater 内读 `e.currentTarget` —— updater 延迟执行时事件对象已回收（React 事件代理），currentTarget 为 null。
+- **修复**：✅ updater 外先取值（`const v = e.currentTarget.value;` 再入 updater）。
+
+### ISS-28 邮箱账号过滤「清除」钮巨大（94×66）【样式 · P1】
+
+- **位置**：邮件组件头部账号过滤 Select（选中后出现的 ×）
+- **根因**：Mantine v9 `InputClearButton` 的 inline 引用 `--cb-size-compact-*` 在官方 CSS **未定义** → var 链失效 → 尺寸塌缩到 94×66px、字号回落 16px。
+- **修复**：✅ 补齐 `--cb-size-compact-xs/sm/md/lg/xl`（widgets.css），实测 16×16。
