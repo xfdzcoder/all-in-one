@@ -22,6 +22,7 @@ import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerTagRoutes } from "./tag/routes.ts";
 import { registerDataSourceRoutes } from "./data-source/routes.ts";
+import { registerIconRoutes } from "./icon/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
 import { registerMailRoutes } from "./mail/routes.ts";
@@ -90,6 +91,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // RSS 变更（源管理/标已读）→ 失效缓存 + SSE（FR：任一组件标已读，其余同步）
   registerTagRoutes(app);
   registerDataSourceRoutes(app);
+  registerIconRoutes(app);
   registerFeedRoutes(app, () => {
     dataChannel.cache.clear();
     dataChannel.bus.publish("rss");

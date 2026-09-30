@@ -55,6 +55,15 @@ export type DataSourceRow = {
   updatedAt: number | string;
 };
 
+/** 自定义图标（Q38b/D45）：文件在服务端 dataDir/icons，引用 = /api/icons/:id 或 custom:<id>。 */
+export type IconRow = {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  createdAt: number | string;
+};
+
 /** Workspace 标签（FR-D1 / D40）。 */
 export type TagRow = {
   id: string;
@@ -195,6 +204,10 @@ export const api = {
     patch: { name?: string; config?: Record<string, unknown> },
   ) => req<{ ok: boolean }>("PATCH", `/api/data-sources/${id}`, patch),
   deleteDataSource: (id: string) => req<{ ok: boolean }>("DELETE", `/api/data-sources/${id}`),
+  // ── 自定义图标库（Q38b/D45）──
+  listIcons: () => req<IconRow[]>("GET", "/api/icons"),
+  createIcon: (v: { name: string; mime: string; dataBase64: string }) => req<IconRow>("POST", "/api/icons", v),
+  deleteIcon: (id: string) => req<{ ok: boolean }>("DELETE", `/api/icons/${id}`),
   listFeeds: () => req<FeedSource[]>("GET", "/api/feeds"),
   // ── Workspace 标签（FR-D1/D2/D3，D40）──
   listTags: () => req<TagRow[]>("GET", "/api/tags"),

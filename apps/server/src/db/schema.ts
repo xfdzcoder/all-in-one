@@ -373,5 +373,22 @@ export const dataSource = sqliteTable(
   ],
 );
 
+/** 自定义图标库（Q38b/D45）：文件存 dataDir/icons/<id>.<ext>，行内只存元数据。 */
+export const customIcon = sqliteTable(
+  "custom_icon",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** MIME 白名单：image/svg+xml / image/png / image/webp（上传期校验）。 */
+    mime: text("mime").notNull(),
+    size: integer("size").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("custom_icon_user_id_idx").on(t.userId)],
+);
+
 export type DataSource = typeof dataSource.$inferSelect;
 export type NewDataSource = typeof dataSource.$inferInsert;

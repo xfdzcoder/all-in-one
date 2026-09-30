@@ -14,7 +14,7 @@
 | 信息源 | RSS 订阅源 | 订阅 / 打标签 / 退订（确认） |
 | 看板 | 看板/列/卡片 | 看板增改删、列增改删、卡片改名/归档/**恢复**/删除（Q26a） |
 | 邮箱 | 邮件账号 | 增改删 + Gmail OAuth（D42 自邮件组件迁入） |
-| 数据连接 | monitor / opencode / http 连接 | 命名连接 CRUD（secret 入凭证库 SEC3；组件经 sourceId 引用，D42） |
+| 数据连接 / 图标（Q38b 自定义图标库） | monitor / opencode / http 连接 | 命名连接 CRUD（secret 入凭证库 SEC3；组件经 sourceId 引用，D42） |
 | 标签 | 标签 | 新建（带色）/ 重命名 / 改色 / 删除（确认）+ 使用计数 |
 
 ## 交互点 · Todo 页签

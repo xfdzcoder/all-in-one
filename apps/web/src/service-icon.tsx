@@ -20,8 +20,12 @@ export const SERVICE_ICON_NAMES = Object.keys(BRAND);
 
 export function ServiceIcon({ name, size = 18 }: { name?: string; size?: number }) {
   if (!name) return null;
-  if (/^(https?:|data:)/.test(name)) {
+  if (/^(https?:|data:|\/)/.test(name)) { // 含根路径引用（/api/icons/:id，Q38b）
     return <img className="wb-service-icon" src={name} alt="" width={size} height={size} />;
+  }
+  // Q38b：自定义图标库引用（custom:<id> → 服务端文件）
+  if (name.startsWith("custom:")) {
+    return <img className="wb-service-icon" src={`/api/icons/${name.slice("custom:".length)}`} alt="" width={size} height={size} />;
   }
   const svg = BRAND[name];
   if (!svg) return null;

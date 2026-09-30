@@ -32,6 +32,7 @@ import {
   useTodoMutations,
   useTodos,
 } from "./data-hooks";
+import { IconLibrary } from "./icon-library";
 import { MailAccountsPanel } from "./mail-accounts";
 import { TagInput } from "./tag-input";
 import { ServiceIcon } from "./service-icon";
@@ -194,6 +195,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
           <Tabs.Tab value="kanban">看板</Tabs.Tab>
           <Tabs.Tab value="mail">邮箱</Tabs.Tab>
           <Tabs.Tab value="sources">数据连接</Tabs.Tab>
+          <Tabs.Tab value="icons">图标</Tabs.Tab>
           <Tabs.Tab value="tags">标签</Tabs.Tab>
         </Tabs.List>
 
@@ -789,6 +791,11 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
               </Stack>
             )}
           </Stack>
+        </Tabs.Panel>
+
+        {/* ── 自定义图标库（Q38b/D45） ── */}
+        <Tabs.Panel value="icons" pt="xs">
+          <IconLibrary />
         </Tabs.Panel>
 
         {/* ── 标签 ── */}
