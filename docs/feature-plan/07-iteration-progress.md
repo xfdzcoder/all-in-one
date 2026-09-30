@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 53 轮 · Q26c ✅ 看板交互重构（配置选板 + composer）；下一项 Q26d 收口） |
+| 最近更新 | 2026-09-30（第 54 轮 · Q26d ✅ 收口 —— 用户反馈⑥全部完成（数据源管理扩容 + 看板交互重构）） |
 
 ## 迭代队列
 
@@ -81,9 +81,9 @@
 
 - [ ] Q26 · 用户反馈⑥：数据源管理扩容 + 看板交互重构（2026-09-30 新指令；看板/列 CRUD 一起做、监控/OpenCode/自定义 API 一并迁入）
   - [x] Q26a · #5 列表行防压缩（全局 flex-shrink:0 + 邮件行 min-height 56px）+ #1 数据源管理「看板」页签（看板/列/卡片全 CRUD + 归档/恢复 + 搜索分组）**✅ 2026-09-30**
-  - [ ] Q26b · #4 数据源全量迁移（**D42** 命名连接模型）：邮箱账号 + 监控源 + OpenCode 连接 + 自定义 API 连接入数据源管理；widget 配置改引用（保留内联回落）
-  - [ ] Q26c · #2+#3 看板交互重构：看板选择入配置（ConfigForm 动态选项）+ 头部只显标题 + 「＋ 添加列/卡片」ghost→composer
-  - [ ] Q26d · 文档/脚本/台账收口（kanban/mail/data-admin 篇重写 + verify-kan/mail 旅程改写 + 全量回归）
+  - [x] Q26b · #4 数据源全量迁移（**D42**）：`data_source` 命名连接（monitor/opencode/http）+ 邮箱迁入管理页 + 组件 `sourceId` 引用（内联回落）+ ConfigForm 动态选项 **✅ 2026-09-30**
+  - [x] Q26c · #2+#3 看板交互重构：看板选择入配置（动态下拉）+ 头部只显标题 + ghost→composer；**顺修真 bug**（validateForm 拒绝动态下拉值）**✅ 2026-09-30**
+  - [x] Q26d · 文档/脚本/台账收口（kanban/mail/data-admin/按钮索引同步；verify-kan 46/46、fr3 29/29、mail 27/27 旅程改写；全量回归）**✅ 2026-09-30**
 
 ## 历轮记录
 
@@ -158,3 +158,4 @@
 | 51 | 2026-09-30 | **Q26b-1 命名连接模型（D42）**：`data_source` 表（kind 白名单 monitor/opencode/http + 同 kind 同名唯一 + config_json；secret 存凭证库引用 SEC3，键与表单同名）+ 迁移 0010；REST `/api/data-sources`（CRUD + 未知 config 键拒绝 + `kinds` 字段契约）+ 契约测试 4 项（147/147）；数据源管理新增「**数据连接**」页签（类型切换、按 kind 动态表单、secret 走 propsWithSecretRefs 入凭证库、编辑回填、删除带确认并注明回落语义） | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `91d71c7` |
 | 52 | 2026-09-30 | **Q26b-2 组件引用 + 邮箱迁移（D42）**：① widget-sdk ConfigField 增 `dynamic` 选项源（kanban-boards / data-source:*）+ ConfigForm 动态下拉（useDynamicOptionsMap 一次取全按 key 查表）；② monitor/opencode/custom-api 增 `sourceId` 配置（动态下拉），`useResolvedSourceConfig` 连接优先合并、内联回落（自定义 API 仅合并认证，url 仍组件配）；monitor/opencode url 由必填降为可空（选连接则不必填）；③ **邮箱管理迁入数据源管理「邮箱」页签**（MailAccountsPanel：增改删 + Gmail OAuth + 删除带确认；D42 数据源归位）——邮件组件去弹窗，「管理账号」→「管理邮箱」跳转（wb:navigate 事件 + initialTab）；④ 脚本同步：verify-mail/gmail 账号旅程改管理页（可见性过滤防隐藏页签同名按钮误点）、空态文案断言同步 | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `91d71c7` |
 | 53 | 2026-09-30 | **Q26c 看板交互重构（#2/#3）**：① **看板选择入配置**（`boardId` dynamic=kanban-boards 下拉）——头部只显看板标题 + 刷新/已归档；组件内 Select/「新看板名/新建看板」移除（建板归「数据源管理 · 看板」）；空态指向配置；② **ghost→composer**：「＋ 添加列 / ＋ 添加卡片」点击展开内联 composer（Enter 提交/Esc 取消/添加·取消按钮），弃常驻输入+「+」；③ 修**真 bug**：`validateForm` 对 select 只认静态 options —— 动态下拉（看板/数据连接）值被误判「取值非法」**根本存不上**（Q26b-2 的 sourceId 同样受影响），dynamic 字段跳过静态白名单校验；④ 脚本重写：verify-kan 旅程改「管理页建板 → 配置选板 → composer 建列/卡」（46/46，含 scoped「配置」点击防误开他组件弹窗）、verify-fr3 看板段改 API 播种+配置选板（29/29） | 全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
+| 54 | 2026-09-30 | **Q26d 收口**：交互文档同步（kanban.md 交互重构后行为、mail.md 管理邮箱跳转、data-admin.md 六页签总览、00-button-index 更新）；Q26 用户反馈⑥全部完成 —— 数据源管理扩容（看板/邮箱/数据连接）+ 看板交互重构（配置选板 + composer）+ 行高修复；旅程脚本三处改写后全绿 | 全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
