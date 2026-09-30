@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 69 轮 · Q33 ✅ 邮箱配置下拉为空修复；余 Q34–Q39） |
+| 最近更新 | 2026-10-01（第 70 轮 · Q34 ✅ 未读徽标编辑态隐藏；余 Q35–Q39） |
 
 ## 迭代队列
 
@@ -201,3 +201,4 @@
 | 67 | 2026-10-01 | **Q31 监控源连接空白修复（一.2）**：复现（puppeteer 走真实 Glances 地址建连接）→ `TypeError: reading 'url'` → 行渲染崩 → 空白页。根因：**POST 响应带解析后 `config`，GET 列表只回原始行（configJson 字符串）**，前端契约 `DataSourceRow.config: Record` 两侧不一致。修复：GET 行补 `config: parseConfig(configJson)`（与 POST/前端契约对齐）+ 契约测试「GET 行携带解析后 config」+ 前端防御（`r.config?.url` / `useResolvedSourceConfig` 缺省回落）。复现回归：列表显 URL、编辑回填 名称/地址/认证方式 齐全；真连 https://glances.xfdzcoder.space 验证 | server Vitest 153/153（+1）✅；verify-mon 15/15 ✅；复现脚本转正断言 ✅；typecheck ✅ | 待提交 |
 | 68 | 2026-10-01 | **Q32 编辑态内容可见禁交互（二.1）**：用户否决 Q29d 的「编辑态隐藏组件自身按钮」（`visibility:hidden` 连 role=button 的条目行一并隐藏 → 「隐藏后无法辨认哪个是哪个」）——**撤除隐藏规则**，内容完整可见；「禁止点击、禁止修改」由既有 D38 承担（`inert` + `pointer-events:none`，脱离 Tab 序）。与外框「配置/移除」的重叠只处理「未读」徽标（Q34 专责），按钮保持可见。verify-p8 补第 9 项断言（编辑态输入框/按钮可见且零 visibility:hidden）防回退；03-edit-mode.md 同步 | verify-p8 9/9 ✅（+1）；verify-kan 45/45、verify-j4 17/17、verify-m1 42/42、verify-dark 3/3 AA ✅；Playwright 5/5 ✅；typecheck ✅ | 待提交 |
 | 69 | 2026-10-01 | **Q33 邮箱配置下拉为空修复（二.2）**：复现定位——mail 组件 `accountIds` 多选 `dynamic:"mail-accounts"`，但 `useDynamicOptionsMap` 的返回表**无此键** → `?? []` 恒空（看板/标签等键正常，故仅邮箱空）。溯源：**Q29e 的 hooks 补丁被守卫误判跳过**（`if '"mail-accounts"' not in s` 命中了 `useMailAccounts` 的 `queryKey: ["mail-accounts"]` 子串 → 未替换却 assert 通过）——Q29e 记录中「多选入配置」实际缺选项源，本轮补正。修复：`mail-accounts: mailAccounts.accounts.map(...)` 入表；verify-mail 新增 4 项（进编辑→开配置→打开多选→断言账号出现在选项 + 关弹窗回归——配置弹窗无「取消」钮，走 Modal-close）。**教训**：字符串存在性守卫须锚定赋值形态（`"mail-accounts":`），裸子串会命中 queryKey | verify-mail 34/34（+4）✅；verify-tag 16/16、verify-kan 45/45、verify-gmail 15/15 ✅；typecheck ✅ | 待提交 |
+| 70 | 2026-10-01 | **Q34 未读徽标编辑态隐藏（二.3）**：信息流头部「未读 N」徽标在编辑态与外框「配置/移除」（右上角悬浮 z-5）重叠被遮挡——按用户口径**只隐藏徽标**（Q32 保持按钮可见不变）：rss-widget 消费 `WidgetEditContext.editMode` 条件渲染。verify-i4 补双断言（编辑态无可见「未读」徽标 / 退出后恢复），rss.md 同步 | verify-i4 20/20（+2）✅；verify-fr3 29/29、verify-p8 9/9、verify-dark 3/3 AA ✅；typecheck ✅ | 待提交 |
