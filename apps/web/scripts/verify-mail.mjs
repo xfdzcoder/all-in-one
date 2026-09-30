@@ -223,6 +223,53 @@ try {
   ok("MAIL list renders subjects", bodyText.includes(`周报汇总-${uniq}`) && bodyText.includes(`欢迎订阅-${uniq}`));
   ok("MAIL per-account error surfaced", bodyText.includes("挂掉的邮箱") && bodyText.includes("connection refused"));
 
+  // Q33：配置表单「展示的邮箱」下拉须列账号（dynamic mail-accounts 选项源回归）
+  ok("MAIL enter edit for config check", await clickBtn("编辑页面"));
+  await sleep(300);
+  ok(
+    "MAIL open widget config",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes("管理邮箱"));
+      const chrome = item?.querySelector(".wb-chrome");
+      const btn = [...(chrome?.querySelectorAll(".wb-chrome__actions button") ?? [])].find((b) => b.textContent.trim() === "配置");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(500);
+  ok(
+    "MAIL open account multiselect in config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
+      const root = roots[roots.length - 1];
+      const wrapper = [...(root?.querySelectorAll(".mantine-InputWrapper-root") ?? [])].find((w) =>
+        w.querySelector("label")?.textContent.includes("展示的邮箱"),
+      );
+      wrapper?.querySelector("input")?.click();
+      return Boolean(wrapper);
+    }),
+  );
+  await sleep(400);
+  ok(
+    "MAIL account listed in config dropdown (Q33)",
+    await page.evaluate((n) => [...document.querySelectorAll("[data-combobox-option]")].some((e) => e.offsetParent !== null && e.textContent.includes(n)), "测试邮箱"),
+  );
+  await page.keyboard.press("Escape");
+  await sleep(200);
+  ok(
+    "MAIL close config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
+      const root = roots[roots.length - 1];
+      const btn = root?.querySelector('[class*="Modal-close"]');
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(300);
+  ok("MAIL exit edit after config check", await clickBtn("完成编辑"));
+  await sleep(300);
+
   // 打开正文 → 沙箱渲染（脚本零执行）
   ok(
     "MAIL open message",

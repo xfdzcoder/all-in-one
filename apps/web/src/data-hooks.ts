@@ -606,6 +606,8 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
     queryFn: () => api.listTodos(undefined, undefined, true),
   });
   const boards = useKanbanBoards();
+  // Q33：mail-accounts 选项源（此前缺失 —— 邮箱多选下拉恒空）
+  const mailAccounts = useMailAccounts();
   const monitor = useDataSources("monitor");
   const opencode = useDataSources("opencode");
   const http = useDataSources("http");
@@ -619,6 +621,7 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
     "data-source:opencode": (opencode.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:http": (http.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     tags: (tags.data ?? []).map((t: { id: string; name: string }) => ({ value: t.id, label: t.name })),
+    "mail-accounts": mailAccounts.accounts.map((a: { id: string; name: string }) => ({ value: a.id, label: a.name })),
   };
 }
 
