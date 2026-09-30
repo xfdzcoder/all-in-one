@@ -103,9 +103,19 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
       </Group>
 
       {!boardId && (
-        <Text size="xs" c="dimmed">
-          在组件「配置」里选择看板（看板在「数据源管理 · 看板」创建）
-        </Text>
+        // 五.1：无看板可选 → 引导去数据源管理创建
+        <div className="wb-widget__hint">
+          <Text size="xs" c="dimmed">
+            暂无看板可选 —— 请到「数据源管理 · 看板」创建
+          </Text>
+          <Button
+            size="compact-xs"
+            variant="default"
+            onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "kanban" } }))}
+          >
+            去创建看板
+          </Button>
+        </div>
       )}
       {boardId && editMode && (
         <Text size="xs" c="dimmed">
@@ -198,14 +208,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     {col.title}
                   </Text>
                 )}
-                <ConfirmAction
-                  label="×"
-                  size="compact-xs"
-                  variant="subtle"
-                  title="删除列？"
-                  message={`删除列「${col.title}」将一并删除其中 ${cardsOf(col.id).length} 张卡片（不可恢复）。确认删除？`}
-                  onConfirm={() => void m.deleteColumn(col.id)}
-                />
+
               </Group>
               <Stack gap={4}>
                 {cardsOf(col.id).map((card, cardIdx) => {

@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 63 轮 · Q29d ✅ Dashboard 编辑态重排；余 Q29e–f） |
+| 最近更新 | 2026-10-01（第 64 轮 · Q29e ✅ 邮箱+看板（多选入配置/添加入右上角/列宽等分/禁删列/空态引导）；余 Q29f 收口） |
 
 ## 迭代队列
 
@@ -98,7 +98,7 @@
   - [x] Q29b · ToDo 重构（一）：`archived` 列+迁移 0011（归档项仅管理面可见 includeArchived）；widget 去标签/去筛选按钮、显示三档（未完成/已完成/全部）；picker「名称」= creatable 下拉（可选已有/输入新建）；管理页 = **单 ToDo 视图**（下拉切换 + 快捷筛选 SegmentedControl + 总数 + 所在 Dashboard/未挂载标注 + 删除 ToDo 带确认）**✅ 2026-09-30**
   - [x] Q29c · RSS 改造（二）：`feed_source.snapshotJson` 快照兜底（失败显缓存+提示）；去详情弹窗（点击=新标签开原文+标已读）；筛选入配置（ConfigField `multiselect` + dynamic tags）**✅ 2026-10-01**
   - [x] Q29d · Dashboard 编辑态（三）：编辑态隐藏组件自身按钮（inert 层按钮 visibility:hidden）；「添加组件」Portal 入头部（编辑页面旁）；「编辑布局」→「编辑页面」+ 页面设置弹窗取消 → **编辑态内联行**（名称/图标/背景色，失焦即存）**✅ 2026-10-01**
-  - [ ] Q29e · 邮箱+看板（四五）：picker 多选邮箱（缓存）；邮箱/看板管理页添加入右上角；看板空态引导/禁删列/列宽等分
+  - [x] Q29e · 邮箱+看板（四五）：mail 配置多选邮箱（dynamic mail-accounts，倒序聚合，账号列表查询缓存）；邮箱「＋ 添加邮箱」/看板「＋ 新建看板」入右上角按需展开；看板空态引导跳转、widget 禁删列、列宽等分 **✅ 2026-10-01**
   - [ ] Q29f · 收口：文档/台账/脚本 + 全量回归
 
 ## 历轮记录
@@ -184,3 +184,4 @@
 | 61 | 2026-09-30 | **Q29a+b**：① **六 数据连接黑屏**——setState updater 内读 `e.currentTarget`（延迟执行时事件已回收）→ TypeError → React 卸载全树；事件属性先取值修复。② **四.1 邮箱巨钮**——Mantine v9 InputClearButton 未定义 `--cb-size-compact-*` → var 链失效 94×66；补齐 compact 变量（16×16）。③ **Q29b ToDo 重构**——`archived` 归档（仅管理面可见）；组件去标签/筛选按钮、显示三档；picker 名称 creatable（Mantine v9 无内建 creatable —— 搜索注入「＋ 新建」项 + 已选新值保持显示）；管理页单 ToDo 视图（下拉+快捷筛选+所在 Dashboard 标注）；`ConfigField.creatable` 契约扩展。旅程适配：j4/w4（creatable 交互=聚焦→键入→点新建）、verify-tag 去 ToDo 标签段（Q29b 后标签仅信息源）| server Vitest 151/151（+1 归档契约）；全量 26 脚本 431 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `9e92a26` / `e55c758` |
 | 62 | 2026-10-01 | **Q29c RSS 改造（二.1-3）**：① 快照兜底——`feed_source.snapshot_json/snapshot_at`（迁移 0012），拉取成功落快照；失败时回落上次快照（条目标 `stale`，UI 显「N 个源暂不可用，显示上次拉取的缓存条目」；无 TTL 不做清理配置）；契约测试含 5s 限流窗等待（force 强刷受最小间隔限流）。② 去详情弹窗——点击条目 = 新标签开原文 + 标已读（`window.open` noopener）；摘要沙箱渲染随弹层移除。③ 筛选并入配置——`ConfigField` 增 `multiselect`（dynamic=tags），组件头部「筛选」按钮移除；契约 `ConfigFieldType` 扩展。旅程：verify-i4 RSS 段改直开断言（拦截 window.open + /api/feeds/read 记录）、verify-tag 筛选段改配置 multiselect 流程（16/16）。**教训**：改 web 后必须重建 bundle（preview 服旧 dist，症状=新逻辑不生效） | server Vitest 152/152（+1）✅；全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |
 | 63 | 2026-10-01 | **Q29d Dashboard 编辑态重排（三.1-3）**：① 编辑态隐藏组件自身按钮（`.wb-chrome__content--inert button/role=button { visibility:hidden }`——与外框「配置/移除」重叠问题）；② 「添加组件」经 **Portal 注入头部槽位**（`#wb-header-edit-slot`，编辑页面旁；BoardToolbar 需在 GridStack 内取 useGridStack，故用 Portal 而非搬家）；③ 「编辑布局」→「编辑页面」（26 文件旅程批量改名）；页面设置弹窗取消 → **编辑态内联行**（页面名称/图标/背景色一行排开、失焦即存，`savePageSettingsFields`）。**事故与加固**：m1 清理段曾因断言失败继续执行而**误删「首页」**（API 重建 seed 布局恢复）——补守卫「确认弹窗必须点名目标页否则中止」；另记「改 web 必须重建 bundle」教训（本轮 J2b 误报由此而来） | 全量 26 脚本 428 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |
+| 64 | 2026-10-01 | **Q29e 邮箱+看板（四.2-3/五.1-4）**：① mail 组件配置增 **`accountIds` 多选邮箱**（dynamic mail-accounts；留空=全部；聚合已倒序）——头部账号过滤下拉移除（配置驱动）；② 邮箱「＋ 添加邮箱」、看板「＋ 新建看板」移**右上角**按需展开（`wb-admin__bar` + `wb-admin__addbtn`）；③ 看板空态引导「请到数据源管理·看板创建 + 去创建看板（跳转）」；④ **widget 列头禁删列**（删除列仅管理页，Q27 系列数据/视图分离收尾）；⑤ **列宽等分**卡片宽（flex 1 1 0 + min/max 宽，列多横滚）。旅程：verify-kan 新建看板展开步骤 + 空态文案（45/45）、verify-mail/gmail「＋ 添加邮箱」 | 全量 26 脚本 429 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |

@@ -267,7 +267,9 @@ export const mailManifest: WidgetManifest = {
   category: "信息流",
   defaultSize: { w: 6, h: 5 },
   minSize: { w: 3, h: 3 },
-  configSchema: [],
+  configSchema: [
+    { key: "accountIds", label: "展示的邮箱", type: "multiselect", dynamic: "mail-accounts", help: "多选邮箱账号；留空 = 全部。组合后按时间倒序（最新在前）" },
+  ],
   capabilities: {
     data: { source: "workspace", resource: "mail" },
     refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },

@@ -58,18 +58,20 @@ export function MailAccountsPanel() {
   const formOpen = Boolean(editingId) || formOpenNew;
   return (
     <Stack gap="xs">
-      <Group gap="xs">
-        <Button
-          size="xs"
-          variant={formOpen ? "default" : "filled"}
-          onClick={() => setFormOpenNew((v) => !v)}
-        >
-          {formOpen ? "收起表单" : "＋ 添加账号"}
-        </Button>
+      {/* 四.3：添加入口右上角（对齐看板样式） */}
+      <div className="wb-admin__bar">
         <Text size="xs" c="dimmed">
           已添加 {accounts.length} 个账号
         </Text>
-      </Group>
+        <Button
+          size="xs"
+          variant={formOpen ? "default" : "filled"}
+          className="wb-admin__addbtn"
+          onClick={() => setFormOpenNew((v) => !v)}
+        >
+          {formOpen ? "收起表单" : "＋ 添加邮箱"}
+        </Button>
+      </div>
 
       {formOpen && (
       <div className="wb-admin__section">

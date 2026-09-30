@@ -204,6 +204,8 @@ try {
     tab?.click();
   });
   await sleep(300);
+  ok("KAN open new-board form", await clickBtn("＋ 新建看板")); // Q29e/五.4：入右上角按需展开
+  await sleep(300);
   ok("KAN type new board name", await fillNth("新看板名", 0, boardTitle));
   await page.keyboard.press("Enter");
   await sleep(800);
@@ -224,7 +226,7 @@ try {
   await sleep(1000);
   ok(
     "KAN empty-state hint",
-    await page.evaluate(() => (document.body.textContent ?? "").includes("在组件「配置」里选择看板")),
+    await page.evaluate(() => (document.body.textContent ?? "").includes("请到「数据源管理 · 看板」创建") && (document.body.textContent ?? "").includes("去创建看板")),
   );
   // 编辑态内容惰性（FR-P8）：composer 入口点击无效
   await page.evaluate(() => {

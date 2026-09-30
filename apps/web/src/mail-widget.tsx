@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge, Button, Card, Group, Select, Stack, Text } from "@mantine/core";
+import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
 import { HtmlSandbox } from "./html-sandbox";
@@ -12,29 +12,29 @@ import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
  * 账号管理在「数据源管理 · 邮箱」（D42；口令走凭证库 SEC3）；D3 只读：无发送/删除/标记端点。
  */
 
-export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refreshSec?: number }) {
-  const [filter, setFilter] = useState<string>("");
+export function MailWidget({
+  limit = 20,
+  refreshSec,
+  accountIds,
+}: {
+  limit?: number;
+  refreshSec?: number;
+  /** Q29e/四.2：配置多选邮箱（留空 = 全部）；组合倒序（聚合已按新→旧）。 */
+  accountIds?: string[];
+}) {
   const [open, setOpen] = useState<MailListEntry | null>(null);
   const { accounts } = useMailAccounts();
-  const { agg, loading, error, refresh } = useMailMessages(filter || undefined, limit, refreshSec);
+  const { agg, loading, error, refresh } = useMailMessages(undefined, limit, refreshSec);
   const { message: detail, error: detailError } = useMailMessage(open?.accountId ?? null, open?.uid ?? null);
+  // Q29e/四.2：配置多选邮箱过滤（留空 = 全部）
+  const allowIds = (accountIds ?? []).length > 0 ? new Set(accountIds) : null;
 
 
 
   return (
     <div className="wb-widget">
       <Group gap={6} wrap="nowrap">
-        <Select
-          size="compact-xs"
-          placeholder="全部账号"
-          data={accounts.map((a) => ({ value: a.id, label: a.name }))}
-          value={filter || null}
-          onChange={(v) => setFilter(v ?? "")}
-          clearable
-          nothingFoundMessage="暂无账号"
-          style={{ width: 140 }}
-          aria-label="邮件账号过滤"
-        />
+
         {/* D42：邮箱属数据源 —— 管理统一在「数据源管理 · 邮箱」 */}
         <Button
           size="compact-xs"
@@ -67,7 +67,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
               {accounts.length === 0 ? "先在「管理邮箱」添加邮箱账号" : "暂无邮件"}
             </Text>
           )}
-          {(agg?.items ?? []).map((item) => (
+          {(agg?.items ?? []).filter((item) => !allowIds || allowIds.has(item.accountId)).map((item) => (
             <Card
               key={`${item.accountId}-${item.uid}`}
               withBorder

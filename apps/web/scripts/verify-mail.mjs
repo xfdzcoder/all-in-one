@@ -180,7 +180,7 @@ try {
   });
   await sleep(300);
   // Q27b#2：表单按需展开（列表为主布局）
-  ok("MAIL expand add-account form", await clickBtn("＋ 添加账号"));
+  ok("MAIL expand add-account form", await clickBtn("＋ 添加邮箱"));
   await sleep(400);
   ok("MAIL fill account name", await setField("名称", "测试邮箱"));
   ok("MAIL fill server", await setField("服务器", "imap.example.com"));

@@ -94,6 +94,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const tree = useKanbanTree(activeBoardId);
   const m = useKanbanMutations(activeBoardId);
   const [newBoard, setNewBoard] = useState("");
+  const [newBoardOpen, setNewBoardOpen] = useState(false);
   const [newColumn, setNewColumn] = useState("");
   // Q26b/D42：命名数据连接（monitor / opencode / http）
   const dsMut = useDataSourceMutations();
@@ -426,9 +427,8 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
         {/* ── 看板（Q26a/#1：看板/列/卡片管理 + 归档恢复） ── */}
         <Tabs.Panel value="kanban" pt="xs">
           <Stack gap="xs">
-            {/* Q27b#1：纵列分节（弃横向控件条） */}
-            <div className="wb-admin__section">
-              <Text size="xs" c="dimmed">选择看板</Text>
+            {/* 五.4：选择看板一行 + 新建看板入右上角（对齐邮箱样式，按需展开） */}
+            <div className="wb-admin__bar">
               <Select
                 size="xs"
                 placeholder="选择看板"
@@ -437,36 +437,49 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                 onChange={(v) => v && setBoardId(v)}
                 nothingFoundMessage="暂无看板"
                 aria-label="看板选择"
+                className="wb-grow"
               />
+              <Button
+                size="xs"
+                variant={newBoardOpen ? "default" : "filled"}
+                className="wb-admin__addbtn"
+                onClick={() => setNewBoardOpen((v) => !v)}
+              >
+                {newBoardOpen ? "收起" : "＋ 新建看板"}
+              </Button>
             </div>
-            <div className="wb-admin__section">
-              <Text size="xs" c="dimmed">新建看板</Text>
-              <Group gap="xs" wrap="nowrap">
-                <TextInput
-                  size="xs"
-                  placeholder="新看板名"
-                  value={newBoard}
-                  onChange={(e) => setNewBoard(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newBoard.trim()) {
+            {newBoardOpen && (
+              <div className="wb-admin__section">
+                <Text size="xs" c="dimmed">新建看板</Text>
+                <Group gap="xs" wrap="nowrap">
+                  <TextInput
+                    size="xs"
+                    placeholder="新看板名"
+                    value={newBoard}
+                    onChange={(e) => setNewBoard(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newBoard.trim()) {
+                        void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                        setNewBoard("");
+                        setNewBoardOpen(false);
+                      }
+                    }}
+                    className="wb-grow"
+                  />
+                  <Button
+                    size="xs"
+                    disabled={!newBoard.trim()}
+                    onClick={() => {
                       void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
                       setNewBoard("");
-                    }
-                  }}
-                  className="wb-grow"
-                />
-                <Button
-                  size="xs"
-                  disabled={!newBoard.trim()}
-                  onClick={() => {
-                    void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
-                    setNewBoard("");
-                  }}
-                >
-                  新建看板
-                </Button>
-              </Group>
-            </div>
+                      setNewBoardOpen(false);
+                    }}
+                  >
+                    创建
+                  </Button>
+                </Group>
+              </div>
+            )}
 
             {activeBoardId && (
               <>

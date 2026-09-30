@@ -127,7 +127,7 @@ try {
     tab?.click();
   });
   await sleep(300);
-  ok("GMAIL expand add-account form", await clickBtn("＋ 添加账号")); // Q27b#2 表单按需展开
+  ok("GMAIL expand add-account form", await clickBtn("＋ 添加邮箱")); // Q27b#2 表单按需展开
   await sleep(400);
   await sleep(400);
 

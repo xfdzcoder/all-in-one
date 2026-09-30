@@ -285,8 +285,10 @@
 
 /* ── 看板列头（P1-2）：标题为文本，点击进入编辑 ───────────── */
 .wb-kanban__col {
-  width: 190px;
-  flex-shrink: 0;
+  /* 五.3：列宽与看板卡片等分（列多时最小宽 + 横向滚动） */
+  flex: 1 1 0;
+  min-width: 132px;
+  max-width: 320px;
   padding: var(--wb-space-2);
   border-radius: var(--wb-radius-sm);
   background: var(--wb-color-surface-raised);
@@ -828,4 +830,9 @@
 
 .wb-pagerow input {
   max-width: 150px;
+}
+
+/* 管理页顶栏：添加入口右上角（Q29e 四.3/五.4） */
+.wb-admin__addbtn {
+  margin-left: auto;
 }
