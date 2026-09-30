@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@mantine/core";
 import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 
-import { useCustomApiData } from "./data-hooks";
+import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
 import { WbAlert } from "./ui";
 import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
@@ -38,8 +38,10 @@ function pickPath(root: unknown, path?: string): unknown {
 }
 
 export function CustomApiWidget(props: CustomApiConfig) {
+  // D42：认证来源（sourceId 提供 authHeader/apiToken），url 仍由组件配置
+  const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"]);
   const display = props.display ?? "stat";
-  const { data, loading, error, refresh } = useCustomApiData(props);
+  const { data, loading, error, refresh } = useCustomApiData(resolved);
   const [detailOpen, setDetailOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 

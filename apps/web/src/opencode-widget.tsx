@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
-import { useOpencodeData, type OpencodeSession } from "./data-hooks";
+import { useOpencodeData, useResolvedSourceConfig, type OpencodeSession } from "./data-hooks";
 import { RelativeTime, WbAlert } from "./ui";
 
 /**
@@ -21,8 +21,10 @@ function formatDuration(ms: number): string {
 }
 
 export function OpencodeWidget(config: { url?: string; limit?: number } & Record<string, unknown>) {
-  const { data, loading, error, refresh } = useOpencodeData(config);
-  const url = config.url;
+  // D42：数据连接优先（sourceId），内联配置回落
+  const resolved = useResolvedSourceConfig("opencode", config as Record<string, unknown>) as typeof config;
+  const { data, loading, error, refresh } = useOpencodeData(resolved);
+  const url = resolved.url;
   const [detail, setDetail] = useState<OpencodeSession | null>(null);
 
   return (

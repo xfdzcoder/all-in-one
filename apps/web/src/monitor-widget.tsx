@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
-import { useMonitorData } from "./data-hooks";
+import { useMonitorData, useResolvedSourceConfig } from "./data-hooks";
 import { WbAlert } from "./ui";
 
 /**
@@ -52,7 +52,9 @@ export function formatUptimeZh(raw: string): string {
 }
 
 export function MonitorWidget(config: { url?: string; refreshSec?: number } & Record<string, unknown>) {
-  const { data, loading, error, refresh } = useMonitorData(config);
+  // D42：数据连接优先（sourceId），内联配置回落
+  const resolved = useResolvedSourceConfig("monitor", config);
+  const { data, loading, error, refresh } = useMonitorData(resolved);
   const [detailOpen, setDetailOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const url = config.url;

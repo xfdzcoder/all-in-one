@@ -72,7 +72,7 @@ const clickBtn = (label, exact = false) =>
 const setField = (label, value) =>
   page.evaluate(
     ({ l, v }) => {
-      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root, .wb-admin .mantine-InputWrapper-root")].find((w) =>
         w.querySelector("label")?.textContent.includes(l),
       );
       const target = wrapper?.querySelector("input, textarea");
@@ -94,8 +94,9 @@ const apiFetch = (path) =>
 /** 弹窗内的精确按钮点击（严禁全文档 includes 匹配破坏性按钮 —— 会误点"删除此页"等）。 */
 const clickInModal = (label) =>
   page.evaluate((l) => {
-    for (const root of document.querySelectorAll(".mantine-Modal-root")) {
-      const btn = [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === l);
+    for (const root of document.querySelectorAll(".mantine-Modal-root, .wb-admin")) {
+      // 可见性过滤：Mantine Tabs 面板挂载但隐藏，隐藏页签的同名按钮不可命中
+      const btn = [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === l && b.offsetParent !== null);
       if (btn) {
         btn.click();
         return true;
@@ -164,14 +165,14 @@ try {
   await sleep(800);
   ok(
     "MAIL empty state hint",
-    await page.evaluate(() => (document.body.textContent ?? "").includes("先在「管理账号」添加邮箱账号")),
+    await page.evaluate(() => (document.body.textContent ?? "").includes("先在「管理邮箱」添加邮箱账号")),
   );
   // 编辑态组件内容惰性（FR-P8）：组件内操作在浏览模式进行
   ok("MAIL exit edit to operate widget", await clickBtn("完成编辑"));
   await sleep(400);
 
   // 账号管理（口令 → 凭证库）
-  ok("MAIL open account manager", await clickBtn("管理账号"));
+  ok("MAIL open account manager", await clickBtn("管理邮箱")); // D42：管理在数据源管理页
   await sleep(400);
   ok("MAIL fill account name", await setField("名称", "测试邮箱"));
   ok("MAIL fill server", await setField("服务器", "imap.example.com"));
@@ -191,14 +192,16 @@ try {
     accountsRes.body.slice(0, 120),
   );
 
-  // 关闭管理弹窗（Esc）→ 刷新列表（scoped：页面上其它组件也有「刷新」按钮）
-  await page.keyboard.press("Escape");
-  await sleep(300);
+  // 返回工作台 → 刷新列表（scoped：页面上其它组件也有「刷新」按钮）
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
+  );
+  await sleep(500);
   ok(
     "MAIL refresh list",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
-        (i.textContent ?? "").includes("管理账号"),
+        (i.textContent ?? "").includes("管理邮箱"),
       );
       const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "刷新");
       if (!btn) return false;
@@ -250,7 +253,7 @@ try {
   // 返回列表 + 清理
   ok("MAIL back to list", await clickBtn("← 返回"));
   await sleep(400);
-  ok("MAIL reopen manager for cleanup", await clickBtn("管理账号"));
+  ok("MAIL reopen manager for cleanup", await clickBtn("管理邮箱"));
   await sleep(400);
   ok("MAIL delete account", await clickInModal("删除"));
   await sleep(400);

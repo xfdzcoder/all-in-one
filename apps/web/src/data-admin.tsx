@@ -30,6 +30,7 @@ import {
   useTodoMutations,
   useTodos,
 } from "./data-hooks";
+import { MailAccountsPanel } from "./mail-accounts";
 import { TagInput } from "./tag-input";
 import { WbAlert } from "./ui";
 import { listLabel } from "./widget-registry";
@@ -50,7 +51,7 @@ const TAG_COLORS = [
   { value: "teal", label: "青" },
 ];
 
-export function DataAdmin({ onBack }: { onBack: () => void }) {
+export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialTab?: string }) {
   const todos = useTodos();
   const sources = useFeedSources();
   const tags = useTags();
@@ -159,11 +160,12 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
           {error}
         </WbAlert>
       )}
-      <Tabs defaultValue="todo">
+      <Tabs defaultValue={initialTab ?? "todo"}>
         <Tabs.List>
           <Tabs.Tab value="todo">任务</Tabs.Tab>
           <Tabs.Tab value="feeds">信息源</Tabs.Tab>
           <Tabs.Tab value="kanban">看板</Tabs.Tab>
+          <Tabs.Tab value="mail">邮箱</Tabs.Tab>
           <Tabs.Tab value="sources">数据连接</Tabs.Tab>
           <Tabs.Tab value="tags">标签</Tabs.Tab>
         </Tabs.List>
@@ -462,6 +464,11 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
               </Text>
             )}
           </Stack>
+        </Tabs.Panel>
+
+        {/* ── 邮箱（D42：数据源，管理自邮件组件迁入） ── */}
+        <Tabs.Panel value="mail" pt="xs">
+          <MailAccountsPanel />
         </Tabs.Panel>
 
         {/* ── 数据连接（D42：monitor / opencode / http 命名连接） ── */}

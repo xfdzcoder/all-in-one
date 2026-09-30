@@ -1,80 +1,25 @@
 import { useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
+import { Badge, Button, Card, Group, Select, Stack, Text } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
-import { api } from "./api";
-import { ConfirmAction } from "./confirm";
 import { HtmlSandbox } from "./html-sandbox";
 import { RelativeTime, WbAlert } from "./ui";
-import {
-  useMailAccounts,
-  useMailMessage,
-  useMailMessages,
-  useMailMutations,
-} from "./data-hooks";
+import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
 
 /**
  * 邮件组件（二期 Q7b，只读聚合 01 FR-E3/§2.3）：多账号列表 + 正文。
  * 正文为不可信 HTML —— 以沙箱 iframe 渲染（D30/D25：deny-all + CSP 禁脚本/远程图）；
- * 账号管理在组件内（口令走凭证库 SEC3）；D3 只读：无发送/删除/标记端点。
+ * 账号管理在「数据源管理 · 邮箱」（D42；口令走凭证库 SEC3）；D3 只读：无发送/删除/标记端点。
  */
 
 export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refreshSec?: number }) {
   const [filter, setFilter] = useState<string>("");
   const [open, setOpen] = useState<MailListEntry | null>(null);
-  const [accountsOpen, setAccountsOpen] = useState(false);
-  const { accounts, refresh: refreshAccounts } = useMailAccounts();
+  const { accounts } = useMailAccounts();
   const { agg, loading, error, refresh } = useMailMessages(filter || undefined, limit, refreshSec);
   const { message: detail, error: detailError } = useMailMessage(open?.accountId ?? null, open?.uid ?? null);
-  const m = useMailMutations();
 
-  const [form, setForm] = useState({
-    name: "",
-    host: "",
-    port: "993",
-    security: "ssl",
-    username: "",
-    folder: "INBOX",
-    password: "",
-  });
-  const [formError, setFormError] = useState<string | null>(null);
-  // ISS-17：账号可编辑（留空口令 = 不改）
-  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const resetForm = () =>
-    setForm({ name: "", host: "", port: "993", security: "ssl", username: "", folder: "INBOX", password: "" });
-
-  const submitAccount = async () => {
-    setFormError(null);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        host: form.host.trim(),
-        port: Number(form.port) || 993,
-        security: form.security,
-        username: form.username.trim(),
-        folder: form.folder.trim() || "INBOX",
-        password: form.password || undefined,
-      };
-      if (editingId) await api.patchMailAccount(editingId, payload);
-      else await m.createAccount(payload);
-      setEditingId(null);
-      resetForm();
-      refreshAccounts();
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : String(e));
-    }
-  };
 
   return (
     <div className="wb-widget">
@@ -90,8 +35,15 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           style={{ width: 140 }}
           aria-label="邮件账号过滤"
         />
-        <Button size="compact-xs" variant="default" onClick={() => setAccountsOpen(true)}>
-          管理账号
+        {/* D42：邮箱属数据源 —— 管理统一在「数据源管理 · 邮箱」 */}
+        <Button
+          size="compact-xs"
+          variant="default"
+          onClick={() =>
+            window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "mail" } }))
+          }
+        >
+          管理邮箱
         </Button>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
           刷新
@@ -112,7 +64,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           )}
           {!loading && (agg?.items ?? []).length === 0 && (
             <Text size="xs" c="dimmed">
-              {accounts.length === 0 ? "先在「管理账号」添加邮箱账号" : "暂无邮件"}
+              {accounts.length === 0 ? "先在「管理邮箱」添加邮箱账号" : "暂无邮件"}
             </Text>
           )}
           {(agg?.items ?? []).map((item) => (
@@ -183,113 +135,6 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
         </Stack>
       )}
 
-      <Modal opened={accountsOpen} onClose={() => setAccountsOpen(false)} title="邮件账号" size="lg">
-        <Stack gap="xs">
-          <Group gap="xs" grow>
-            <TextInput size="xs" label="名称" value={form.name} onChange={(e) => setForm({ ...form, name: e.currentTarget.value })} />
-            <TextInput size="xs" label="服务器" value={form.host} onChange={(e) => setForm({ ...form, host: e.currentTarget.value })} />
-          </Group>
-          <Group gap="xs" grow>
-            <TextInput size="xs" label="端口" value={form.port} onChange={(e) => setForm({ ...form, port: e.currentTarget.value })} />
-            <Select
-              size="xs"
-              label="加密"
-              data={[
-                { value: "ssl", label: "SSL（993）" },
-                { value: "starttls", label: "STARTTLS" },
-                { value: "plain", label: "明文" },
-              ]}
-              value={form.security}
-              onChange={(v) => setForm({ ...form, security: v ?? "ssl" })}
-            />
-          </Group>
-          <Group gap="xs" grow>
-            <TextInput size="xs" label="用户名" value={form.username} onChange={(e) => setForm({ ...form, username: e.currentTarget.value })} />
-            <TextInput size="xs" label="文件夹" value={form.folder} onChange={(e) => setForm({ ...form, folder: e.currentTarget.value })} />
-          </Group>
-          <TextInput
-            size="xs"
-            label="口令/应用专用密码"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.currentTarget.value })}
-            description="存入凭证库，账号只保存引用（SEC3）"
-          />
-          <Button
-            size="xs"
-            variant="light"
-            onClick={() => {
-              void (async () => {
-                setFormError(null);
-                try {
-                  const { url } = await api.gmailAuthorize(`${window.location.origin}/api/mail/gmail/callback`);
-                  window.open(url, "_blank", "noopener");
-                } catch (e) {
-                  setFormError(e instanceof Error ? e.message : String(e));
-                }
-              })();
-            }}
-          >
-            绑定 Gmail 账号（OAuth）
-          </Button>
-          {formError && <WbAlert tone="error" size="sm">{formError}</WbAlert>}
-          <Button size="xs" onClick={() => void submitAccount()}>
-            {editingId ? "保存修改" : "添加账号"}
-          </Button>
-          {editingId && (
-            <Button
-              size="xs"
-              variant="default"
-              onClick={() => {
-                setEditingId(null);
-                resetForm();
-              }}
-            >
-              取消编辑
-            </Button>
-          )}
-          <Stack gap={4}>
-            {accounts.map((a) => (
-              <Group key={a.id} gap="xs" justify="space-between">
-                <Text size="xs">
-                  {a.name} · {a.username}@{a.host}:{a.port} · {a.folder}
-                </Text>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={() => {
-                    // ISS-17：编辑回填（口令留空 = 不改）
-                    setEditingId(a.id);
-                    setForm({
-                      name: a.name,
-                      host: a.host,
-                      port: String(a.port),
-                      security: a.security ?? "ssl",
-                      username: a.username,
-                      folder: a.folder,
-                      password: "",
-                    });
-                  }}
-                >
-                  编辑
-                </Button>
-                <ConfirmAction
-                  label="删除"
-                  size="compact-xs"
-                  title="删除账号？"
-                  message={`确认删除邮件账号「${a.name}」？（仅移除账号配置与凭证引用，邮件保留在邮件服务器）`}
-                  onConfirm={() => void m.deleteAccount(a.id).then(() => refreshAccounts())}
-                />
-              </Group>
-            ))}
-            {accounts.length === 0 && (
-              <Text size="xs" c="dimmed">
-                尚未添加账号
-              </Text>
-            )}
-          </Stack>
-        </Stack>
-      </Modal>
     </div>
   );
 }

@@ -90,6 +90,7 @@ export const customApiManifest: WidgetManifest = {
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   configSchema: [
+    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌（D42）；留空 = 使用下方内联配置" },
     { key: "url", label: "接口地址", type: "text", required: true, placeholder: "https://api.example.com/…" },
     { key: "method", label: "方法", type: "select", default: "GET", options: [
       { value: "GET", label: "GET" },
@@ -211,7 +212,8 @@ export const opencodeManifest: WidgetManifest = {
   defaultSize: { w: 4, h: 4 },
   minSize: { w: 3, h: 2 },
   configSchema: [
-    { key: "url", label: "服务地址", type: "text", required: true, placeholder: "http://127.0.0.1:4096" },
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:opencode", help: "在「数据源管理 · 数据连接」维护；留空 = 使用下方内联配置" },
+    { key: "url", label: "服务地址", type: "text", placeholder: "http://127.0.0.1:4096" },
     { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
     { key: "limit", label: "会话条数", type: "number", default: 20 },
   ],
@@ -231,7 +233,8 @@ export const monitorManifest: WidgetManifest = {
   defaultSize: { w: 6, h: 4 },
   minSize: { w: 3, h: 2 },
   configSchema: [
-    { key: "url", label: "监控源地址", type: "text", required: true, placeholder: "http://127.0.0.1:61208" },
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:monitor", help: "在「数据源管理 · 数据连接」维护；留空 = 使用下方内联配置" },
+    { key: "url", label: "监控源地址", type: "text", placeholder: "http://127.0.0.1:61208" },
     {
       key: "authMode",
       label: "认证方式",

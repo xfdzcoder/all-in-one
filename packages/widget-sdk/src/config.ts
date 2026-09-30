@@ -23,6 +23,11 @@ export interface ConfigField {
   default?: unknown;
   /** type=select 时的选项。 */
   options?: Array<{ value: string; label: string }>;
+  /**
+   * 动态选项源（Q26b / D42）：宿主按 key 运行时取选项，与静态 options 二选一。
+   * 约定 key："kanban-boards" | "data-source:monitor" | "data-source:opencode" | "data-source:http"。
+   */
+  dynamic?: string;
   placeholder?: string;
   help?: string;
 }

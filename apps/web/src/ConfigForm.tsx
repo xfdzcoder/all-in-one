@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import { validateForm } from "./config-form-utils";
+import { useDynamicOptionsMap } from "./data-hooks";
 import { WbAlert } from "./ui";
 
 /**
@@ -39,6 +40,8 @@ export function ConfigForm({
 }) {
   // ISS-23 修复：校验失败内联提示（不再浏览器 alert）
   const [formError, setFormError] = useState<string | null>(null);
+  // Q26b：select.dynamic 动态选项（看板/数据连接下拉）
+  const dynamicOptions = useDynamicOptionsMap();
   const submit = () => {
     const errors = validateForm(schema, values);
     if (errors.length === 0) {
@@ -96,7 +99,7 @@ export function ConfigForm({
                 key={f.key}
                 label={f.label}
                 size="xs"
-                data={f.options ?? []}
+                data={f.dynamic ? dynamicOptions[f.dynamic] ?? [] : f.options ?? []}
                 value={typeof v === "string" ? v : null}
                 onChange={(nv) => onChange(f.key, nv ?? undefined)}
               />

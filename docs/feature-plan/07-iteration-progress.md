@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 51 轮 · Q26b-1 ✅ 命名连接模型（D42）+ 数据连接页签；下一项 Q26b-2 组件引用 + 邮箱迁移） |
+| 最近更新 | 2026-09-30（第 52 轮 · Q26b-2 ✅ 组件引用 + 邮箱迁移（D42 落地完毕）；下一项 Q26c 看板交互重构） |
 
 ## 迭代队列
 
@@ -156,3 +156,4 @@
 | 49 | 2026-09-30 | **Q25c 数据源管理（#1/#2/#3）**：① 全站改名「数据管理→数据源管理」（按钮/标题/文档/脚本）；② 弹窗 → **独立全页视图**（`?view=data` 深链、`← 返回工作台`、`.wb-admin` 表格化行 + 顶部搜索，大数量好展示；数据操作全端可达 D41 不变）；③ **TagInput**（`tag-input.tsx`）：输入即搜索已有标签、**回车直接创建并选中**、chips 可删（值模型=标签名、保存时解析 tagId，新名走创建接口）——任务/信息源行内打标全部换用；标签页签保留名称+颜色表单。脚本同步：verify-tag 管理面步骤改页面态（`.wb-admin`/`data-admin-row` 锚定）、verify-j3 D41 断言改页面态、verify-d31 退订旅程改页面作用域 + 返回工作台；另修一个**数据依赖抖动**：verify-j5 的 401 探针全文匹配会被时间戳后缀含「401」误伤 → 收窄到错误条 | 全量 26 脚本 423 项 ✅（含 verify-drag）；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `7497b31` |
 | 50 | 2026-09-30 | **Q26a 行高修复 + 看板管理页签**：① **#5 邮件行被压扁**——flex 容器子项默认可压缩，组件高度拉低后行塌缩；修 `.wb-widget__body > * { flex-shrink: 0 }`（高度不足交滚动）+ 邮件行 `min-height: 56px`（顺带根治 Todo/RSS/看板同类隐患）；② **#1 看板进数据源管理**——「看板」页签：看板选择/新建/重命名（失焦）/删除（确认）、列重命名/删除/「＋ 卡片」、卡片标题改名/归档/**恢复**/删除（确认）+ 搜索 + 列分组（`data-admin-col/card` 锚点） | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
 | 51 | 2026-09-30 | **Q26b-1 命名连接模型（D42）**：`data_source` 表（kind 白名单 monitor/opencode/http + 同 kind 同名唯一 + config_json；secret 存凭证库引用 SEC3，键与表单同名）+ 迁移 0010；REST `/api/data-sources`（CRUD + 未知 config 键拒绝 + `kinds` 字段契约）+ 契约测试 4 项（147/147）；数据源管理新增「**数据连接**」页签（类型切换、按 kind 动态表单、secret 走 propsWithSecretRefs 入凭证库、编辑回填、删除带确认并注明回落语义） | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
+| 52 | 2026-09-30 | **Q26b-2 组件引用 + 邮箱迁移（D42）**：① widget-sdk ConfigField 增 `dynamic` 选项源（kanban-boards / data-source:*）+ ConfigForm 动态下拉（useDynamicOptionsMap 一次取全按 key 查表）；② monitor/opencode/custom-api 增 `sourceId` 配置（动态下拉），`useResolvedSourceConfig` 连接优先合并、内联回落（自定义 API 仅合并认证，url 仍组件配）；monitor/opencode url 由必填降为可空（选连接则不必填）；③ **邮箱管理迁入数据源管理「邮箱」页签**（MailAccountsPanel：增改删 + Gmail OAuth + 删除带确认；D42 数据源归位）——邮件组件去弹窗，「管理账号」→「管理邮箱」跳转（wb:navigate 事件 + initialTab）；④ 脚本同步：verify-mail/gmail 账号旅程改管理页（可见性过滤防隐藏页签同名按钮误点）、空态文案断言同步 | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | 待提交 |

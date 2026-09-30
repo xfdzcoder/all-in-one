@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   QueryClient,
   useMutation,
@@ -581,4 +581,39 @@ export function useDataSourceMutations() {
     onSuccess: invalidate,
   });
   return { create, update, remove };
+}
+
+/** 动态选项源（Q26b / D42）：ConfigForm 的 select.dynamic 取数（一次取全，按 key 查表）。 */
+export function useDynamicOptionsMap(): Record<string, Array<{ value: string; label: string }>> {
+  const boards = useKanbanBoards();
+  const monitor = useDataSources("monitor");
+  const opencode = useDataSources("opencode");
+  const http = useDataSources("http");
+  return {
+    "kanban-boards": boards.boards.map((b) => ({ value: b.id, label: b.title })),
+    "data-source:monitor": (monitor.data ?? []).map((r) => ({ value: r.id, label: r.name })),
+    "data-source:opencode": (opencode.data ?? []).map((r) => ({ value: r.id, label: r.name })),
+    "data-source:http": (http.data ?? []).map((r) => ({ value: r.id, label: r.name })),
+  };
+}
+
+/**
+ * 连接解析（D42）：config.sourceId 命中命名连接时合并其配置（内联值可覆盖）；
+ * pick 限定合并键（自定义 API 只取认证）。未引用/未命中 → 原样返回（内联回落）。
+ */
+export function useResolvedSourceConfig<T extends Record<string, unknown>>(
+  kind: string,
+  config: T,
+  pick?: string[],
+): T {
+  const sources = useDataSources(kind);
+  const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
+  const source = (sources.data ?? []).find((r) => r.id === sourceId);
+  return useMemo(() => {
+    if (!source) return config;
+    const from = pick
+      ? Object.fromEntries(Object.entries(source.config).filter(([k]) => pick.includes(k)))
+      : source.config;
+    return { ...config, ...from } as T;
+  }, [config, source, pick]);
 }

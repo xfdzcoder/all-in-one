@@ -58,9 +58,21 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
   const [layoutEdit, setLayoutEdit] = useState(false);
   // FR-D2 / Q25c：数据源管理 = 独立全页视图（大数量好展示；?view=data 深链）
+  const [dataTab, setDataTab] = useState<string | undefined>(undefined);
   const [view, setView] = useState<"workspace" | "data">(() =>
     new URLSearchParams(window.location.search).get("view") === "data" ? "data" : "workspace",
   );
+  // 组件 → 数据源管理 的跳转入口（Q26b：邮箱等数据源配置统一在管理页）
+  useEffect(() => {
+    const onNav = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
+      setDataTab(tab);
+      gotoView("data");
+    };
+    window.addEventListener("wb:navigate", onNav);
+    return () => window.removeEventListener("wb:navigate", onNav);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const gotoView = (v: "workspace" | "data") => {
     setView(v);
     const url = new URL(window.location.href);
@@ -218,7 +230,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
           minHeight: "100vh",
         }}
       >
-        {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} />}
+        {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />}
         {view === "workspace" && (
         <Tabs
           value={activeId}
