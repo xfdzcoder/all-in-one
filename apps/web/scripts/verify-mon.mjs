@@ -29,8 +29,12 @@ const glances = createServer((req, res) => {
     load: { cpucore: 8, min1: 1.2, min5: 0.8, min15: 0.4 },
     mem: { total: 8589934592, used: 5257150464, percent: 61.2 },
     fs: [
-      { mnt_point: "/", percent: 77.4, size: 100000000000, used: 77400000000 },
-      { mnt_point: "/backup", percent: 20.0, size: 200000000000, used: 40000000000 },
+      // Q37：容器化 Glances 的真实形态 —— 同卷多条 bind mount + 一条干净挂载点
+      { device_name: "/dev/mapper/mock-root", mnt_point: "/usr/lib/os-release", percent: 77.4, size: 100000000000, used: 77400000000 },
+      { device_name: "/dev/mapper/mock-root", mnt_point: "/host/etc", percent: 77.4, size: 100000000000, used: 77400000000 },
+      { device_name: "/dev/mapper/mock-root", mnt_point: "/etc/glances/glances.conf", percent: 77.4, size: 100000000000, used: 77400000000 },
+      { device_name: "/dev/mapper/mock-var", mnt_point: "/etc/hosts", percent: 87.0, size: 58000000000, used: 50460000000 },
+      { device_name: "/dev/sdb1", mnt_point: "/backup", percent: 20.0, size: 200000000000, used: 40000000000 },
     ],
     uptime: JSON.stringify("5 days, 1:02:03"),
     version: JSON.stringify("4.9.0"),
@@ -201,7 +205,24 @@ try {
   ok("MON cpu/mem/load cards", body.includes("23.5%") && body.includes("61.2%") && body.includes("1.2"), body.slice(-160));
   ok("MON uptime + cpu name shown", body.includes("5 天 1 小时 2 分") && body.includes("Mock CPU")); // ISS-18 本地化
   const progressCount = await page.evaluate(() => document.querySelectorAll(".mantine-Progress-root").length);
-  ok("MON disk progress bars", body.includes("/backup") && progressCount >= 2, `progress=${progressCount}`);
+  // Q37：同卷 bind mount 去重（5 条原始 → 2 卷 + /backup = 3 行）、噪声挂载点不外泄、设备名回退
+  ok(
+    "MON storage deduped per volume (Q37)",
+    body.includes("/backup") && body.includes("mock-root") && !body.includes("/etc/hosts") && progressCount === 3,
+    `progress=${progressCount}`,
+  );
+  // Q37：CPU/内存/负载三卡等高
+  const cardHeights = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll(".mantine-Card-root")]
+      .filter((c) => ["CPU", "内存", "负载"].some((l) => c.textContent.trim().startsWith(l)))
+      .map((c) => Math.round(c.getBoundingClientRect().height));
+    return cards;
+  });
+  ok(
+    "MON metric cards equal heights (Q37)",
+    cardHeights.length === 3 && cardHeights.every((h) => h === cardHeights[0]),
+    JSON.stringify(cardHeights),
+  );
   const expectedAuth = `Basic ${Buffer.from("glances:s3cret").toString("base64")}`;
   ok("MON basic auth injected from credential (SEC3)", seenAuth === expectedAuth, String(seenAuth));
 

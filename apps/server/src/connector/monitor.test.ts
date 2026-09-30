@@ -155,4 +155,22 @@ describe("monitor source adapter (D36: Glances 打通，只做连接与展示)",
     expect(m.disks).toEqual([]);
     expect(m.uptime).toBeUndefined();
   });
+
+  it("Q37: fs dedupes same-volume bind mounts and falls back to device label", () => {
+    const m = normalizeGlances({
+      fs: [
+        { device_name: "/dev/mapper/mock-root", mnt_point: "/usr/lib/os-release", size: 100, used: 85, percent: 85.7 },
+        { device_name: "/dev/mapper/mock-root", mnt_point: "/host/etc", size: 100, used: 85, percent: 85.7 },
+        { device_name: "/dev/mapper/mock-root", mnt_point: "/etc/glances/glances.conf", size: 100, used: 85, percent: 85.7 },
+        { device_name: "/dev/mapper/mock-var", mnt_point: "/etc/hosts", size: 58, used: 50, percent: 87 },
+        { device_name: "/dev/sdb1", mnt_point: "/backup", size: 200, used: 40, percent: 20 },
+      ],
+    });
+    expect(m.disks.length).toBe(3); // 同卷多条 bind mount 只留一行
+    const labels = m.disks.map((d) => d.point);
+    expect(labels).toContain("/backup"); // 深度 ≤1 的真实挂载点保留原名
+    expect(labels).toContain("mock-root"); // 无干净挂载点 → 设备名（去 /dev/）
+    expect(labels.some((l) => l.includes("/etc/") || l.includes("/usr/lib"))).toBe(false); // bind 噪声不外泄
+    expect(m.disks.find((d) => d.point === "mock-root")?.percent).toBe(85.7);
+  });
 });

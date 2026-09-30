@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 72 轮 · Q36 ✅ 监控组件选择化；余 Q37–Q39） |
+| 最近更新 | 2026-10-01（第 73 轮 · Q37 ✅ 监控卡片样式修正；余 Q38–Q39） |
 
 ## 迭代队列
 
@@ -204,3 +204,4 @@
 | 70 | 2026-10-01 | **Q34 未读徽标编辑态隐藏（二.3）**：信息流头部「未读 N」徽标在编辑态与外框「配置/移除」（右上角悬浮 z-5）重叠被遮挡——按用户口径**只隐藏徽标**（Q32 保持按钮可见不变）：rss-widget 消费 `WidgetEditContext.editMode` 条件渲染。verify-i4 补双断言（编辑态无可见「未读」徽标 / 退出后恢复），rss.md 同步 | verify-i4 20/20（+2）✅；verify-fr3 29/29、verify-p8 9/9、verify-dark 3/3 AA ✅；typecheck ✅ | 待提交 |
 | 71 | 2026-10-01 | **Q35 看板列宽恒等分（二.4）**：用户否决 Q29e 的「min-width 132 / max-width 320 + 等分」——max 宽会把宽卡上的列截断（留白不等分）、min 宽在多列时溢出不等分；改**纯 `flex: 1 1 0`（min-width:0）**，列宽恒 = (卡片宽 − 列间距×(n−1))/n。verify-kan 补等分断言（读 computed columnGap 算期望值，逐列 ±2px）——实测 436=436=expected ✓ | verify-kan 46/46（+1）✅；verify-drag 3/3、verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
 | 72 | 2026-10-01 | **Q36 监控组件配置=只选监控源（二.5）**：① `monitorManifest.configSchema` 收敛为 **`sourceId` 单选**（「监控源」，dynamic data-source:monitor）——url/authMode/username/apiToken 内联字段从表单移除（**旧组件的内联 props 仍兼容生效**，`useResolvedSourceConfig` 回落）；② 组件空态「暂无监控源 —— 请到数据源管理·数据连接添加 + 去添加监控源（wb:navigate tab=sources）」，判定改按解析后 url；③ **修真缺陷：连接表单键错配**——DS_FIELDS.monitor 存 `password`，连接器只读 `apiToken` → 带认证的监控连接从未生效；改 `apiToken`（连接器兼容旧 `password` 键、白名单双键）+ authMode 补 **bearer**。verify-mon 重构：API 建连接（凭证库引用 SEC3）→ picker 断言表单无「监控源地址」+ 下拉选源（17/17，+2） | verify-mon 17/17 ✅；server Vitest 153/153 ✅；verify-opc 15/15、verify-j5 10/10、verify-dark 3/3 ✅ | 待提交 |
+| 73 | 2026-10-01 | **Q37 监控卡片样式（二.6）**：① **三卡不等高**——MetricCard hint 行有时缺失（CPU 无 hint）→ 内容结构不一致；修：hint 行**恒占位**（nbsp）+ Group `align="stretch"`，实测 84=84=84。② **存储空间展示不对**——真机实证（https://glances.xfdzcoder.space /api/4/fs）：容器化 Glances 返回 6 条**同卷 bind mount**（/etc/hosts、/usr/lib/os-release…），逐条渲染全是噪声；修 `normalizeGlances`：同物理卷（device+size+used）**去重一行**，代表挂载点取深度最浅者，若仍像文件挂载（深度 ≥2）**回退设备名**（去 /dev/）。契约测试 +1；verify-mon fs 夹具改真实噪声形态（5 条→3 行断言 + 三卡等高断言，18/18）。**真机验收**：6 条 → xfdz--debian--vg-var 48.6/58.3 + xfdz--debian--vg-root 210/256 两卷，截图 `/tmp/opencode/q37-real.png` | server Vitest 154/154（+1）✅；verify-mon 18/18（+2）✅；verify-dark 3/3 ✅；真机 Glances 实测 ✅ | 待提交 |

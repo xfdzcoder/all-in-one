@@ -90,20 +90,50 @@ export function normalizeGlances(parts: {
   const version = parseUptime(parts.version) ?? (typeof parts.version === "string" ? parts.version : undefined);
   if (version) out.probe.version = version;
 
+  // Q37（二.6）：容器化 Glances 的 /fs 常含同卷多条 bind mount（/etc/hosts、/usr/lib/os-release…）
+  // → 同物理卷（device+size+used）只显示一行；代表挂载点取深度最浅者，若仍像文件挂载则回退设备名。
   const fsList = Array.isArray(parts.fs) ? parts.fs : [];
-  out.disks = fsList
-    .map((d) => {
-      const r = (d ?? {}) as Record<string, unknown>;
-      return {
-        point: typeof r.mnt_point === "string" ? r.mnt_point : "",
-        percent: num(r.percent) ?? 0,
-        usedBytes: num(r.used),
-        totalBytes: num(r.size),
-      };
-    })
-    .filter((d) => d.point)
+  const groups = new Map<
+    string,
+    { mnt: string; device: string; percent: number; usedBytes?: number; totalBytes?: number }
+  >();
+  for (const d of fsList) {
+    const r = (d ?? {}) as Record<string, unknown>;
+    const mnt = typeof r.mnt_point === "string" ? r.mnt_point : "";
+    if (!mnt) continue;
+    const device = typeof r.device_name === "string" ? r.device_name : "";
+    const usedBytes = num(r.used);
+    const totalBytes = num(r.size);
+    const key = `${device}|${totalBytes ?? ""}|${usedBytes ?? ""}`;
+    const row = { mnt, device, percent: num(r.percent) ?? 0, usedBytes, totalBytes };
+    const cur = groups.get(key);
+    if (!cur) {
+      groups.set(key, row);
+    } else if (mntDepth(row.mnt) < mntDepth(cur.mnt) || (mntDepth(row.mnt) === mntDepth(cur.mnt) && row.mnt.length < cur.mnt.length)) {
+      groups.set(key, row);
+    }
+  }
+  out.disks = [...groups.values()]
+    .map((g) => ({
+      point: diskLabel(g.mnt, g.device),
+      percent: g.percent,
+      usedBytes: g.usedBytes,
+      totalBytes: g.totalBytes,
+    }))
     .sort((a, b) => b.percent - a.percent);
   return out;
+}
+
+/** 挂载点深度（"/" = 0，"/backup" = 1，"/etc/hosts" = 2）。 */
+function mntDepth(mnt: string): number {
+  return mnt.split("/").filter(Boolean).length;
+}
+
+/** 存储行标签：像真实挂载点（深度 ≤ 1）用挂载点，否则回退设备名（去掉 /dev/ 前缀）。 */
+function diskLabel(mnt: string, device: string): string {
+  if (mntDepth(mnt) <= 1) return mnt;
+  if (!device) return mnt;
+  return device.replace(/^\/dev\//, "").split("/").pop() ?? device;
 }
 
 function authHeaders(config: Record<string, unknown>): Record<string, string> {

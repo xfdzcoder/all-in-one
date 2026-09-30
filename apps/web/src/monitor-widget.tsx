@@ -31,11 +31,10 @@ function MetricCard({ label, value, hint }: { label: string; value: string; hint
       <Text size="lg" fw={600}>
         {value}
       </Text>
-      {hint && (
-        <Text size="xs" c="dimmed">
-          {hint}
-        </Text>
-      )}
+      {/* Q37：hint 行恒占位 —— 三卡内容结构一致（等高） */}
+      <Text size="xs" c="dimmed">
+        {hint || "\u00a0"}
+      </Text>
     </Card>
   );
 }
@@ -115,7 +114,7 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
 
       {data?.probe?.ok && (
         <Stack gap={6} style={{ flex: 1, overflow: "auto" }}>
-          <Group gap="xs" wrap="nowrap">
+          <Group gap="xs" wrap="nowrap" align="stretch">
             <MetricCard label="CPU" value={data.cpu ? `${data.cpu.percent.toFixed(1)}%` : "—"} />
             <MetricCard
               label="内存"
