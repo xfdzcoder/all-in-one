@@ -53,6 +53,33 @@ try {
   );
   ok("J3/D10 no edit entry on mobile", editVisible === false);
 
+  // D41: 数据管理移动端可达（数据操作非布局编辑）
+  const dataAdminVisible = await page.evaluate(() =>
+    [...document.querySelectorAll("button")].some(
+      (b) => b.textContent.trim() === "数据管理" && b.offsetParent !== null,
+    ),
+  );
+  ok("J3/D41 data admin reachable on mobile", dataAdminVisible === true);
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "数据管理")?.click(),
+  );
+  await sleep(500);
+  ok(
+    "J3/D41 data admin opens on mobile",
+    await page.evaluate(() =>
+      [...document.querySelectorAll(".mantine-Modal-root")].some(
+        (r) => r.offsetParent !== null && r.textContent.trim().length > 0 && r.textContent.includes("信息源"),
+      ),
+    ),
+  );
+  await page.evaluate(() => {
+    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+      (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+    );
+    roots[roots.length - 1]?.querySelector(".mantine-Modal-close")?.click();
+  });
+  await sleep(400);
+
   // NFR2: 可交互元素触控目标 ≥44px（高度）
   const touchAudit = await page.evaluate(() => {
     const sel = "button, a[href], input, [role='checkbox'], [role='tab']";

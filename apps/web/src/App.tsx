@@ -186,11 +186,10 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 {layoutEdit ? "完成编辑" : "编辑布局"}
               </Button>
             )}
-            {isDesktop && (
-              <Button variant="default" size="xs" onClick={() => setDataAdminOpen(true)}>
-                数据管理
-              </Button>
-            )}
+            {/* D41：数据管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
+            <Button variant="default" size="xs" onClick={() => setDataAdminOpen(true)}>
+              数据管理
+            </Button>
             {isDesktop && (
               <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
                 插件管理
