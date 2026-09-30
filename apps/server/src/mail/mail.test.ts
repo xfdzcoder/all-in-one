@@ -9,7 +9,9 @@ import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from "fas
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
-import { createCredential } from "../credentials/store.ts";
+import { createCredential, readSecret } from "../credentials/store.ts";
+import { credential as credentialTable } from "../db/schema.ts";
+import { eq } from "drizzle-orm";
 import { user } from "../db/schema.ts";
 import type {
   MailClient,
@@ -208,5 +210,35 @@ describe("mail read-only aggregation (Q7a, D3/SEC3/SEC4)", () => {
     expect((await req("DELETE", `/api/mail/accounts/${idB}`)).statusCode).toBe(404);
     const left = await req("GET", "/api/mail/accounts");
     expect(left.json()).toHaveLength(3);
+  });
+
+  it("Q27a: PATCH password rotates the credential (edit no longer drops it)", async () => {
+    const created = await req("POST", "/api/mail/accounts", {
+      name: "pw-rot",
+      host: "imap.example.com",
+      port: 993,
+      security: "ssl",
+      username: "pw@example.com",
+      credentialId: credId,
+    });
+    expect(created.statusCode).toBe(201);
+    const accId = created.json().id as string;
+    const patched = await req("PATCH", `/api/mail/accounts/${accId}`, { password: "new-secret-42" });
+    expect(patched.statusCode).toBe(200);
+    const newCredId = patched.json().credentialId as string;
+    expect(newCredId).toBeTruthy();
+    expect(newCredId).not.toBe(credId);
+    expect(await readSecret(db, patched.json().userId as string, newCredId)).toBe("new-secret-42");
+    // 不带口令的编辑不动凭证
+    const again = await req("PATCH", `/api/mail/accounts/${accId}`, { folder: "INBOX" });
+    expect(again.json().credentialId).toBe(newCredId);
+  });
+
+  it("Q27a: undecryptable credential yields actionable error (not crypto gibberish)", async () => {
+    const rows = await db.select().from(credentialTable).limit(1);
+    await db.update(credentialTable).set({ cipherText: "AAAA" }).where(eq(credentialTable.id, rows[0].id));
+    const res = await req("GET", "/api/mail/messages?force=1&limit=5");
+    expect(res.statusCode).toBe(200);
+    expect(JSON.stringify(res.json())).toContain("凭证无法解密");
   });
 });

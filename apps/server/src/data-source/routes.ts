@@ -99,15 +99,24 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
       .where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)))
       .limit(1);
     if (rows.length === 0) return reply.code(404).send({ error: "not found" });
+    let configJson: string | undefined;
     if (body.data.config) {
       const bad = configOk(rows[0].kind as DataSourceKind, body.data.config);
       if (bad) return reply.code(400).send({ error: bad });
+      // Q27a：合并而非整体替换 —— 编辑时密钥字段留空 = 保留原 SecretRef（同「口令留空不改」语义）
+      let oldConfig: Record<string, unknown> = {};
+      try {
+        oldConfig = JSON.parse(rows[0].configJson) as Record<string, unknown>;
+      } catch {
+        /* noop */
+      }
+      configJson = JSON.stringify({ ...oldConfig, ...body.data.config });
     }
     await app.db
       .update(dataSource)
       .set({
         name: body.data.name,
-        configJson: body.data.config ? JSON.stringify(body.data.config) : undefined,
+        configJson,
         updatedAt: new Date(),
       })
       .where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)));

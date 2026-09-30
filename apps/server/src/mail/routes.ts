@@ -34,7 +34,11 @@ const accountBody = z.object({
   credentialId: z.string().min(1).max(64).nullish(),
   folder: z.string().min(1).max(120).optional(),
 });
-const accountPatch = accountBody.partial().refine((o) => Object.keys(o).length > 0, "empty patch");
+// Q27a：PATCH 支持 password —— 更新口令 = 换新凭证（旧编辑路径静默丢弃口令，致认证失败）
+const accountPatch = accountBody
+  .extend({ password: z.string().min(1).max(400).optional() })
+  .partial()
+  .refine((o) => Object.keys(o).length > 0, "empty patch");
 const idParams = z.object({ id: z.string().min(1).max(64) });
 const bodyParams = z.object({
   accountId: z.string().min(1).max(64),
@@ -67,7 +71,14 @@ export function registerMailRoutes(
     const params = idParams.safeParse(req.params);
     const body = accountPatch.safeParse(req.body);
     if (!params.success || !body.success) return reply.code(400).send({ error: "invalid request" });
-    const row = await updateAccount(app.db, req.user!.id, params.data.id, body.data);
+    const { password, ...rest } = body.data;
+    let credentialId = rest.credentialId;
+    if (password) {
+      // 新口令入凭证库（SEC3），账号改指向新凭证
+      const cred = await createCredential(app.db, req.user!.id, `mail-${Date.now()}`, "generic", password);
+      credentialId = cred.id;
+    }
+    const row = await updateAccount(app.db, req.user!.id, params.data.id, { ...rest, credentialId });
     if (!row) return reply.code(404).send({ error: "not found" });
     return row;
   });

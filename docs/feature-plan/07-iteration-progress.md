@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 54 轮 · Q26d ✅ 收口 —— 用户反馈⑥全部完成（数据源管理扩容 + 看板交互重构）） |
+| 最近更新 | 2026-09-30（第 55 轮 · Q27a ✅ 邮箱回归修复（口令轮换 + 解密容错）；下一项 Q27b 数据源管理细节） |
 
 ## 迭代队列
 
@@ -85,6 +85,12 @@
   - [x] Q26c · #2+#3 看板交互重构：看板选择入配置（动态下拉）+ 头部只显标题 + ghost→composer；**顺修真 bug**（validateForm 拒绝动态下拉值）**✅ 2026-09-30**
   - [x] Q26d · 文档/脚本/台账收口（kanban/mail/data-admin/按钮索引同步；verify-kan 46/46、fr3 29/29、mail 27/27 旅程改写；全量回归）**✅ 2026-09-30**
 
+- [ ] Q27 · 用户反馈⑦：数据源管理细化 + Dashboard 导航重构（2026-09-30 新指令；三确认点按建议口径：整列点按=加卡片、下拉收纳页面管理、logo 自绘 SVG）
+  - [x] Q27a · **邮箱回归修复**（三）：编辑口令被 zod 静默丢弃 → PATCH 支持 password（换新凭证 + 改指向）；解密失败（主密钥变更/密文损坏）给人话提示 + 修复指引；数据连接编辑空密钥字段改为合并保留（同类缺陷）；契约测试 +2（149/149）**✅ 2026-09-30**
+  - [ ] Q27b · 数据源管理细节（一.1/2/4/5/6）：看板 tab 纵列、邮箱页签布局重设计、数据源管理隐藏编辑布局、信息源 TagInput 失效键 bug、任务添加清单选择 + 收件箱语义
+  - [ ] Q27c · 数据连接画廊（一.3）：类型卡片（自绘 SVG logo + 说明 + 连接数）→ 点击进入连接管理视图
+  - [ ] Q27d · Dashboard 导航重构（二.1/2/3）：页签 → 右上角弹出下拉（收纳页面管理）；看板加列移除 + 管理跳转 + 整列点按加卡；撤销计数累计
+
 ## 历轮记录
 
 | # | 日期 | 内容 | 验证 | commit |
@@ -159,3 +165,4 @@
 | 52 | 2026-09-30 | **Q26b-2 组件引用 + 邮箱迁移（D42）**：① widget-sdk ConfigField 增 `dynamic` 选项源（kanban-boards / data-source:*）+ ConfigForm 动态下拉（useDynamicOptionsMap 一次取全按 key 查表）；② monitor/opencode/custom-api 增 `sourceId` 配置（动态下拉），`useResolvedSourceConfig` 连接优先合并、内联回落（自定义 API 仅合并认证，url 仍组件配）；monitor/opencode url 由必填降为可空（选连接则不必填）；③ **邮箱管理迁入数据源管理「邮箱」页签**（MailAccountsPanel：增改删 + Gmail OAuth + 删除带确认；D42 数据源归位）——邮件组件去弹窗，「管理账号」→「管理邮箱」跳转（wb:navigate 事件 + initialTab）；④ 脚本同步：verify-mail/gmail 账号旅程改管理页（可见性过滤防隐藏页签同名按钮误点）、空态文案断言同步 | 全量 26 脚本 423 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `91d71c7` |
 | 53 | 2026-09-30 | **Q26c 看板交互重构（#2/#3）**：① **看板选择入配置**（`boardId` dynamic=kanban-boards 下拉）——头部只显看板标题 + 刷新/已归档；组件内 Select/「新看板名/新建看板」移除（建板归「数据源管理 · 看板」）；空态指向配置；② **ghost→composer**：「＋ 添加列 / ＋ 添加卡片」点击展开内联 composer（Enter 提交/Esc 取消/添加·取消按钮），弃常驻输入+「+」；③ 修**真 bug**：`validateForm` 对 select 只认静态 options —— 动态下拉（看板/数据连接）值被误判「取值非法」**根本存不上**（Q26b-2 的 sourceId 同样受影响），dynamic 字段跳过静态白名单校验；④ 脚本重写：verify-kan 旅程改「管理页建板 → 配置选板 → composer 建列/卡」（46/46，含 scoped「配置」点击防误开他组件弹窗）、verify-fr3 看板段改 API 播种+配置选板（29/29） | 全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `9f1e525` / `54826a3` |
 | 54 | 2026-09-30 | **Q26d 收口**：交互文档同步（kanban.md 交互重构后行为、mail.md 管理邮箱跳转、data-admin.md 六页签总览、00-button-index 更新）；Q26 用户反馈⑥全部完成 —— 数据源管理扩容（看板/邮箱/数据连接）+ 看板交互重构（配置选板 + composer）+ 行高修复；旅程脚本三处改写后全绿 | 全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅；typecheck ✅ | `9f1e525` / `54826a3` |
+| 55 | 2026-09-30 | **Q27a 邮箱回归修复**（用户报「qq：Unsupported state or unable to authenticate data」）：排查定位 = Node AES-GCM `decipher.final()` 失败文案；Q26 未动取数路径，但暴露两个真缺陷——① **编辑账号带新口令被 zod 静默丢弃**（accountBody 无 password 字段、无凭证更新语义）→ PATCH 支持 password：入凭证库换新凭证 + 改指向（契约测试验证轮换与「留空不改」）；② **解密失败抛 Node 天书** → resolvePassword 容错转人话「凭证无法解密（主密钥变更或数据损坏）—— 请在数据源管理·邮箱编辑该账号并重设口令」；③ 同类缺陷：数据连接 PATCH 整体替换 configJson 会把 SecretRef 覆盖掉（编辑留空密钥即坏）→ **合并保留**。报错本身若为密钥变更所致，人话提示即引导用户重设口令恢复 | server Vitest 149/149（+2）✅；全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |

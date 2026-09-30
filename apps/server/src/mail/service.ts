@@ -160,10 +160,19 @@ export interface MailAgg {
   errors: Array<{ accountId: string; accountName: string; error: string }>;
 }
 
-/** 解析密码：credentialId 引用凭证库（SEC3）；无引用 = 空密码（如需匿名/前置认证失败）。 */
+/** 解析密码：credentialId 引用凭证库（SEC3）；无引用 = 空密码（如需匿名/前置认证失败）。
+ *  Q27a：解密失败（主密钥变更/密文损坏）不再抛 Node 天书 —— 给可操作的人话。 */
 async function resolvePassword(db: Db, userId: string, account: MailAccount): Promise<string> {
   if (!account.credentialId) return "";
-  const secret = await readSecret(db, userId, account.credentialId);
+  let secret: string | null;
+  try {
+    secret = await readSecret(db, userId, account.credentialId);
+  } catch {
+    throw new MailError(
+      "凭证无法解密（主密钥变更或数据损坏）—— 请在「数据源管理 · 邮箱」编辑该账号并重设口令",
+      500,
+    );
+  }
   if (secret === null) throw new MailError("凭证不存在或无权访问", 400);
   return secret;
 }
