@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 28 轮 · 用户反馈①②修复 + 三项拍板落盘（D35–D38）；下一项 Q9 监控打通） |
+| 最近更新 | 2026-09-30（第 29 轮 · Q9 ✅ 监控打通（Glances）；下一项 Q10 受限 JSX 模板） |
 
 ## 迭代队列
 
@@ -34,7 +34,7 @@
   - [x] Q7b · 邮件组件 UI（账号管理（口令入凭证库）、聚合列表 + 逐账号错误、正文沙箱渲染（D25 工具）、账号过滤）**✅ 2026-09-29**
 - [x] Q11 · 破坏性操作防误触（**D31**：ConfirmAction 二次确认 —— 删除页面/列/卡片/账号、卸载插件；布局编辑内组件移除不加确认）**✅ 2026-09-29**
 - [x] Q8 · 二期：OpenCode 组件（**D32**：直接 HTTP 薄封装 + API 版本探测容错；会话列表/状态/耗时）**✅ 2026-09-29**
-- [ ] Q9 · 二期：监控打通组件（**D36**：Glances 等第三方服务只做连接与展示；监控源适配器契约 + Glances 适配 → 监控 widget）
+- [x] Q9 · 二期：监控打通组件（**D36**：Glances 等第三方服务只做连接与展示；监控源适配器 + Glances 适配 + 监控 widget）**✅ 2026-09-30**
 - [ ] Q10 · 二期：自定义 API 受限 JSX 模板（**D35**：Homarr 模式 —— 组件白名单 + 安全绑定 + 危险标识符拒绝 + 渲染期剥离 + 恶意样例回归）
 - [ ] Q-G1 · Gmail OAuth 绑定流程（client_id/secret 用户自备、callback 端点、refresh_token 入凭证库，**D37**）
 - [ ] Q-G2 · Gmail 拉取映射（messages.list/get 只读 → 归一并入邮件聚合列表）
@@ -86,6 +86,7 @@
 | 26 | 2026-09-29 | **Q18 契约文档收口 + 全量回归**：widget-sdk README（J8 规范）补齐宿主标准行为——FR-I2 标准刷新字段（capabilities.refresh 自动附带 `props.refreshSec`，组件勿重复声明）、FR-I3 刷新语义（定时/手动 force 回源/断线轮询兜底）、D28 宿主服务（editMode/onConfigure/requestSave）、FR-I4 详情约定（组件自供弹层 + HtmlSandbox）、D34 确认原则 | **全量验收回归**：19 脚本 354 项 ✅、Playwright 5/5 ✅、Vitest 123/123 ✅、typecheck/lint ✅ | `545353b` |
 | 27 | 2026-09-29 | **第 27 轮：NFR3 实测收口 + 自主循环暂停**：最后一个未实测的 NFR 断言（局域网首屏可交互 < 2s）落为可重复脚本 `verify-nfr3.mjs`——登录页可交互 89ms、登录后首屏（grid-stack 出现）3 采样中位 91ms（localhost 画像，LAN 另有网络跳数）2/2 ✅。至此 01 冻结需求（FR/NFR/SEC）**全部兑现或属非目标**（SEC6/7 为公网化触发项）。可自主推进源（07 队列 / 06 §1/§3）已尽——仅剩待用户拍板的 Q9/Q10 —— 按"无进展不消耗 token"写入 `.opencode/opencode-loop/STOP` **暂停调度**（删除该文件或 `/loop-resume` 恢复） | verify-nfr3 2/2 ✅；本轮收口无代码变更（docs-only） | `6a8af17` |
 | 28 | 2026-09-30 | **用户反馈修复轮 + 拍板落盘**：① 深色模式根治（反馈"看不清"）——根因是 Mantine 未开深色主题（浅色组件套深色外壳）：`defaultColorScheme="dark"` + `color-scheme: dark` + dimmed/placeholder 灰阶标定（!important 抗运行时注入覆盖）+ 占位组件白字；`verify-dark.mjs` 3/3 WCAG AA 快检（438–476 元素/面，0 失败）。② 编辑态组件内容惰性（**D38**，反馈"编辑时禁止改卡片"）：WidgetChrome 内容层 `inert` + `pointer-events:none`，「配置」入口保留；`verify-p8.mjs` 8/8（真实鼠标语义：浏览可操作/编辑惰性/配置可用/恢复）；旅程脚本（j4/j6/kan/mail + Playwright J4）改为浏览态操作。③ 三项拍板销项：**D35** 受限 JSX 模板（Homarr 模式）、**D36** 监控打通（Glances 等第三方服务）、**D37** Gmail OAuth 专项 —— 队列改写 Q9/Q10 + 新增 Q-G1~3；样式优化排 Q19 后置。顺带：vite 代理目标可用 VITE_API_PROXY 覆盖（并行实例互不干扰） | 全量 22 脚本 371 项 ✅（含 verify-dark/verify-p8 新增）；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `bd91382`、`ee06c6c` |
+| 29 | 2026-09-30 | **Q9 监控打通（D36）**：`connector/monitor.ts` Glances REST API v4 适配器（quicklook/load/mem/fs/uptime/version → 归一化指标；端点 best-effort + **形状校验**——全 200 但字段不符显式"形状不符"，绝不空白）；认证 none/basic/bearer（口令入凭证库 SEC3）；`monitor-widget.tsx` 指标卡（CPU/内存/负载）+ 磁盘进度条（按使用率着色）+ 运行时长/CPU 名 + 版本徽标 + 手动刷新（force）+ FR-I4 详情弹层。**对齐修正**：`outboundRequest` 增加 allowPrivate 通道，opencode/monitor 与 app-launcher 同族按 D22/D32/D36 默认放行内网（代码与文档一致化） | server 128/128（新增 6 项：归一化/奇形字段、Basic+Bearer 注入、部分失败容忍、不可达/形状不符探测错）✅；verify-mon 15/15 ✅；全量 23 脚本 386 项 ✅；Playwright 5/5 ✅ | `725b694` |
 
 ## 待用户确认
 
