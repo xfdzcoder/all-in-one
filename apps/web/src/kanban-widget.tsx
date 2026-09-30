@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { Fragment, useContext, useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -40,7 +40,13 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  // Q25b（B 方案）：拖拽落点 = 目标列 + 插入索引（占位跟随指针；松手中插）。
+  // state 供渲染；ref 同步记录供 drop 读取（setState 异步 —— 快速落下时闭包会拿到旧值）。
+  const [dropTarget, setDropTarget] = useState<{ colId: string; index: number } | null>(null);
+  const dropTargetRef = useRef<{ colId: string; index: number } | null>(null);
+  // 拖拽中的卡 id：插入索引按「其余卡」坐标计算（与 moveCardToIndex 的 others 语义一致，
+  // 同列移动不再差一格）；ref 同步供 dragover 过滤
+  const draggingIdRef = useRef<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
@@ -61,6 +67,24 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         .map((c) => c.sortOrder),
     );
     void m.patchCard(cardId, { columnId, sortOrder: max + 1 });
+  };
+
+  /** B 方案：拖拽中插 —— 目标列按序重排，落点插入（含同列移动的索引修正）。 */
+  const moveCardToIndex = (cardId: string, columnId: string, index: number) => {
+    const others = (tree?.cards ?? [])
+      .filter((c) => c.columnId === columnId && !c.archived && c.id !== cardId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const clamped = Math.max(0, Math.min(index, others.length));
+    const next = [...others.slice(0, clamped), { id: cardId }, ...others.slice(clamped)];
+    const moving = (tree?.cards ?? []).find((c) => c.id === cardId);
+    const ops = next.map((c, i) => {
+      const row = (tree?.cards ?? []).find((x) => x.id === c.id);
+      const sameCol = row?.columnId === columnId;
+      if (!row && moving) return m.patchCard(cardId, { columnId, sortOrder: i });
+      if (row && (row.sortOrder !== i || !sameCol)) return m.patchCard(c.id, { columnId, sortOrder: i });
+      return null;
+    });
+    void Promise.all(ops.filter(Boolean));
   };
 
   const createBoardAndSelect = async () => {
@@ -133,22 +157,46 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           {(tree?.columns ?? []).map((col) => (
             <div
               key={col.id}
-              className={`wb-kanban__col${dragOverCol === col.id ? " wb-kanban__col--drop" : ""}`}
+              className={`wb-kanban__col${dropTarget?.colId === col.id ? " wb-kanban__col--drop" : ""}`}
               data-col-title={col.title}
               onDragOver={(e) => {
                 // Q6c 拖拽冲突方案（D29）：仅浏览模式接卡片拖放；编辑模式让位布局拖拽
-                if (!editMode) {
-                  e.preventDefault();
-                  setDragOverCol(col.id);
+                if (editMode) return;
+                e.preventDefault();
+                // B 方案：按鼠标 Y 计算插入索引（两卡中点为界）；值不变不置态（防抖动）
+                const cards = [...e.currentTarget.querySelectorAll("[data-card-id]")].filter(
+                  (el) => el.getAttribute("data-card-id") !== draggingIdRef.current,
+                );
+                let index = cards.length;
+                for (let i = 0; i < cards.length; i += 1) {
+                  const r = cards[i].getBoundingClientRect();
+                  if (e.clientY < r.top + r.height / 2) {
+                    index = i;
+                    break;
+                  }
+                }
+                const next = { colId: col.id, index };
+                if (!(dropTargetRef.current && dropTargetRef.current.colId === col.id && dropTargetRef.current.index === index)) {
+                  dropTargetRef.current = next;
+                  setDropTarget(next);
                 }
               }}
-              onDragLeave={() => setDragOverCol((v) => (v === col.id ? null : v))}
+              onDragLeave={(e) => {
+                // 闪烁修复：仍在列内（子元素间冒泡）不置空；真离开（relatedTarget 在列外）才清
+                if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                dropTargetRef.current = null;
+                setDropTarget(null);
+              }}
               onDrop={(e) => {
                 if (editMode) return;
                 e.preventDefault();
-                setDragOverCol(null);
                 const cardId = e.dataTransfer.getData("text/plain");
-                if (cardId) moveCardTo(cardId, col.id);
+                const target = dropTargetRef.current;
+                dropTargetRef.current = null;
+                setDropTarget(null);
+                if (!cardId) return;
+                if (target && target.colId === col.id) moveCardToIndex(cardId, col.id, target.index);
+                else moveCardTo(cardId, col.id);
               }}
             >
               <Group gap={4} wrap="nowrap" mb={4}>
@@ -195,9 +243,30 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                 />
               </Group>
               <Stack gap={4}>
-                {cardsOf(col.id).map((card) => (
-                  <Card
+                {cardsOf(col.id).map((card, cardIdx) => {
+                  // 占位索引从「其余卡」坐标换算回全列表坐标（跳过拖拽中的卡）
+                  let slotIdx = -1;
+                  if (dropTarget?.colId === col.id) {
+                    let seen = 0;
+                    const full = cardsOf(col.id);
+                    for (let i = 0; i < full.length; i += 1) {
+                      if (full[i].id === draggingIdRef.current) continue;
+                      if (seen === dropTarget.index) {
+                        slotIdx = i;
+                        break;
+                      }
+                      seen += 1;
+                    }
+                    if (slotIdx === -1) slotIdx = full.length;
+                  }
+                  return (
+                  <Fragment key={card.id}>
+                    {dropTarget?.colId === col.id && slotIdx === cardIdx && (
+                      <div className="wb-kanban__drop-slot wb-kanban__drop-slot--inline">放在这里</div>
+                    )}
+                    <Card
                     key={card.id}
+                    data-card-id={card.id}
                     withBorder
                     padding={6}
                     radius={6}
@@ -207,10 +276,15 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     role="button"
                     tabIndex={0}
                     onDragStart={(e) => {
+                      draggingIdRef.current = card.id;
                       e.dataTransfer.setData("text/plain", card.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
-                    onDragEnd={() => setDragOverCol(null)}
+                    onDragEnd={() => {
+                      draggingIdRef.current = null;
+                      dropTargetRef.current = null;
+                      setDropTarget(null);
+                    }}
                     onClick={() => setEditing(card)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -225,11 +299,26 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                         {card.body}
                       </Text>
                     )}
-                  </Card>
-                ))}
-                {dragOverCol === col.id && (
-                  <div className="wb-kanban__drop-slot">放在这里</div>
-                )}
+                    </Card>
+                  </Fragment>
+                  );
+                })}
+                {dropTarget?.colId === col.id && (() => {
+                  const full = cardsOf(col.id);
+                  let seen = 0;
+                  let slotIdx = full.length;
+                  for (let i = 0; i < full.length; i += 1) {
+                    if (full[i].id === draggingIdRef.current) continue;
+                    if (seen === dropTarget.index) {
+                      slotIdx = i;
+                      break;
+                    }
+                    seen += 1;
+                  }
+                  return slotIdx >= full.length ? (
+                    <div className="wb-kanban__drop-slot wb-kanban__drop-slot--inline">放在这里</div>
+                  ) : null;
+                })()}
                 <Group gap={4} wrap="nowrap">
                   <TextInput
                     size="compact-xs"

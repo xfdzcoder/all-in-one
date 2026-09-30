@@ -436,6 +436,7 @@
 }
 
 .wb-kanban__drop-slot {
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -545,4 +546,9 @@
   width: 16px;
   height: 16px;
   border-radius: 4px;
+}
+
+/* 插入位占位（B 方案）：出现在两卡之间，不吃指针事件 */
+.wb-kanban__drop-slot--inline {
+  min-height: 32px;
 }
