@@ -33,7 +33,6 @@ import {
 import { MailAccountsPanel } from "./mail-accounts";
 import { TagInput } from "./tag-input";
 import { WbAlert } from "./ui";
-import { listLabel } from "./widget-registry";
 
 /**
  * 数据源管理（FR-D2/D40；Q25c/#2 由弹窗改为**独立全页**——大数量好展示）：
@@ -58,9 +57,8 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const tagMut = useTagMutations();
   const todoMut = useTodoMutations();
   const feedMut = useFeedMutations();
-  const [newTodo, setNewTodo] = useDraft();
-  // Q27b#6：新任务可选清单（此前默认收件箱且无法选择）
-  const [newTodoList, setNewTodoList] = useState("inbox");
+  // D43：任务按「卡片名称」分组 —— 组内添加（草稿按组）
+  const [groupDrafts, setGroupDrafts] = useState<Record<string, string>>({});
   const [newSourceTitle, setNewSourceTitle] = useDraft();
   const [newSourceUrl, setNewSourceUrl] = useDraft();
   const [newTagName, setNewTagName] = useDraft();
@@ -175,87 +173,104 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
           <Tabs.Tab value="tags">标签</Tabs.Tab>
         </Tabs.List>
 
-        {/* ── 任务（Workspace 级，D21） ── */}
+        {/* ── 任务（Workspace 级，D21）：按卡片名称分组（D43） ── */}
         <Tabs.Panel value="todo" pt="xs">
           <Stack gap="xs">
-            <Group gap="xs" wrap="nowrap">
-              <TextInput
-                size="xs"
-                placeholder="新任务…"
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newTodo.trim()) {
-                    todoMut.create.mutate({ title: newTodo.trim(), list: newTodoList });
-                    setNewTodo("");
-                  }
-                }}
-                style={{ flex: 1 }}
-              />
-              {/* Q27b#6：清单 = 任务分组（新任务落此清单） */}
-              <Select
-                size="xs"
-                data={[
-                  { value: "inbox", label: "收件箱" },
-                  { value: "work", label: "工作" },
-                  { value: "life", label: "生活" },
-                ]}
-                value={newTodoList}
-                onChange={(v) => setNewTodoList(v ?? "inbox")}
-                style={{ width: 100 }}
-                aria-label="新任务清单"
-              />
-              <Button
-                size="xs"
-                disabled={!newTodo.trim()}
-                onClick={() => {
-                  todoMut.create.mutate({ title: newTodo.trim(), list: newTodoList });
-                  setNewTodo("");
-                }}
-              >
-                添加
-              </Button>
-            </Group>
-            <div className="wb-admin__table">
-              {(todos.data ?? [])
-                .filter((t: TodoItem) => !q || t.title.includes(q) || listLabel(t.list).includes(q))
-                .map((t: TodoItem) => (
-                  <div key={t.id} className="wb-admin__row" data-admin-row="todo">
-                    <Checkbox
-                      checked={t.done}
-                      onChange={(e) => todoMut.toggle.mutate({ id: t.id, done: e.currentTarget.checked })}
-                      aria-label={`toggle ${t.title}`}
-                    />
-                    <Text size="sm" className="wb-grow" truncate>
-                      {t.title}
-                    </Text>
-                    <Badge size="xs" variant="outline" title="清单：任务分组">
-                      {listLabel(t.list)}
-                    </Badge>
-                    <TagInput
-                      tags={tagRows}
-                      value={t.tagIds ?? []}
-                      onChange={(tagIds) =>
-                        tagMut.setTarget.mutate({ targetType: "todo", targetId: t.id, tagIds })
-                      }
-                      width={220}
-                    />
-                    <ConfirmAction
-                      label="×"
-                      size="compact-xs"
-                      variant="subtle"
-                      title="删除任务？"
-                      message={`确认删除任务「${t.title}」？（不可恢复）`}
-                      onConfirm={() => todoMut.remove.mutate(t.id)}
-                    />
+            {(() => {
+              const groups = new Map<string, TodoItem[]>();
+              for (const t of (todos.data ?? []) as TodoItem[]) {
+                const g = t.list || "未命名";
+                const arr = groups.get(g) ?? [];
+                arr.push(t);
+                groups.set(g, arr);
+              }
+              return [...groups.entries()]
+                .filter(([g]) => !q || g.includes(q))
+                .map(([g, items]) => (
+                  <div key={g} className="wb-admin__group" data-admin-group={g}>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={600} className="wb-grow" truncate>
+                        {g}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {items.length} 项
+                      </Text>
+                      {/* D43：删分组 = 真删该组全部任务（唯一真删入口） */}
+                      <ConfirmAction
+                        label="删除分组"
+                        size="compact-xs"
+                        variant="subtle"
+                        title="删除分组？"
+                        message={`确认删除分组「${g}」？将真删该组全部 ${items.length} 项任务（不可恢复；Dashboard 上的卡片只是视图，删除卡片不删数据）`}
+                        onConfirm={() => todoMut.deleteGroup.mutate(g)}
+                      />
+                    </Group>
+                    {items
+                      .filter((t: TodoItem) => !q || t.title.includes(q))
+                      .map((t: TodoItem) => (
+                        <div key={t.id} className="wb-admin__row" data-admin-row="todo">
+                          <Checkbox
+                            checked={t.done}
+                            onChange={(e) => todoMut.toggle.mutate({ id: t.id, done: e.currentTarget.checked })}
+                            aria-label={`toggle ${t.title}`}
+                          />
+                          <Text size="sm" className="wb-grow" truncate>
+                            {t.title}
+                          </Text>
+                          <TagInput
+                            tags={tagRows}
+                            value={t.tagIds ?? []}
+                            onChange={(tagIds) =>
+                              tagMut.setTarget.mutate({ targetType: "todo", targetId: t.id, tagIds })
+                            }
+                            width={220}
+                          />
+                          <ConfirmAction
+                            label="×"
+                            size="compact-xs"
+                            variant="subtle"
+                            title="删除任务？"
+                            message={`确认删除任务「${t.title}」？（不可恢复）`}
+                            onConfirm={() => todoMut.remove.mutate(t.id)}
+                          />
+                        </div>
+                      ))}
+                    <Group gap="xs" wrap="nowrap">
+                      <TextInput
+                        size="xs"
+                        placeholder={`「${g}」新任务…`}
+                        value={groupDrafts[g] ?? ""}
+                        onChange={(e) => {
+                          const v = e.currentTarget.value;
+                          setGroupDrafts((d) => ({ ...d, [g]: v }));
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (groupDrafts[g] ?? "").trim()) {
+                            todoMut.create.mutate({ title: (groupDrafts[g] ?? "").trim(), list: g });
+                            setGroupDrafts((d) => ({ ...d, [g]: "" }));
+                          }
+                        }}
+                        className="wb-grow"
+                      />
+                      <Button
+                        size="xs"
+                        disabled={!(groupDrafts[g] ?? "").trim()}
+                        onClick={() => {
+                          todoMut.create.mutate({ title: (groupDrafts[g] ?? "").trim(), list: g });
+                          setGroupDrafts((d) => ({ ...d, [g]: "" }));
+                        }}
+                      >
+                        添加
+                      </Button>
+                    </Group>
                   </div>
-                ))}
-              {(todos.data ?? []).length === 0 && (
-                <Text size="xs" c="dimmed">
-                  暂无任务
-                </Text>
-              )}
-            </div>
+                ));
+            })()}
+            {(todos.data ?? []).length === 0 && (
+              <Text size="xs" c="dimmed">
+                暂无任务 —— 在 Dashboard 添加 Todo 卡片并命名后，这里会按卡片名称分组
+              </Text>
+            )}
           </Stack>
         </Tabs.Panel>
 

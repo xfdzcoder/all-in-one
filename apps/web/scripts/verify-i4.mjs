@@ -184,7 +184,7 @@ try {
   );
   await sleep(600);
   const bodyAfterTodo = await page.evaluate(() => document.body.textContent ?? "");
-  ok("I4 todo detail shows list/status/time", bodyAfterTodo.includes("任务详情") && bodyAfterTodo.includes("清单：收件箱") && bodyAfterTodo.includes("创建"), bodyAfterTodo.slice(-120));
+  ok("I4 todo detail shows list/status/time", bodyAfterTodo.includes("任务详情") && bodyAfterTodo.includes("分组：inbox") && bodyAfterTodo.includes("创建"), bodyAfterTodo.slice(-120));
   await page.keyboard.press("Escape");
   await sleep(400);
 

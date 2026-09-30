@@ -100,6 +100,18 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
     return row;
   });
 
+  // D43：删除分组（卡片名称）= 真删该组全部任务（调用方需二次确认）
+  app.post("/api/todos/delete-group", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = z.object({ name: z.string().min(1).max(64) }).safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid request" });
+    const rows = await app.db
+      .delete(todo)
+      .where(and(eq(todo.userId, req.user!.id), eq(todo.list, parsed.data.name)))
+      .returning({ id: todo.id });
+    onChanged();
+    return { ok: true, deleted: rows.length };
+  });
+
   app.delete("/api/todos/:id", { preHandler: authGuard }, async (req, reply) => {
     const params = idParams.safeParse(req.params);
     if (!params.success) return reply.code(400).send({ error: "invalid request" });

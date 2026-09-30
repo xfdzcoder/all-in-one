@@ -122,61 +122,41 @@ test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({
   await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
 });
 
-test("J4 data/view separation: two todo widgets share Workspace state", async ({ page }) => {
+test("J4 data/view separation: card name = task group, data admin shares state (D43)", async ({ page }) => {
   await login(page);
-  // 页面 A：添加 Todo（filter=open）并新建任务
+  const nm = `J4-${Date.now().toString(36).slice(-4)}`;
+  // 页面 A：添加 Todo（名称全站唯一）并新建任务
   await page.getByRole("button", { name: "编辑布局" }).click();
   await page.waitForTimeout(400);
   await page.getByRole("button", { name: "添加组件" }).click();
   await page.getByRole("button", { name: "个人 Todo" }).click();
+  await page.locator(".mantine-Modal-root").getByLabel("名称").fill(nm); // D43 名称必填
   await page.getByRole("button", { name: "确认添加" }).click();
   await page.waitForTimeout(800);
-  // 编辑态组件内容惰性（FR-P8）：任务操作在浏览模式进行
   await page.getByRole("button", { name: "完成编辑" }).click();
   await page.waitForTimeout(400);
 
+  // 组件建任务 → 归入卡片名称
   const title = `J4-${Date.now().toString(36)}`;
-  const todoA = page
+  const todoBox = page
     .locator(".grid-stack-item")
     .filter({ has: page.locator('input[placeholder="新任务…"]') })
-    .last();
-  await todoA.locator('input[placeholder="新任务…"]').fill(title);
-  await todoA.getByRole("button", { name: "添加", exact: true }).click();
-  await expect(todoA.getByText(title)).toBeVisible({ timeout: 5000 });
+    .filter({ hasText: nm })
+    .first();
+  await todoBox.locator('input[placeholder="新任务…"]').fill(title);
+  await todoBox.getByRole("button", { name: "添加", exact: true }).click();
+  await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
 
-  // 页面 B：新建页面 + Todo 组件 → 无需刷新即可见（SSE + 查询缓存）
-  const uniq = `J4-${Date.now().toString(36).slice(-4)}`;
-  await page.getByRole("button", { name: "切换页面" }).click(); // Q27d#1：页面切换器弹层
-  await page.getByPlaceholder("新页面名").fill(uniq);
-  await page.getByRole("button", { name: "新建页面" }).click();
-  await page.waitForTimeout(800);
-  await page.getByRole("button", { name: "编辑布局" }).click();
-  await page.waitForTimeout(400);
-  await page.getByRole("button", { name: "添加组件" }).click();
-  await page.getByRole("button", { name: "个人 Todo" }).click();
-  await page.getByRole("button", { name: "确认添加" }).click();
-  await page.waitForTimeout(1500);
-  await page.getByRole("button", { name: "完成编辑" }).click();
-  await page.waitForTimeout(400);
-  const todoB = page
-    .locator(".grid-stack-item")
-    .filter({ has: page.locator('input[placeholder="新任务…"]') })
-    .last();
-  await expect(todoB.getByText(title)).toBeVisible({ timeout: 8000 });
+  // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
+  await page.getByRole("button", { name: "数据源管理" }).click();
+  await page.waitForTimeout(600);
+  await expect(page.locator(`[data-admin-group="${nm}"]`)).toContainText(title, { timeout: 5000 });
 
-  // 勾选完成（Mantine 隐藏原生 input，force 点击触发 change）→ 任务离开 open 列表
-  // 目标行 = li 且含任务标题；Mantine 隐藏原生 checkbox → force click
-  const row = page.locator(".grid-stack-item li").filter({ hasText: title }).last();
-  await row.locator('input[type="checkbox"]').click({ force: true });
-  await expect(todoB.getByText(title)).toBeHidden({ timeout: 8000 });
-
-  // 切回页面 A：完成态同步（同一 Workspace 数据 —— 任务带删除线显示）
-  await page.getByRole("button", { name: "切换页面" }).click();
-  await page.locator('[data-page-item="首页"]').click();
-  await page.waitForTimeout(800);
-  const doneOnA = await page.evaluate((t: string) => {
-    const rows = [...document.querySelectorAll(".grid-stack-item p")];
-    return rows.some((r) => (r.textContent ?? "").includes(t) && r.style.textDecoration.includes("line-through"));
-  }, title);
-  expect(doneOnA).toBe(true);
+  // 数据源管理新建 → 组件无刷新即可见（SSE + 查询失效）
+  const grp = page.locator(`[data-admin-group="${nm}"]`);
+  await grp.locator('input[placeholder*="新任务"]').fill("playwright-sse-task");
+  await grp.getByRole("button", { name: "添加", exact: true }).click();
+  await page.getByRole("button", { name: "返回工作台" }).click();
+  await page.waitForTimeout(1200);
+  await expect(page.getByText("playwright-sse-task")).toBeVisible({ timeout: 5000 });
 });

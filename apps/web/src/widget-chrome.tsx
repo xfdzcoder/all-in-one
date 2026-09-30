@@ -42,6 +42,7 @@ export function WidgetChrome({ children }: { children: ReactNode }) {
             size="compact-xs"
             variant="subtle"
             color="red"
+            title="仅移除卡片；数据保留，可在「数据源管理」查看或删除"
             onClick={() => {
               const el = node?.el;
               if (el && grid) removeWidget(el);

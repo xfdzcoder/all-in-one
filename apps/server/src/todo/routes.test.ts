@@ -134,4 +134,17 @@ describe("todo API (Workspace-level data, D21)", () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it("D43: delete-group 真删该组全部任务（跨组不动）", async () => {
+    await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "g-a1", list: "组甲" } });
+    await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "g-a2", list: "组甲" } });
+    await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "g-b1", list: "组乙" } });
+    const res = await app.inject({ method: "POST", url: "/api/todos/delete-group", cookies: { sid }, payload: { name: "组甲" } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().deleted).toBe(2);
+    const left = await app.inject({ method: "GET", url: "/api/todos?list=组乙", cookies: { sid } });
+    expect((left.json() as unknown[]).length).toBe(1);
+    const gone = await app.inject({ method: "GET", url: "/api/todos?list=组甲", cookies: { sid } });
+    expect((gone.json() as unknown[]).length).toBe(0);
+  });
 });

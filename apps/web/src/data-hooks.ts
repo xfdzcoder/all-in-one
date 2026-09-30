@@ -144,7 +144,12 @@ export function useTodoMutations() {
     mutationFn: (id: string) => api.deleteTodo(id),
     onSuccess: invalidate,
   });
-  return { create, toggle, remove };
+  // D43：删除分组 = 真删该组全部任务（调用方二次确认）
+  const deleteGroup = useMutation({
+    mutationFn: (name: string) => api.deleteTodoGroup(name),
+    onSuccess: invalidate,
+  });
+  return { create, toggle, remove, deleteGroup };
 }
 
 /** 组件卸载安全的本地输入状态。 */

@@ -269,7 +269,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                         size="xs"
                         variant="subtle"
                         title="删除页面？"
-                        message={`删除页面只移除布局与组件排布，业务数据（Todo/看板/邮件/凭证等 Workspace 数据）保留。确认删除页面「${active.title}」？`}
+                        message={`删除页面只移除布局与组件排布，业务数据（任务/看板/邮件/凭证等 Workspace 数据）保留 —— 可在「数据源管理」查看或删除。确认删除页面「${active.title}」？`}
                         onConfirm={() => void removeActive()}
                       />
                     )}

@@ -18,6 +18,7 @@ import { MonitorWidget } from "./monitor-widget";
 
 export const todoManifest: WidgetManifest = {
   type: "todo",
+  uniqueField: "name",
   name: "个人 Todo",
   description: "Workspace 级任务清单，多页面共享同一数据",
   icon: "checklist",
@@ -26,16 +27,12 @@ export const todoManifest: WidgetManifest = {
   minSize: { w: 2, h: 2 },
   configSchema: [
     {
-      key: "list",
-      label: "清单",
-      type: "select",
-      default: "inbox",
-      help: "任务分组：本组件只显示该清单的任务，新任务也加进此清单",
-      options: [
-        { value: "inbox", label: "收件箱" },
-        { value: "work", label: "工作" },
-        { value: "life", label: "生活" },
-      ],
+      key: "name",
+      label: "名称",
+      type: "text",
+      required: true,
+      placeholder: "如：家庭待办",
+      help: "任务分组名（D43）：本卡片新建的任务归入此名；全站不允许重名",
     },
     {
       key: "filter",

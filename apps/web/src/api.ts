@@ -171,6 +171,8 @@ export const api = {
   },
   createTodo: (title: string, list = "inbox") =>
     req<TodoItem>("POST", "/api/todos", { title, list }),
+  deleteTodoGroup: (name: string) =>
+    req<{ ok: boolean; deleted: number }>("POST", "/api/todos/delete-group", { name }),
   patchTodo: (id: string, patch: { done?: boolean; title?: string }) =>
     req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),

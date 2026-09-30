@@ -4,20 +4,22 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
-import { listLabel } from "./widget-registry";
 import { TagFilter } from "./tag-filter";
 import { RelativeTime, WbAlert } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
  *  gridstack 直接把布局 JSON 的 props 展开传入，即扁平 config 形态。 */
 export type TodoConfig = {
+  /** D43：卡片名称 = 任务分组名（全站唯一）。 */
+  name?: string;
+  /** 兼容旧布局（Q28 前为「清单」）—— 读取回落 name ?? list。 */
   list?: string;
   filter?: "open" | "all";
   /** FR-D3：按标签选数据（OR 语义；空/缺省 = 全部）。 */
   tagIds?: string[];
 };
 
-// 清单显示名（ISS-15）：与 manifest 选项同源（widget-registry.listLabel）
+// D43：名称即分组名 —— 原样显示（用户自由命名）
 
 /**
  * Todo Widget（FR：Workspace 级数据、勾选完成/新增）。
@@ -25,8 +27,10 @@ export type TodoConfig = {
  * 注：M2 内置组件直接消费工作台 REST + SSE（业务数据通道）；
  * 第三方数据类组件（custom-api）走服务端 connector 数据通道（M2-⑤）。
  */
-export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec }: TodoConfig & { refreshSec?: number }) {
-  const { data, loading, error, refresh } = useTodos(list, refreshSec, tagIds);
+export function TodoWidget({ name, list = "inbox", filter = "open", tagIds, refreshSec }: TodoConfig & { refreshSec?: number }) {
+  // D43：分组名 = 卡片名称（旧布局回落 list）
+  const group = name ?? list ?? "我的待办";
+  const { data, loading, error, refresh } = useTodos(group, refreshSec, tagIds);
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
   const [detail, setDetail] = useState<TodoItem | null>(null);
@@ -46,7 +50,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
     <div className="wb-widget">
       <Group gap={6}>
         <Text size="sm" fw={600} style={{ flex: 1 }}>
-          Todo · {listLabel(list)}
+          Todo · {group}
         </Text>
         <TagFilter value={tagIds} targetLabel="任务" />
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
@@ -61,7 +65,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           onChange={(e) => setDraft(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && draft.trim()) {
-              create.mutate({ title: draft.trim(), list });
+              create.mutate({ title: draft.trim(), list: group });
               setDraft("");
             }
           }}
@@ -71,7 +75,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           size="xs"
           disabled={!draft.trim()}
           onClick={() => {
-            create.mutate({ title: draft.trim(), list });
+            create.mutate({ title: draft.trim(), list: group });
             setDraft("");
           }}
         >
@@ -147,7 +151,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
               {detail.title}
             </Text>
             <Text size="xs" c="dimmed">
-              清单：{listLabel(detail.list)} · 状态：{detail.done ? "已完成" : "未完成"}
+              分组：{detail.list} · 状态：{detail.done ? "已完成" : "未完成"}
             </Text>
             <Text size="xs" c="dimmed">
               创建 <RelativeTime value={detail.createdAt} /> · 更新 <RelativeTime value={detail.updatedAt} />

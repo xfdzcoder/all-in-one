@@ -19,6 +19,34 @@ import { WbAlert } from "./ui";
 
 const SAVE_DEBOUNCE_MS = 800;
 
+/**
+ * 唯一字段校验（D43，通用）：manifest.uniqueField 声明的字段在同 type 实例间全站唯一。
+ * 宿主零组件特判（J8）—— 新组件声明 uniqueField 即获得同款校验。
+ */
+async function uniqueFieldTaken(
+  component: string,
+  field: string,
+  value: string,
+  excludeId?: string,
+): Promise<boolean> {
+  const rows = await api.listDashboards();
+  for (const d of rows) {
+    let layout: Array<{ id?: string; component?: string; props?: Record<string, unknown> }> = [];
+    try {
+      layout = JSON.parse(d.layoutJson ?? "[]") as typeof layout;
+    } catch {
+      /* noop */
+    }
+    for (const w of layout) {
+      if (w.component !== component || w.id === excludeId) continue;
+      const props = (w.props ?? {}) as Record<string, unknown>;
+      const n = String(props[field] ?? "");
+      if (n === value) return true;
+    }
+  }
+  return false;
+}
+
 /** 全部组件包上编辑态外框（配置入口），组件实现零改动（FR-W4 配置变更 / J8）。 */
 const chromeComponents: ComponentMap = Object.fromEntries(
   Object.entries(widgetComponents).map(([key, Comp]) => [
@@ -85,6 +113,14 @@ function BoardToolbar({
             onClose={() => setPickerOpen(false)}
             extraManifests={pluginManifests}
             onAdd={async (manifest, values) => {
+              // D43：唯一字段校验（manifest 声明，宿主零组件特判）
+              if (manifest.uniqueField) {
+                const v = String((values as Record<string, unknown>)[manifest.uniqueField] ?? "").trim();
+                if (v && (await uniqueFieldTaken(manifest.type, manifest.uniqueField, v))) {
+                  alert(`「${v}」已被同类型组件使用（不允许重名）`);
+                  return;
+                }
+              }
               // SEC3：secret 字段的明文先入凭证库，props 只保存引用
               const props = await propsWithSecretRefs(manifest.configSchema, values, (name, secret) =>
                 api.createCredential(name, secret),
@@ -305,6 +341,14 @@ export function Board({
         const node = grid && configureId ? findNode(grid, configureId) : undefined;
         if (!grid || !node?.el || !configManifest) return;
         try {
+          // D43：唯一字段校验（manifest 声明；exclude 当前实例）
+          if (configManifest.uniqueField) {
+            const v = String((values as Record<string, unknown>)[configManifest.uniqueField] ?? "").trim();
+            if (v && (await uniqueFieldTaken(configManifest.type, configManifest.uniqueField, v, String(configureId ?? "")))) {
+              setConfigError(`「${v}」已被同类型组件使用（不允许重名）`);
+              return;
+            }
+          }
           // SEC3：secret 字段明文入库凭证库，props 只保存引用；未改动的引用原样保留
           const props = await propsWithSecretRefs(
             configManifest.configSchema,

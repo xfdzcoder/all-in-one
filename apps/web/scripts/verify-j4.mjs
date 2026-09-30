@@ -59,11 +59,27 @@ const openTodos = () =>
   page.$$eval('.grid-stack-item input[placeholder="新任务…"]', (els) => els.length);
 
 /** FR-W2 选择器流程：添加组件 → 选 manifest → configSchema 表单（默认值）→ 确认添加。 */
-const addWidgetViaPicker = async (name) => {
+const addWidgetViaPicker = async (name, fillLabel, fillValue) => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
   if (!(await clickBtn(name))) return false;
   await sleep(300);
+  if (fillLabel) {
+    // D43：Todo 名称必填（全站唯一）
+    await page.evaluate(
+      ({ l, v }) => {
+        const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+          w.querySelector("label")?.textContent.includes(l),
+        );
+        const input = wrapper?.querySelector("input");
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+        setter.call(input, v);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      },
+      { l: fillLabel, v: fillValue },
+    );
+    await sleep(200);
+  }
   return clickBtn("确认添加", true);
 };
 
@@ -75,38 +91,74 @@ try {
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 
-  // page A (首页): edit → add Todo widget
+  // ── J4（D43 语义）：任务归属 = 卡片名称；数据/视图分离 = 组件 ↔ 数据源管理同一数据 ──
+  const uniqA = `A-${Date.now().toString(36).slice(-4)}`;
   ok("J4 enter edit A", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("J4 add Todo on page A", await addWidgetViaPicker("个人 Todo"));
-  await sleep(1200); // portal render + hydration
+  ok("J4 add Todo on page A", await addWidgetViaPicker("个人 Todo", "名称", `J4A-${uniqA}`));
+  await sleep(1200);
   const todoInputsA = await openTodos();
   ok("J4 Todo widget renders on page A", todoInputsA >= 1, `inputs=${todoInputsA}`);
-  // 编辑态组件内容惰性（D35/FR-P8）：卡片操作在浏览模式进行
   ok("J4 exit edit A (browse to operate cards)", await clickBtn("完成编辑"));
   await sleep(400);
 
-  // create task on page A（标题按轮唯一 —— 任务归 Workspace 且跨轮累积）
+  // 组件建任务 → 归入卡片名称（scoped：只在 J4A 卡片内输入）
   const title = `J4-${Date.now().toString(36)}`;
-  const todoBoxes = await page.$$(".grid-stack-item");
-  let targetBox = null;
-  for (const b of todoBoxes) {
-    if ((await b.$('input[placeholder="新任务…"]'))) targetBox = b;
-  }
-  await (await targetBox.$('input[placeholder="新任务…"]')).type(title);
-  const addBtn = await targetBox.$$("button");
-  for (const btn of addBtn) {
-    if ((await btn.evaluate((e) => e.textContent.trim())) === "添加") {
-      await btn.click();
-      break;
-    }
-  }
-  ok("J4 add task", true);
-  await sleep(600);
-  const taskVisibleA = await page.evaluate((t) => document.body.textContent.includes(t), title);
-  ok("J4 task visible on page A", taskVisibleA);
+  const typed = await page.evaluate(
+    ({ n, t }) => {
+      const box = [...document.querySelectorAll(".grid-stack-item")].find(
+        (i) => (i.textContent ?? "").includes(n) && i.querySelector('input[placeholder="新任务…"]'),
+      );
+      const input = box?.querySelector('input[placeholder="新任务…"]');
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      setter.call(input, t);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      [...box.querySelectorAll("button")].find((b) => b.textContent.trim() === "添加")?.click();
+      return true;
+    },
+    { n: `J4A-${uniqA}`, t: title },
+  );
+  ok("J4 add task in named card", typed);
+  await sleep(800);
+  ok("J4 task visible in card", await page.evaluate((t) => document.body.textContent.includes(t), title));
 
-  // create page B with its own Todo widget
+  // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
+  ok("J4 open data admin", await clickBtn("数据源管理"));
+  await sleep(600);
+  ok(
+    "J4 data admin shows task under group (data/view separation)",
+    await page.evaluate(
+      ({ n, t }) => {
+        const g = document.querySelector(`[data-admin-group="${n}"]`);
+        return (g?.textContent ?? "").includes(t);
+      },
+      { n: `J4A-${uniqA}`, t: title },
+    ),
+  );
+
+  // 数据源管理新建 → 组件无刷新即可见（SSE + 查询失效）
+  const sseAdded = await page.evaluate((n) => {
+    const g = document.querySelector(`[data-admin-group="${n}"]`);
+    const input = [...(g?.querySelectorAll("input") ?? [])].find((i) => i.placeholder.includes("新任务"));
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(input, "SSE-sync-task");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    [...g.querySelectorAll("button")].find((b) => b.textContent.trim() === "添加")?.click();
+    return true;
+  }, `J4A-${uniqA}`);
+  ok("J4 add task via data admin", sseAdded);
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
+  );
+  await sleep(1200);
+  ok(
+    "J4 admin-created task syncs to widget (SSE, no reload)",
+    await page.evaluate(() => document.body.textContent.includes("SSE-sync-task")),
+  );
+
+  // 页面 B：不同名称 = 不同任务池（D43 唯一名 → 隔离）
   await page.setViewport({ width: 1400, height: 900 });
   const uniq = `J4-${Date.now().toString(36).slice(-4)}`;
   await openSwitcher();
@@ -115,56 +167,19 @@ try {
   await sleep(800);
   ok("J4 enter edit B", await clickBtn("编辑布局"));
   await sleep(300);
-  ok("J4 add Todo on page B", await addWidgetViaPicker("个人 Todo"));
-  await sleep(1500); // portal render + SSE round-trip
+  ok("J4 add Todo on page B", await addWidgetViaPicker("个人 Todo", "名称", `J4B-${uniq}`));
+  await sleep(1500);
   ok("J4 exit edit B (browse to operate cards)", await clickBtn("完成编辑"));
   await sleep(400);
-
-  // task created on A must appear on B WITHOUT reload (SSE invalidation + query)
-  const state = await page.evaluate((t) => {
+  const isolated = await page.evaluate((t) => {
     const onB = document.querySelector('[aria-label="切换页面"]')?.textContent ?? "";
-    return {
-      activeTab: onB,
-      taskVisible: document.body.textContent.includes(t),
-      todoWidgets: document.querySelectorAll('.grid-stack-item input[placeholder="新任务…"]').length,
-    };
+    return { activeTab: onB, taskVisible: document.body.textContent.includes(t) };
   }, title);
   ok(
-    "J4 task syncs to page B (data/view separation)",
-    state.taskVisible && state.activeTab.startsWith("J4-") && state.todoWidgets >= 1,
-    `tab=${state.activeTab} task=${state.taskVisible} todos=${state.todoWidgets}`,
+    "J4 differently-named cards are isolated (D43 unique names)",
+    isolated.activeTab.startsWith("J4-") && !isolated.taskVisible,
+    `tab=${isolated.activeTab} task=${isolated.taskVisible}`,
   );
-
-  // toggle done on page B — widget filter=open, so completing the task makes it
-  // disappear from the list (assert state CHANGED, not a vacuous checkbox scan)
-  const hasCheckbox = await page.$('.grid-stack-item input[type="checkbox"]');
-  if (hasCheckbox) {
-    // 勾选目标任务所在行（Workspace 里还有其它任务，不能盲点第一个 checkbox）
-    const toggled = await page.evaluate((t) => {
-      const row = [...document.querySelectorAll(".grid-stack-item li")].find((r) =>
-        (r.textContent ?? "").includes(t),
-      );
-      const box = row?.querySelector('input[type="checkbox"]');
-      box?.click();
-      return Boolean(box);
-    }, title);
-    await sleep(1000);
-    const stillOpenOnB = await page.evaluate((t) => document.body.textContent.includes(t), title);
-    ok("J4 toggle done on page B (task leaves open list)", toggled && !stillOpenOnB, `toggled=${toggled}`);
-  } else {
-    ok("J4 toggle done on page B", false, "no checkbox found");
-  }
-
-  // back to page A: completion must reflect there too (same Workspace data)
-  await switchPage("首页");
-  await sleep(1200);
-  const doneOnA = await page.evaluate((t) => {
-    const rows = [...document.querySelectorAll(".grid-stack-item p")];
-    return rows.some(
-      (r) => (r.textContent ?? "").includes(t) && r.style.textDecoration.includes("line-through"),
-    );
-  }, title);
-  ok("J4 completion reflects on page A (line-through, Workspace-shared)", doneOnA);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

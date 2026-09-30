@@ -160,20 +160,20 @@ try {
   );
   ok("W4 changed props on node (ground truth)", (await propsOf(phId))?.title === newTitle, JSON.stringify(await propsOf(phId)));
 
-  // ④ select 字段配置变更（Todo 清单 = 数据/视图分离配置）
+  // ④ 文本字段配置变更（Todo 名称 = 任务分组名，D43）
   const before2 = await nodeIds();
-  const todoId = await addViaPicker("个人 Todo", before2, null, null);
+  const todoId = await addViaPicker("个人 Todo", before2, "名称", `W4组-${uniq}`);
   ok("W4 add todo widget", Boolean(todoId), String(todoId));
   ok("W4 open todo config form", await clickItemBtn(todoId, "配置"));
   await sleep(400);
-  ok("W4 change todo list via select", await selectOption("清单", "工作"));
+  ok("W4 change todo name", await setField("名称", `W4改-${uniq}`));
   ok("W4 save todo config", await clickBtn("保存配置", true));
   await sleep(800);
-  ok("W4 todo props updated (ground truth)", (await propsOf(todoId))?.list === "work", JSON.stringify(await propsOf(todoId)));
+  ok("W4 todo props updated (ground truth)", (await propsOf(todoId))?.name === `W4改-${uniq}`, JSON.stringify(await propsOf(todoId)));
   ok("W4 reopen todo config", await clickItemBtn(todoId, "配置"));
   await sleep(400);
-  const listValue = await readField("清单");
-  ok("W4 select change persisted (reopened form shows 工作)", listValue === "工作", String(listValue));
+  const nameValue = await readField("名称");
+  ok("W4 name change persisted (reopened form)", nameValue === `W4改-${uniq}`, String(nameValue));
   await clickBtn("保存配置", true); // close
   await sleep(300);
 

@@ -14,6 +14,11 @@ export interface WidgetSize {
 }
 
 export interface WidgetManifest {
+  /**
+   * 唯一字段声明（D43）：该字段的值在同一 type 的所有实例间全站唯一，
+   * 宿主在配置保存/添加时校验（重名拒绝）。如 todo 的 "name"。
+   */
+  uniqueField?: string;
   /** 全局唯一 id（如 "todo"、"custom-api"、"iframe"）。 */
   type: string;
   name: string;
