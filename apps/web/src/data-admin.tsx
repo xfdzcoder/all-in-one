@@ -112,6 +112,11 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
     { value: "monitor", label: "监控源", desc: "Glances 等服务监控（CPU / 内存 / 磁盘 / 运行时长）", icon: "monitor" },
     { value: "opencode", label: "OpenCode", desc: "opencode server 会话与状态（实验性接口）", icon: "opencode" },
     { value: "http", label: "HTTP / 自定义 API", desc: "任意 HTTP 接口的认证来源（Bearer / 自定义头）", icon: "http" },
+    // Q39/D46：第三方服务四类（服务概览组件消费）
+    { value: "immich", label: "Immich", desc: "照片库（API Key 认证；版本/照片/视频计数）", icon: "immich" },
+    { value: "navidrome", label: "Navidrome", desc: "音乐库（Subsonic u/p；版本/歌曲/专辑/艺术家）", icon: "navidrome" },
+    { value: "portainer", label: "Portainer", desc: "容器管理（API Key；版本/端点/容器运行数）", icon: "portainer" },
+    { value: "mihomo", label: "Mihomo / metacubexd", desc: "代理内核（secret；版本/代理数/内存）", icon: "mihomo" },
   ] as Array<{ value: string; label: string; desc: string; icon: string }>;
   const DS_FIELDS: Record<string, Array<{ key: string; label: string; type: "text" | "select" | "secret"; options?: Array<{ value: string; label: string }> }>> = {
     monitor: [
@@ -129,6 +134,24 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
       { key: "url", label: "接口地址", type: "text" },
       { key: "authHeader", label: "认证头名", type: "text" },
       { key: "apiToken", label: "访问令牌", type: "secret" },
+    ],
+    // Q39/D46：服务连接表单（secret → 凭证库 SEC3）
+    immich: [
+      { key: "url", label: "服务地址", type: "text" },
+      { key: "apiKey", label: "API Key", type: "secret" },
+    ],
+    navidrome: [
+      { key: "url", label: "服务地址", type: "text" },
+      { key: "username", label: "用户名", type: "text" },
+      { key: "password", label: "口令", type: "secret" },
+    ],
+    portainer: [
+      { key: "url", label: "服务地址", type: "text" },
+      { key: "apiToken", label: "访问令牌", type: "secret" },
+    ],
+    mihomo: [
+      { key: "url", label: "服务地址", type: "text" },
+      { key: "secret", label: "secret", type: "secret" },
     ],
   };
 
@@ -889,7 +912,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
 /** 数据源 logo（Q27c：自绘简洁 SVG 标 —— 离线环境无官方资源）。 */
 function SourceLogo({ kind }: { kind: string }) {
   // Q38a（三.1）：已接入服务用官方图标（vendored，SOURCES.md 登记）；通用概念保留自绘
-  const brand: Record<string, string> = { monitor: "glances", opencode: "opencode" };
+  const brand: Record<string, string> = { monitor: "glances", opencode: "opencode", immich: "immich", navidrome: "navidrome", portainer: "portainer", mihomo: "mihomo" };
   if (brand[kind]) {
     return (
       <span className="wb-source-logo" aria-hidden>

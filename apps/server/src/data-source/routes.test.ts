@@ -111,8 +111,19 @@ describe("data sources API（D42 命名连接）", () => {
   it("kinds 契约（config 键白名单）", async () => {
     const res = await app.inject({ method: "GET", url: "/api/data-sources/kinds", cookies: { sid } });
     const kinds = res.json() as Array<{ kind: string; configKeys: string[] }>;
-    expect(kinds.map((k) => k.kind).sort()).toEqual(["http", "monitor", "opencode"]);
+    // Q39/D46：含第三方服务四类（immich/navidrome/portainer/mihomo）
+    expect(kinds.map((k) => k.kind).sort()).toEqual([
+      "http",
+      "immich",
+      "mihomo",
+      "monitor",
+      "navidrome",
+      "opencode",
+      "portainer",
+    ]);
     expect(kinds.find((k) => k.kind === "monitor")?.configKeys).toContain("password");
+    expect(kinds.find((k) => k.kind === "mihomo")?.configKeys).toContain("secret");
+    expect(kinds.find((k) => k.kind === "immich")?.configKeys).toContain("apiKey");
   });
 
   it("Q31: GET 列表行携带解析后的 config 对象（前端契约）", async () => {

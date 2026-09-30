@@ -20,6 +20,7 @@ import { appLauncherConnector } from "../connector/launcher.ts";
 import { iframeEmbedConnector } from "../connector/iframe.ts";
 import { opencodeConnector } from "../connector/opencode.ts";
 import { monitorConnector } from "../connector/monitor.ts";
+import { serviceOverviewConnector } from "../connector/service.ts";
 import {
   PluginPermissionError,
   fetchPluginData,
@@ -53,6 +54,7 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(iframeEmbedConnector);
   registry.register(opencodeConnector);
   registry.register(monitorConnector);
+  registry.register(serviceOverviewConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),

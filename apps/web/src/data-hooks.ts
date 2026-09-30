@@ -374,6 +374,26 @@ export function useMailAccounts() {
   };
 }
 
+/** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
+export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
+  const key = ["service-overview", sourceId ?? ""];
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => api.widgetData("service-overview", { sourceId }) as Promise<Record<string, unknown>>,
+    enabled: Boolean(sourceId),
+    staleTime: 30_000,
+    refetchInterval: refreshInterval(refreshSec, 60_000),
+  });
+  return {
+    data: query.data as
+      | { probe: { ok: boolean; version?: string; error?: string }; stats: Array<{ label: string; value: string }> }
+      | undefined,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
 /** 聚合邮件列表（只读；服务端 60s 缓存，手动刷新可 force 穿透）。 */
 export function useMailMessages(account: string | undefined, limit = 20, refreshSec?: unknown) {
   const qc = useQueryClient();
@@ -611,6 +631,11 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
   const monitor = useDataSources("monitor");
   const opencode = useDataSources("opencode");
   const http = useDataSources("http");
+  // Q39/D46：服务概览可选连接（immich/navidrome/portainer/mihomo）
+  const svcImmich = useDataSources("immich");
+  const svcNavidrome = useDataSources("navidrome");
+  const svcPortainer = useDataSources("portainer");
+  const svcMihomo = useDataSources("mihomo");
   return {
     "kanban-boards": boards.boards.map((b) => ({ value: b.id, label: b.title })),
     "todo-names": [...new Set((todosAll.data ?? []).map((t: { list: string }) => t.list))].map((n: string) => ({
@@ -620,6 +645,9 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
     "data-source:monitor": (monitor.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:opencode": (opencode.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:http": (http.data ?? []).map((r) => ({ value: r.id, label: r.name })),
+    "data-source:service": [...(svcImmich.data ?? []), ...(svcNavidrome.data ?? []), ...(svcPortainer.data ?? []), ...(svcMihomo.data ?? [])].map(
+      (r: { id: string; name: string }) => ({ value: r.id, label: r.name }),
+    ),
     tags: (tags.data ?? []).map((t: { id: string; name: string }) => ({ value: t.id, label: t.name })),
     "mail-accounts": mailAccounts.accounts.map((a: { id: string; name: string }) => ({ value: a.id, label: a.name })),
   };

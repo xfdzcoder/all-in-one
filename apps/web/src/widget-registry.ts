@@ -10,6 +10,7 @@ import { KanbanWidget } from "./kanban-widget";
 import { MailWidget } from "./mail-widget";
 import { OpencodeWidget } from "./opencode-widget";
 import { MonitorWidget } from "./monitor-widget";
+import { ServiceOverviewWidget } from "./service-overview-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -249,6 +250,25 @@ export const monitorManifest: WidgetManifest = {
 };
 
 /** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
+/** 服务概览（Q39/D46）：选一个服务连接 → 探活徽标 + 版本 + 关键计数。 */
+export const serviceOverviewManifest: WidgetManifest = {
+  type: "service-overview",
+  name: "服务概览",
+  description: "第三方服务状态一览（Immich / Navidrome / Portainer / Mihomo）：可达性 + 版本 + 关键计数",
+  icon: "apps",
+  category: "服务",
+  defaultSize: { w: 4, h: 3 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:service", help: "在「数据源管理 · 数据连接」维护（Immich / Navidrome / Portainer / Mihomo）" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    detail: true,
+  },
+};
+
 export const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
@@ -275,6 +295,7 @@ export const widgetComponents = {
   mail: MailWidget,
   opencode: OpencodeWidget,
   monitor: MonitorWidget,
+  "service-overview": ServiceOverviewWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -294,6 +315,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   mail: mailManifest,
   opencode: opencodeManifest,
   monitor: monitorManifest,
+  "service-overview": serviceOverviewManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -315,6 +337,7 @@ export const builtinManifests: WidgetManifest[] = [
   mailManifest,
   opencodeManifest,
   monitorManifest,
+  serviceOverviewManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

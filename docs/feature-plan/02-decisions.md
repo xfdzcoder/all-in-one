@@ -398,3 +398,12 @@
   2. **服务用官方图标不自绘**：`ServiceIcon` 组件 + `WidgetManifest.icon`（字符串=内置名或 URL）；数据连接画廊、组件选择器卡片已接线。通用概念（http/todo/kanban 等）不属「服务」，保留既有自绘/图标名。
   3. **自定义图标库**（Q38b）：用户上传 SVG/PNG 入 `icon` 表 + `data/icons/` 文件存储，数据源管理维护（增删/引用），配置侧以 URL/`custom:<id>` 引用（SEC3 不涉及密钥；SVG 上传须服务端净化，防 script 注入）。
 - **后果**：新增服务接入必须同步登记官方图标与来源；图标变更走 `SOURCES.md` 留痕。
+
+## D46 · 第三方服务接入形态（Immich / Navidrome / Portainer / Mihomo·metacubexd）
+
+- **日期**：2026-10-01（Q39，用户反馈⑪三.2「尝试接入更多数据源」）
+- **决策**：v1 = **连接 + 概览展示**（D36 同族「只做连接与展示」）：
+  1. 数据连接新增 `immich` / `navidrome` / `portainer` / `mihomo` 四类（**metacubexd 为 Mihomo 的 Web 前端，归 `mihomo` 类**，secret = external-controller 密钥）；认证字段与各服务 API 对齐（immich/portainer = API Key，navidrome = Subsonic u/p（salt+token md5），mihomo = Bearer secret），secret 一律入凭证库（SEC3）；目标为内网服务 → allowPrivate 通道（monitor 同族）。
+  2. 各服务适配器归一 `ServiceOverview { probe, version?, stats[] }`（探活 + 版本 + 关键计数；接口缺失 best-effort 省略）；「服务概览」组件消费（选连接 → 徽标 + 版本 + 计数 + 详情原始 JSON）。
+  3. **深度组件属二期另立需求**（Immich 照片墙、Navidrome 播放、Portainer 容器操作、Mihomo 代理切换等不在本项）。
+- **后果**：新服务接入按「连接 kind + 适配器 + ServiceOverview 归一」模式扩展；品牌图标按 D45 登记（SOURCES.md）。
