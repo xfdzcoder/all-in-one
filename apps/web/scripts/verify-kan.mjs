@@ -356,6 +356,22 @@ try {
   await sleep(1200);
   ok("KAN board selection persists (props round-trip)", await page.evaluate((t) => document.querySelector(".wb-kanban__board-title")?.textContent === t, boardTitle));
   ok("KAN columns persist after reload", await cardInColumn("进行中", cardC));
+  // Q35（二.4）：列宽恒为卡片宽度等分（无 min/max 干扰；期望值含列间距）
+  const colMeasure = await page.evaluate(() => {
+    const board = document.querySelector(".wb-kanban__board");
+    if (!board) return null;
+    const cols = [...board.querySelectorAll(".wb-kanban__col")].map((c) => c.getBoundingClientRect().width);
+    const gap = parseFloat(getComputedStyle(board).columnGap) || 0;
+    const boardW = board.getBoundingClientRect().width;
+    return { cols, gap, boardW, expected: (boardW - gap * (cols.length - 1)) / cols.length };
+  });
+  ok(
+    "KAN columns equal-split the card width (Q35)",
+    Boolean(colMeasure) &&
+      colMeasure.cols.length > 1 &&
+      colMeasure.cols.every((w) => Math.abs(w - colMeasure.expected) < 2),
+    JSON.stringify(colMeasure),
+  );
   ok(
     "KAN archived stays archived",
     await page.evaluate((t) => !(document.body.textContent ?? "").includes(t), cardB),

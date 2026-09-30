@@ -285,10 +285,9 @@
 
 /* ── 看板列头（P1-2）：标题为文本，点击进入编辑 ───────────── */
 .wb-kanban__col {
-  /* 五.3：列宽与看板卡片等分（列多时最小宽 + 横向滚动） */
+  /* Q35（二.4）：恒为卡片宽度的等分 —— 不设最小/最大宽（此前 min 132/max 320 破坏等分） */
   flex: 1 1 0;
-  min-width: 132px;
-  max-width: 320px;
+  min-width: 0;
   padding: var(--wb-space-2);
   border-radius: var(--wb-radius-sm);
   background: var(--wb-color-surface-raised);
