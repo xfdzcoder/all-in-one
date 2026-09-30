@@ -382,3 +382,19 @@
 
 - 顶层概念 **Workspace（空间/工作台）**，其下 **Dashboard（页面）**，再下 **Widget（组件）**；文档统一用 Workspace 作顶层。
 - 概念模型详见 [01-requirements.md](01-requirements.md) §1.3。
+
+## D44 · Todo 归档项语义（组件不可见，仅管理面）
+
+- **日期**：2026-09-30（Q29b，用户反馈⑩ ToDo 重构；补录）
+- **决策**：Todo 项增加 `archived` 标记；**组件一律不显示归档项**（含「全部」档），仅数据源管理「任务」页签可见并可恢复/删除；API `includeArchived=1` 仅管理面使用。
+- **后果**：「显示」三档（未完成/已完成/全部）均不含归档；归档 ≠ 删除（数据保留，FR-D4 边界不变）。
+
+## D45 · 图标体系（图标库 + 自定义图标库）
+
+- **日期**：2026-10-01（Q38，用户反馈⑪三.1）
+- **背景**：已接入服务此前用自绘 SVG，辨识度差；要求引入图标库并对已接入服务用**官方图标**，另支持自定义图标库。
+- **决策**：
+  1. **内置图标库 = vendored 品牌 SVG 子集**（`apps/web/src/icons/brand/`，随包分发、零外呼）：来源限 simple-icons（CC0）与 homarr-labs/dashboard-icons（集合 MIT，商标归各自所有者），`SOURCES.md` 逐个登记来源与许可；黑色单色图标改 `fill="currentColor"` 适配暗色主题；vendor 期内联 `<style>` 类填充为元素属性（防全局样式泄漏）、剥 `<title>`（防文本污染）。
+  2. **服务用官方图标不自绘**：`ServiceIcon` 组件 + `WidgetManifest.icon`（字符串=内置名或 URL）；数据连接画廊、组件选择器卡片已接线。通用概念（http/todo/kanban 等）不属「服务」，保留既有自绘/图标名。
+  3. **自定义图标库**（Q38b）：用户上传 SVG/PNG 入 `icon` 表 + `data/icons/` 文件存储，数据源管理维护（增删/引用），配置侧以 URL/`custom:<id>` 引用（SEC3 不涉及密钥；SVG 上传须服务端净化，防 script 注入）。
+- **后果**：新增服务接入必须同步登记官方图标与来源；图标变更走 `SOURCES.md` 留痕。

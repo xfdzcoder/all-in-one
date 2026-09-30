@@ -34,6 +34,7 @@ import {
 } from "./data-hooks";
 import { MailAccountsPanel } from "./mail-accounts";
 import { TagInput } from "./tag-input";
+import { ServiceIcon } from "./service-icon";
 import { WbAlert } from "./ui";
 
 /**
@@ -880,20 +881,17 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
 
 /** 数据源 logo（Q27c：自绘简洁 SVG 标 —— 离线环境无官方资源）。 */
 function SourceLogo({ kind }: { kind: string }) {
+  // Q38a（三.1）：已接入服务用官方图标（vendored，SOURCES.md 登记）；通用概念保留自绘
+  const brand: Record<string, string> = { monitor: "glances", opencode: "opencode" };
+  if (brand[kind]) {
+    return (
+      <span className="wb-source-logo" aria-hidden>
+        <ServiceIcon name={brand[kind]} size={22} />
+      </span>
+    );
+  }
   return (
     <span className="wb-source-logo" aria-hidden>
-      {kind === "monitor" && (
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M6 14.5l3-4 2.5 3 2-5 2.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
-      {kind === "opencode" && (
-        <svg viewBox="0 0 24 24" fill="none">
-          <rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      )}
       {kind === "http" && (
         <svg viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />

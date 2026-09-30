@@ -129,7 +129,7 @@ export const rssManifest: WidgetManifest = {
   type: "rss",
   name: "信息流",
   description: "多源 RSS/Atom 聚合，未读标记归 Workspace（跨组件同步）",
-  icon: "rss",
+  icon: "rss", // Q38a：官方品牌图标
   category: "信息流",
   defaultSize: { w: 4, h: 4 },
   minSize: { w: 2, h: 3 },
@@ -211,6 +211,7 @@ export const opencodeManifest: WidgetManifest = {
   type: "opencode",
   name: "OpenCode",
   description: "opencode 会话列表 / 状态 / 耗时 + API 版本探测（实验性接口）",
+  icon: "opencode", // Q38a：官方品牌图标
   category: "服务",
   defaultSize: { w: 4, h: 4 },
   minSize: { w: 3, h: 2 },
@@ -232,6 +233,7 @@ export const monitorManifest: WidgetManifest = {
   type: "monitor",
   name: "服务器监控",
   description: "Glances 等监控源打通：CPU / 内存 / 负载 / 磁盘（只做连接与展示）",
+  icon: "glances", // Q38a：官方品牌图标
   category: "服务",
   defaultSize: { w: 6, h: 4 },
   minSize: { w: 3, h: 2 },
@@ -251,6 +253,7 @@ export const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
   description: "多账号邮件聚合（只读）：列表 + 正文（沙箱渲染）",
+  icon: "gmail", // Q38a：官方品牌图标
   category: "信息流",
   defaultSize: { w: 6, h: 5 },
   minSize: { w: 3, h: 3 },

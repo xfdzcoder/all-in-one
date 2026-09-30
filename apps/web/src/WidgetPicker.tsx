@@ -4,6 +4,7 @@ import type { ConfigValues, WidgetManifest } from "@all-in-one/widget-sdk";
 
 import { builtinManifests } from "./widget-registry";
 import { ConfigForm } from "./ConfigForm";
+import { ServiceIcon } from "./service-icon";
 import { defaultsFromSchema } from "./config-form-utils";
 
 /**
@@ -49,6 +50,8 @@ export function WidgetPicker({
             // ISS-22（P0 修复）：固定高度 Button 塞多行会叠字 —— 改语义卡容器（.wb-picker-card）
             <UnstyledButton key={m.type} className="wb-picker-card" onClick={() => pick(m)}>
               <div className="wb-picker-card__head">
+                {/* Q38a：服务官方图标（有则显示，无则不占位） */}
+                <ServiceIcon name={m.icon} size={18} />
                 <Text size="sm" fw={600}>
                   {m.name}
                 </Text>

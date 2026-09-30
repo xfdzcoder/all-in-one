@@ -839,3 +839,17 @@
 .wb-admin__bar-right {
   margin-left: auto;
 }
+
+/* 服务官方图标（Q38a）：vendored SVG 渲染容器 */
+.wb-service-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.wb-service-icon > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
