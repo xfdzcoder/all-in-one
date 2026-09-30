@@ -83,11 +83,13 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const [dsName, setDsName] = useState("");
   const [dsConfig, setDsConfig] = useState<Record<string, string>>({});
   const [dsError, setDsError] = useState<string | null>(null);
+  // Q27c#3：数据连接 = 类型画廊（卡片 + logo）→ 点击进入该类型连接管理
+  const [dsView, setDsView] = useState<string>("gallery");
   const DS_KINDS = [
-    { value: "monitor", label: "监控源" },
-    { value: "opencode", label: "OpenCode" },
-    { value: "http", label: "HTTP / 自定义 API" },
-  ];
+    { value: "monitor", label: "监控源", desc: "Glances 等服务监控（CPU / 内存 / 磁盘 / 运行时长）", icon: "monitor" },
+    { value: "opencode", label: "OpenCode", desc: "opencode server 会话与状态（实验性接口）", icon: "opencode" },
+    { value: "http", label: "HTTP / 自定义 API", desc: "任意 HTTP 接口的认证来源（Bearer / 自定义头）", icon: "http" },
+  ] as Array<{ value: string; label: string; desc: string; icon: string }>;
   const DS_FIELDS: Record<string, Array<{ key: string; label: string; type: "text" | "select" | "secret"; options?: Array<{ value: string; label: string }> }>> = {
     monitor: [
       { key: "url", label: "监控源地址", type: "text" },
@@ -495,113 +497,153 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
           <MailAccountsPanel />
         </Tabs.Panel>
 
-        {/* ── 数据连接（D42：monitor / opencode / http 命名连接） ── */}
+        {/* ── 数据连接（D42）：类型画廊（Q27c#3）→ 连接管理 ── */}
         <Tabs.Panel value="sources" pt="xs">
           <Stack gap="xs">
-            {dsError && (
-              <WbAlert tone="error" size="sm" onClose={() => setDsError(null)}>
-                {dsError}
-              </WbAlert>
-            )}
-            <Group gap="xs" wrap="nowrap">
-              <Select
-                size="xs"
-                data={DS_KINDS}
-                value={dsKind}
-                onChange={(v) => {
-                  setDsKind(v ?? "monitor");
-                  resetDsForm();
-                }}
-                style={{ width: 150 }}
-                aria-label="连接类型"
-              />
-              <TextInput
-                size="xs"
-                placeholder="连接名称"
-                value={dsName}
-                onChange={(e) => setDsName(e.currentTarget.value)}
-                style={{ width: 150 }}
-              />
-              {DS_FIELDS[dsKind].map((f) =>
-                f.type === "select" ? (
-                  <Select
-                    key={f.key}
-                    size="xs"
-                    data={f.options ?? []}
-                    value={dsConfig[f.key] ?? "none"}
-                    onChange={(v) => setDsConfig((c) => ({ ...c, [f.key]: v ?? "" }))}
-                    style={{ width: 110 }}
-                    aria-label={f.label}
-                  />
-                ) : (
-                  <TextInput
-                    key={f.key}
-                    size="xs"
-                    type={f.type === "secret" ? "password" : "text"}
-                    placeholder={f.label}
-                    value={dsConfig[f.key] ?? ""}
-                    onChange={(e) => setDsConfig((c) => ({ ...c, [f.key]: e.currentTarget.value }))}
-                    style={{ width: 160 }}
-                  />
-                ),
-              )}
-              <Button size="xs" disabled={!dsName.trim()} onClick={() => void submitDs()}>
-                {dsEditing ? "保存修改" : "添加连接"}
-              </Button>
-              {dsEditing && (
-                <Button size="xs" variant="default" onClick={resetDsForm}>
-                  取消
-                </Button>
-              )}
-            </Group>
-            <div className="wb-admin__table">
-              {(dsRows.data ?? [])
-                .filter((r: DataSourceRow) => !q || r.name.includes(q))
-                .map((r: DataSourceRow) => (
-                  <div key={r.id} className="wb-admin__row" data-admin-row="source">
-                    <Badge size="xs" variant="outline">
-                      {DS_KINDS.find((k) => k.value === r.kind)?.label ?? r.kind}
-                    </Badge>
-                    <Text size="sm" fw={600} style={{ width: 140 }} truncate>
-                      {r.name}
-                    </Text>
-                    <Text size="xs" c="dimmed" className="wb-grow" truncate>
-                      {String(r.config.url ?? "")}
-                    </Text>
-                    <Button
-                      size="compact-xs"
-                      variant="subtle"
+            {dsView === "gallery" ? (
+              <div className="wb-source-grid">
+                {DS_KINDS.map((k) => {
+                  const count = (dsRows.data ?? []).filter((r: DataSourceRow) => r.kind === k.value).length;
+                  return (
+                    <button
+                      key={k.value}
+                      type="button"
+                      className="wb-source-card"
                       onClick={() => {
-                        setDsEditing(r.id);
-                        setDsKind(r.kind);
-                        setDsName(r.name);
-                        setDsConfig(
-                          Object.fromEntries(
-                            Object.entries(r.config ?? {})
-                              .filter(([, v]) => typeof v === "string")
-                              .map(([k, v]) => [k, String(v)]),
-                          ),
-                        );
+                        setDsKind(k.value);
+                        resetDsForm();
+                        setDsView(k.value);
                       }}
                     >
-                      编辑
-                    </Button>
-                    <ConfirmAction
-                      label="删除"
-                      size="compact-xs"
-                      variant="subtle"
-                      title="删除连接？"
-                      message={`确认删除连接「${r.name}」？（引用它的组件将回落内联配置；业务数据保留）`}
-                      onConfirm={() => dsMut.remove.mutate(r.id)}
+                      <SourceLogo kind={k.icon} />
+                      <Text size="sm" fw={600}>
+                        {k.label}
+                      </Text>
+                      <Text size="xs" c="dimmed" className="wb-source-card__desc">
+                        {k.desc}
+                      </Text>
+                      <Badge size="xs" variant="light">
+                        {count} 个连接
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Stack gap="xs">
+                <Group gap="xs">
+                  <Button
+                    size="xs"
+                    variant="default"
+                    onClick={() => {
+                      resetDsForm();
+                      setDsView("gallery");
+                    }}
+                  >
+                    ← 返回
+                  </Button>
+                  <Text size="sm" fw={600}>
+                    {DS_KINDS.find((k) => k.value === dsView)?.label}连接
+                  </Text>
+                </Group>
+                {dsError && (
+                  <WbAlert tone="error" size="sm" onClose={() => setDsError(null)}>
+                    {dsError}
+                  </WbAlert>
+                )}
+                <div className="wb-admin__section">
+                  <Text size="xs" c="dimmed">
+                    {dsEditing ? "编辑连接" : "添加连接"}
+                  </Text>
+                  <Group gap="xs" wrap="nowrap">
+                    <TextInput
+                      size="xs"
+                      placeholder="连接名称"
+                      value={dsName}
+                      onChange={(e) => setDsName(e.currentTarget.value)}
+                      style={{ width: 150 }}
                     />
-                  </div>
-                ))}
-              {(dsRows.data ?? []).length === 0 && (
-                <Text size="xs" c="dimmed">
-                  暂无{DS_KINDS.find((k) => k.value === dsKind)?.label}连接 —— 添加后组件可引用
-                </Text>
-              )}
-            </div>
+                    {DS_FIELDS[dsKind].map((f) =>
+                      f.type === "select" ? (
+                        <Select
+                          key={f.key}
+                          size="xs"
+                          data={f.options ?? []}
+                          value={dsConfig[f.key] ?? "none"}
+                          onChange={(v) => setDsConfig((c) => ({ ...c, [f.key]: v ?? "" }))}
+                          style={{ width: 110 }}
+                          aria-label={f.label}
+                        />
+                      ) : (
+                        <TextInput
+                          key={f.key}
+                          size="xs"
+                          type={f.type === "secret" ? "password" : "text"}
+                          placeholder={f.label}
+                          value={dsConfig[f.key] ?? ""}
+                          onChange={(e) => setDsConfig((c) => ({ ...c, [f.key]: e.currentTarget.value }))}
+                          style={{ width: 160 }}
+                        />
+                      ),
+                    )}
+                    <Button size="xs" disabled={!dsName.trim()} onClick={() => void submitDs()}>
+                      {dsEditing ? "保存修改" : "添加连接"}
+                    </Button>
+                    {dsEditing && (
+                      <Button size="xs" variant="default" onClick={resetDsForm}>
+                        取消
+                      </Button>
+                    )}
+                  </Group>
+                </div>
+                <Text size="xs" c="dimmed">已添加连接</Text>
+                <div className="wb-admin__table">
+                  {(dsRows.data ?? [])
+                    .filter((r: DataSourceRow) => r.kind === dsView && (!q || r.name.includes(q)))
+                    .map((r: DataSourceRow) => (
+                      <div key={r.id} className="wb-admin__row" data-admin-row="source">
+                        <Text size="sm" fw={600} style={{ width: 140 }} truncate>
+                          {r.name}
+                        </Text>
+                        <Text size="xs" c="dimmed" className="wb-grow" truncate>
+                          {String(r.config.url ?? "")}
+                        </Text>
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          onClick={() => {
+                            setDsEditing(r.id);
+                            setDsKind(r.kind);
+                            setDsName(r.name);
+                            setDsConfig(
+                              Object.fromEntries(
+                                Object.entries(r.config ?? {})
+                                  .filter(([, v]) => typeof v === "string")
+                                  .map(([k, v]) => [k, String(v)]),
+                              ),
+                            );
+                          }}
+                        >
+                          编辑
+                        </Button>
+                        <ConfirmAction
+                          label="删除"
+                          size="compact-xs"
+                          variant="subtle"
+                          title="删除连接？"
+                          message={`确认删除连接「${r.name}」？（引用它的组件将回落内联配置；业务数据保留）`}
+                          onConfirm={() => dsMut.remove.mutate(r.id)}
+                        />
+                      </div>
+                    ))}
+                  {(dsRows.data ?? []).filter((r: DataSourceRow) => r.kind === dsView).length === 0 && (
+                    <Text size="xs" c="dimmed">
+                      暂无连接 —— 添加后组件可引用
+                    </Text>
+                  )}
+                </div>
+              </Stack>
+            )}
           </Stack>
         </Tabs.Panel>
 
@@ -690,5 +732,31 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
         </Tabs.Panel>
       </Tabs>
     </div>
+  );
+}
+
+/** 数据源 logo（Q27c：自绘简洁 SVG 标 —— 离线环境无官方资源）。 */
+function SourceLogo({ kind }: { kind: string }) {
+  return (
+    <span className="wb-source-logo" aria-hidden>
+      {kind === "monitor" && (
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M6 14.5l3-4 2.5 3 2-5 2.5 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {kind === "opencode" && (
+        <svg viewBox="0 0 24 24" fill="none">
+          <rect x="2.5" y="4.5" width="19" height="15" rx="3" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {kind === "http" && (
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M3.5 12h17M12 3.5c2.5 2.4 2.5 14.6 0 17M12 3.5c-2.5 2.4-2.5 14.6 0 17" stroke="currentColor" strokeWidth="1.4" />
+        </svg>
+      )}
+    </span>
   );
 }

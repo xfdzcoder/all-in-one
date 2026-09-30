@@ -213,9 +213,11 @@ try {
   await page.keyboard.type(tagName);
   await sleep(400);
   await page.keyboard.press("Enter");
-  await sleep(600);
-  ok(
-    await page.evaluate(
+  // 轮询等待（打标 → 失效 → 重取 → 行内 chip 刷新，链路有 2 个往返）
+  let assignedOk = false;
+  for (let i = 0; i < 15 && !assignedOk; i += 1) {
+    await sleep(300);
+    assignedOk = await page.evaluate(
       ({ t, n }) => {
         const row = [...document.querySelectorAll(".wb-admin [data-admin-row=todo]")].find((r) =>
           (r.textContent ?? "").includes(t),
@@ -223,9 +225,9 @@ try {
         return (row?.textContent ?? "").includes(n);
       },
       { t: taskTagged, n: tagName },
-    ),
-    "TAG assign tag to task via TagInput",
-  );
+    );
+  }
+  ok(assignedOk, "TAG assign tag to task via TagInput");
   await page.evaluate(() =>
     [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
   );

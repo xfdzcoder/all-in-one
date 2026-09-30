@@ -664,3 +664,50 @@
   border: var(--wb-border);
   border-radius: var(--wb-radius-sm);
 }
+
+/* ── 数据连接类型画廊（Q27c#3）── */
+.wb-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--wb-space-3);
+}
+
+.wb-source-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-4);
+  text-align: left;
+  cursor: pointer;
+  background: var(--wb-color-surface-raised);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  color: var(--wb-color-text);
+  transition: background var(--wb-transition), border-color var(--wb-transition);
+}
+
+.wb-source-card:hover {
+  background: var(--wb-color-surface-hover);
+  border-color: var(--wb-color-border-strong);
+}
+
+.wb-source-card__desc {
+  min-height: 32px;
+}
+
+.wb-source-logo {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--wb-radius-sm);
+  background: color-mix(in srgb, var(--wb-color-accent) 16%, transparent);
+  color: var(--wb-color-accent-hover);
+}
+
+.wb-source-logo svg {
+  width: 24px;
+  height: 24px;
+}
