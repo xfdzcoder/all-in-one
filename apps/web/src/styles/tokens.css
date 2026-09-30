@@ -1,0 +1,69 @@
+/**
+ * 设计令牌（Q19b）—— 全站唯一的定制入口。
+ *
+ * 约定（支撑"用户可自定义所有 CSS"）：
+ * 1. 组件样式只允许引用本文件的 --wb-* 变量与语义类名（见 widgets.css）；
+ * 2. 用户覆盖方式二选一：
+ *    a) 覆盖变量：在 /custom.css（或任意更晚加载的样式表）重定义任意 --wb-* 即全局生效；
+ *    b) 覆盖规则：按 .wb-* 语义类名书写选择器（类名稳定、不随实现变动）；
+ * 3. 禁止在组件里写内联 style（内联不可覆盖）；本文件不使用 !important（不与用户抢优先级）。
+ */
+
+:root {
+  /* ── 表面（深色层级用表面明度表达，不用投影） ───────────────── */
+  --wb-color-bg: #0f1216;
+  --wb-color-surface: #161b22;
+  --wb-color-surface-hover: #1c222b;
+  --wb-color-surface-raised: #222a35;
+  --wb-color-border: rgba(255, 255, 255, 0.08);
+  --wb-color-border-strong: rgba(255, 255, 255, 0.16);
+  --wb-color-overlay: rgba(0, 0, 0, 0.55);
+
+  /* ── 文本（AA 已由 verify-dark 快检守护） ───────────────────── */
+  --wb-color-text: #e8eef5;
+  --wb-color-text-secondary: #b7c0cc;
+  --wb-color-text-muted: #a6a9ae;
+
+  /* ── 语义色 ─────────────────────────────────────────────── */
+  --wb-color-accent: #2f6fd0;
+  --wb-color-accent-hover: #3b7fe6;
+  --wb-color-success: #2f9e63;
+  --wb-color-warning: #d9822b;
+  --wb-color-danger: #d64545;
+  --wb-color-info: #2f9fc4;
+
+  /* ── 间距（8pt 网格） ───────────────────────────────────── */
+  --wb-space-1: 4px;
+  --wb-space-2: 8px;
+  --wb-space-3: 12px;
+  --wb-space-4: 16px;
+  --wb-space-6: 24px;
+  --wb-space-8: 32px;
+
+  /* ── 圆角 / 边框 / 阴影 ─────────────────────────────────── */
+  --wb-radius-sm: 6px;
+  --wb-radius-md: 10px;
+  --wb-radius-lg: 14px;
+  --wb-border: 1px solid var(--wb-color-border);
+  --wb-shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.5);
+
+  /* ── 字体 / 字阶 / 字重（模块化） ────────────────────────── */
+  --wb-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --wb-font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  --wb-text-xs: 12px;
+  --wb-text-sm: 13px;
+  --wb-text-md: 14px;
+  --wb-text-lg: 16px;
+  --wb-text-xl: 20px;
+  --wb-text-2xl: 26px;
+  --wb-leading: 1.5;
+  --wb-weight-regular: 400;
+  --wb-weight-medium: 500;
+  --wb-weight-semibold: 600;
+
+  /* ── 过渡 / 层级 ───────────────────────────────────────── */
+  --wb-transition: 150ms ease;
+
+  /* ── NFR2 触控目标（移动端由全局 CSS 引用；勿低于 44px） ──── */
+  --wb-touch-min: 44px;
+}

@@ -23,6 +23,7 @@ import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
 import { registerMailRoutes } from "./mail/routes.ts";
+import { MANTINE_BRIDGE_CSS } from "./styles-bridge.ts";
 import type { MailClientFactory } from "./mail/client.ts";
 
 export type AppDeps = {
@@ -58,6 +59,18 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     layoutSchemaVersion: LAYOUT_SCHEMA_VERSION,
     time: new Date().toISOString(),
   }));
+
+  // 样式定制层（Q19b"允许自定义所有 CSS"）：Mantine→令牌桥 + 用户自定义合并下发。
+  // 该表在 index.html 末尾加载（文档顺序最晚）→ 必然胜过打包/Mantine 注入的样式；
+  // 用户段永远拼接在桥接段之后 → 后写覆盖前写，全程无需 !important。
+  app.get("/custom.css", async (_req, reply) => {
+    const file = path.join(config.dataDir, "custom.css");
+    const user = existsSync(file)
+      ? readFileSync(file, "utf8")
+      : "/* 自定义样式写入 ./data/custom.css 即生效（令牌与类名见 docs/design-audit/02-custom-css.md）*/";
+    reply.type("text/css; charset=utf-8");
+    return `${MANTINE_BRIDGE_CSS}\n/* ── 用户自定义（./data/custom.css） ── */\n${user}`;
+  });
 
   // D11: OpenAPI 3.1 generated from the same zod schemas routes validate with.
   app.get("/api/openapi.json", async () => openApiDoc);

@@ -45,7 +45,7 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const url = config.url;
 
   return (
-    <Stack gap={6} style={{ height: "100%", overflow: "hidden", padding: 4 }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           服务器监控
@@ -150,6 +150,6 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
           <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />
         </Modal>
       )}
-    </Stack>
+    </div>
   );
 }

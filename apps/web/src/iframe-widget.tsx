@@ -30,7 +30,7 @@ export function IframeWidget({ url, sandbox }: IframeConfig) {
   const blocked = check != null && check.verified && !check.embeddable;
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="wb-widget">
       <Group gap={6} mb={4}>
         <Badge size="xs" variant="light" style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
           {url}

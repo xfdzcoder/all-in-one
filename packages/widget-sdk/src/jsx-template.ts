@@ -51,6 +51,18 @@ const DEFAULT_ALLOWED_PROPS = [
   "fs",
   "c",
   "ta",
+  "order",
+  "truncate",
+  "lineClamp",
+  "lh",
+  "lts",
+  "gap",
+  "wrap",
+  "justify",
+  "align",
+  "cols",
+  "spacing",
+  "display",
   "mt",
   "mb",
   "mx",
@@ -63,7 +75,6 @@ const DEFAULT_ALLOWED_PROPS = [
   "label",
   "w",
   "maw",
-  "lineClamp",
 ] as const;
 
 /** 属性/标识符危险名：经典逃逸面（原型链、调用劫持）。 */

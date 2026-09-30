@@ -30,7 +30,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
   const [detail, setDetail] = useState<OpencodeSession | null>(null);
 
   return (
-    <Stack gap={6} style={{ height: "100%", overflow: "hidden" }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           OpenCode 会话
@@ -121,6 +121,6 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
           </Stack>
         </Modal>
       )}
-    </Stack>
+    </div>
   );
 }

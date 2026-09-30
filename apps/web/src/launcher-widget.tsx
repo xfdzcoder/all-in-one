@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group, Text } from "@mantine/core";
 
 import { useAppLauncher } from "./data-hooks";
 
@@ -29,7 +29,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
   const { data, loading, error, refresh } = useAppLauncher(items, refreshSec);
 
   return (
-    <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           应用入口
@@ -66,6 +66,6 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
         ))}
       </Group>
       {items.length === 0 && <Text size="xs" c="dimmed">配置 itemsJson 添加服务入口</Text>}
-    </Stack>
+    </div>
   );
 }

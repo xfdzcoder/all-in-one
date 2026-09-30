@@ -73,7 +73,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const archivedCount = (tree?.cards ?? []).filter((c) => c.archived).length;
 
   return (
-    <Stack gap={6} style={{ height: "100%", overflow: "hidden" }}>
+    <div className="wb-widget">
       <Group gap={6} wrap="nowrap">
         <Select
           size="compact-xs"
@@ -323,6 +323,6 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           </Stack>
         )}
       </Modal>
-    </Stack>
+    </div>
   );
 }

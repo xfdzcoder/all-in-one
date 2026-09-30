@@ -209,7 +209,7 @@ export function Board({
         { w: 1200, c: 12 },
         { w: 900, c: 8 },
         { w: 600, c: 4 },
-        { w: 480, c: 2 },
+        { w: 480, c: 1 }, // D39：手机单列全宽（2 列挤压导致标题折行破碎）
       ],
       layout: "moveScale" as const,
     },

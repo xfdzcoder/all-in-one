@@ -1,0 +1,181 @@
+/**
+ * 语义类名体系（Q19b）—— 组件结构样式。
+ *
+ * 命名：`.wb-<组件>__<部位>`（BEM 风格），类名即公共 API：
+ * 用户可在 /custom.css 按同名选择器覆盖任意规则；新增样式必须走令牌 + 语义类。
+ */
+
+/* ── 组件容器（WidgetCard）────────────────────────────────── */
+.wb-widget {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2);
+  background: var(--wb-color-surface);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  overflow: hidden;
+}
+
+.wb-widget__header {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border-bottom: var(--wb-border);
+  min-height: 38px;
+  flex-shrink: 0;
+}
+
+.wb-widget__title {
+  font-size: var(--wb-text-md);
+  font-weight: var(--wb-weight-semibold);
+  color: var(--wb-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wb-widget__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+  flex-shrink: 0;
+}
+
+.wb-widget__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--wb-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-2);
+}
+
+.wb-widget__hint {
+  color: var(--wb-color-text-muted);
+  font-size: var(--wb-text-sm);
+}
+
+/* ── 通用卡片 / 列表行 / 药丸 / 指标 ───────────────────────── */
+.wb-card {
+  background: var(--wb-color-surface-raised);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  padding: var(--wb-space-2) var(--wb-space-3);
+  transition: background var(--wb-transition), border-color var(--wb-transition);
+}
+
+.wb-card--interactive {
+  cursor: pointer;
+}
+
+.wb-card--interactive:hover {
+  background: var(--wb-color-surface-hover);
+  border-color: var(--wb-color-border-strong);
+}
+
+.wb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2) 0;
+}
+
+.wb-row + .wb-row {
+  border-top: var(--wb-border);
+}
+
+.wb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+  padding: var(--wb-space-1) var(--wb-space-2);
+  border-radius: 999px;
+  background: var(--wb-color-surface-hover);
+  border: var(--wb-border);
+  font-size: var(--wb-text-xs);
+  color: var(--wb-color-text-secondary);
+  cursor: pointer;
+}
+
+.wb-pill:hover {
+  border-color: var(--wb-color-border-strong);
+}
+
+.wb-metric {
+  flex: 1;
+  min-width: 90px;
+  background: var(--wb-color-surface-raised);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  padding: var(--wb-space-2) var(--wb-space-3);
+}
+
+.wb-metric__label {
+  font-size: var(--wb-text-xs);
+  color: var(--wb-color-text-muted);
+}
+
+.wb-metric__value {
+  font-size: var(--wb-text-xl);
+  font-weight: var(--wb-weight-semibold);
+  color: var(--wb-color-text);
+  line-height: 1.2;
+}
+
+.wb-metric__hint {
+  font-size: var(--wb-text-xs);
+  color: var(--wb-color-text-muted);
+}
+
+/* ── 文本语义（与 --wb-color-text-* 对应） ─────────────────── */
+.wb-text {
+  color: var(--wb-color-text);
+  font-size: var(--wb-text-md);
+  line-height: var(--wb-leading);
+}
+
+.wb-text--secondary {
+  color: var(--wb-color-text-secondary);
+}
+
+.wb-text--muted {
+  color: var(--wb-color-text-muted);
+}
+
+.wb-text--sm {
+  font-size: var(--wb-text-sm);
+}
+
+.wb-text--xs {
+  font-size: var(--wb-text-xs);
+}
+
+/* ── 页面级（头部/页签区/工具栏）──────────────────────────── */
+.wb-header {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-3);
+  padding: var(--wb-space-2) var(--wb-space-4);
+  border-bottom: var(--wb-border);
+  background: var(--wb-color-surface);
+}
+
+.wb-brand {
+  font-size: var(--wb-text-lg);
+  font-weight: var(--wb-weight-semibold);
+  color: var(--wb-color-text);
+}
+
+.wb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--wb-space-3);
+}

@@ -10,7 +10,7 @@ describe("restricted JSX template (D35: 模板是数据不是代码)", () => {
   it("parses a normal template with bindings and safe helpers", () => {
     const src = `
       <Stack>
-        <Title>{data.title}</Title>
+        <Title order={4}>{data.title}</Title>
         <Text size="sm">{String(data.name).toUpperCase()} · {Math.round(data.cpu)}%</Text>
         {data.ok ? <Badge>OK</Badge> : <Badge>DOWN</Badge>}
         <Progress value={data.cpu} label="CPU" />

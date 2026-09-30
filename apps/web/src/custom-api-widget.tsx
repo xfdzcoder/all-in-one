@@ -49,7 +49,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
   );
 
   return (
-    <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
           自定义 API
@@ -85,7 +85,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
           <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />
         </Modal>
       )}
-    </Stack>
+    </div>
   );
 }
 

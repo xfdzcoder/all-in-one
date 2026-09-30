@@ -26,7 +26,7 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
   return (
-    <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           信息流
@@ -166,6 +166,6 @@ export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig 
           </Stack>
         </Modal>
       )}
-    </Stack>
+    </div>
   );
 }

@@ -314,6 +314,19 @@
 
 ---
 
+## D39 · 样式定制契约（令牌 + 语义类 + 用户样式表）与移动端单列
+
+- **状态**：已决（用户要求 + 视觉审计 P0-1/P0-2，2026-09-30）
+- **背景**：用户明确要求"允许用户自定义所有的 CSS"，且需高质量、命名清晰、可复用、可替代的 CSS。视觉审计另发现组件卡片无容器（P0-1）、≤480px 双列挤压标题折行破碎（P0-2，与 D12 断点 480→2 列相抵）。
+- **决策**：
+  1. **三层定制契约**（详见 `docs/design-audit/02-custom-css.md`）：① 全部设计决策收敛为 `apps/web/src/styles/tokens.css` 的 `--wb-*` 令牌；② 组件结构用稳定 `.wb-*` 语义类名（BEM），类名即公共 API，**禁止内联 style**；③ 用户样式写 `./data/custom.css`，与 Mantine 令牌桥合并经 `/custom.css` 于 **index.html 末尾**下发（段内后写覆盖前写，用户永远赢，全程无 `!important`）。
+  2. **Mantine 桥接不走 `cssVariablesResolver`**：实测其输出与 Mantine 默认值并入同一规则（默认在后覆盖我们），故桥接表由服务端合成下发（`apps/server/src/styles-bridge.ts`）。
+  3. **移动端单列**：gridstack 断点 `{ w: 480, c: 2 }` → `{ w: 480, c: 1 }`（P0-2 修复，修正 D12 的 480→2 列）。
+- **影响**：主题改造只需覆盖令牌；`verify-dark` 3 面 AA 保持 0 失败；新增 `/custom.css` 契约测试（bridge 在前、用户在后）。唯一 `!important` 保留给 NFR2 触控下限（可达性优先）。
+- **被否备选**：`!important` 覆盖 Mantine 变量（与用户抢优先级，违背定制要求）；纯内联样式主题（不可覆盖）；仅提供主题切换（覆盖面不足"所有 CSS"）。
+
+---
+
 ## 命名约定（非编号决策，已确认）
 
 - 顶层概念 **Workspace（空间/工作台）**，其下 **Dashboard（页面）**，再下 **Widget（组件）**；文档统一用 Workspace 作顶层。

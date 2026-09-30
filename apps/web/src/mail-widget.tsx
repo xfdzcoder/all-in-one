@@ -69,7 +69,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
   };
 
   return (
-    <Stack gap={6} style={{ height: "100%", overflow: "hidden" }}>
+    <div className="wb-widget">
       <Group gap={6} wrap="nowrap">
         <Select
           size="compact-xs"
@@ -257,6 +257,6 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           </Stack>
         </Stack>
       </Modal>
-    </Stack>
+    </div>
   );
 }

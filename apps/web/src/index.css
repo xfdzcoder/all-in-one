@@ -1,27 +1,18 @@
-html {
-  /* 深色模式：原生控件/滚动条跟随深色（Mantine 组件另行经 defaultColorScheme=dark） */
+@import "./styles/tokens.css";
+@import "./styles/widgets.css";
+
+/* 基础层（元素级，最后加载 = 可被用户 /custom.css 覆盖） */
+body {
+  margin: 0;
+  font-family: var(--wb-font-sans);
+  background: var(--wb-color-bg);
+  color: var(--wb-color-text);
   color-scheme: dark;
 }
 
-/* 深色标定（verify-dark 快检驱动）：Mantine 默认 dimmed/placeholder 灰在深底上
-   仅 ~2.5–4.0:1，提亮到 AA；!important 因 Mantine 运行时注入同优先级变量会覆盖本层。 */
-[data-mantine-color-scheme="dark"] {
-  --mantine-color-dimmed: #a6a9ae !important;
-  --mantine-color-placeholder: #a6a9ae !important;
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #14181f;
-  color: #e8e8e8;
-}
-
-/*
- * NFR2：移动端触控目标 ≥44px（375px 核心操作路径可用）。
+/* NFR2：移动端触控目标 ≥44px（375px 核心浏览/操作路径可用）。
  * 用 !important 覆盖组件库（Mantine）按 size 变体设置的 min-height ——
- * 触控可达性优先于紧凑外观。
- */
+ * 触控可达性优先于紧凑外观（此条为可达性下限，用户如需覆盖请自行评估 NFR2）。 */
 @media (max-width: 767px) {
   button,
   a[href],
@@ -31,8 +22,8 @@ body {
   [role="checkbox"],
   [role="tab"],
   [role="combobox"] {
-    min-height: 44px !important;
-    min-width: 44px;
+    min-height: var(--wb-touch-min) !important;
+    min-width: var(--wb-touch-min);
     box-sizing: border-box;
   }
 }

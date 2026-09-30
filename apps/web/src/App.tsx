@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   AppShell,
   Button,
+  createTheme,
   Center,
   Group,
   Loader,
@@ -21,6 +22,19 @@ import { ConfirmAction } from "./confirm";
 import { LoginPage } from "./LoginPage";
 import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
+
+/** Q19b：主题令牌（theme 字段在同一规则内无竞争，值全部引用 --wb-* 令牌）。 */
+const theme = createTheme({
+  primaryColor: "blue",
+  fontFamily: "var(--wb-font-sans)",
+  defaultRadius: "sm",
+  radius: {
+    xs: "calc(var(--wb-radius-sm) / 2)",
+    sm: "var(--wb-radius-sm)",
+    md: "var(--wb-radius-md)",
+    lg: "var(--wb-radius-lg)",
+  },
+});
 
 type SessionState =
   | { kind: "loading" }
@@ -268,14 +282,8 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider
-        defaultColorScheme="dark"
-        theme={{
-          primaryColor: "blue",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          defaultRadius: "sm",
-        }}
-      >
+      {/* Mantine 变量桥见 apps/server/src/styles-bridge.ts（经 /custom.css 末尾下发，层叠必胜） */}
+      <MantineProvider defaultColorScheme="dark" theme={theme}>
         {session.kind === "loading" && (
           <Center h="50vh">
             <Loader />

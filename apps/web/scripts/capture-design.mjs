@@ -11,7 +11,9 @@ import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 
 const WEB = "http://localhost:4173/";
-const OUT = join(process.cwd(), "..", "..", "docs", "design-audit", "baseline");
+const OUT = process.env.DESIGN_OUT
+  ? join(process.cwd(), "..", "..", "docs", "design-audit", process.env.DESIGN_OUT)
+  : join(process.cwd(), "..", "..", "docs", "design-audit", "baseline");
 mkdirSync(OUT, { recursive: true });
 
 const now = Date.now();

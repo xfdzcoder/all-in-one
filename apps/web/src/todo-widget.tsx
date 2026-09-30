@@ -27,7 +27,7 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
   const items = (data ?? []).filter((t) => (filter === "open" ? !t.done : true));
 
   return (
-    <Stack gap="xs" style={{ height: "100%", overflow: "auto", padding: 4 }}>
+    <div className="wb-widget">
       <Group gap={6}>
         <Text size="sm" fw={600} style={{ flex: 1 }}>
           Todo · {list}
@@ -109,6 +109,6 @@ export function TodoWidget({ list = "inbox", filter = "open", refreshSec }: Todo
           </Stack>
         </Modal>
       )}
-    </Stack>
+    </div>
   );
 }
