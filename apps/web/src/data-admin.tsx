@@ -427,26 +427,54 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
         {/* ── 看板（Q26a/#1：看板/列/卡片管理 + 归档恢复） ── */}
         <Tabs.Panel value="kanban" pt="xs">
           <Stack gap="xs">
-            {/* 五.4：选择看板一行 + 新建看板入右上角（对齐邮箱样式，按需展开） */}
+            {/* 一.1（Q30）：左=看板下拉（缩短）+「＋ 新建看板」紧邻；右=当前看板名称+删除看板（同一行、缩短、靠右） */}
             <div className="wb-admin__bar">
-              <Select
-                size="xs"
-                placeholder="选择看板"
-                data={boards.boards.map((b) => ({ value: b.id, label: b.title }))}
-                value={activeBoardId ?? null}
-                onChange={(v) => v && setBoardId(v)}
-                nothingFoundMessage="暂无看板"
-                aria-label="看板选择"
-                className="wb-grow"
-              />
-              <Button
-                size="xs"
-                variant={newBoardOpen ? "default" : "filled"}
-                className="wb-admin__addbtn"
-                onClick={() => setNewBoardOpen((v) => !v)}
-              >
-                {newBoardOpen ? "收起" : "＋ 新建看板"}
-              </Button>
+              <div className="wb-admin__bar-group">
+                <Select
+                  size="xs"
+                  w={200}
+                  placeholder="选择看板"
+                  data={boards.boards.map((b) => ({ value: b.id, label: b.title }))}
+                  value={activeBoardId ?? null}
+                  onChange={(v) => v && setBoardId(v)}
+                  nothingFoundMessage="暂无看板"
+                  aria-label="看板选择"
+                />
+                <Button
+                  size="xs"
+                  variant={newBoardOpen ? "default" : "filled"}
+                  onClick={() => setNewBoardOpen((v) => !v)}
+                >
+                  {newBoardOpen ? "收起" : "＋ 新建看板"}
+                </Button>
+              </div>
+              {activeBoardId && (
+                <div className="wb-admin__bar-group wb-admin__bar-right">
+                  <TextInput
+                    key={activeBoardId}
+                    size="xs"
+                    w={170}
+                    placeholder="看板名称"
+                    defaultValue={boards.boards.find((b) => b.id === activeBoardId)?.title ?? ""}
+                    aria-label="看板名称"
+                    onBlur={(e) => {
+                      const v = e.currentTarget.value.trim();
+                      const cur = boards.boards.find((b) => b.id === activeBoardId);
+                      if (v && cur && v !== cur.title) void m.renameBoard(activeBoardId, v);
+                    }}
+                  />
+                  <ConfirmAction
+                    label="删除看板"
+                    size="compact-xs"
+                    variant="subtle"
+                    title="删除看板？"
+                    message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
+                    onConfirm={() => {
+                      void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
+                    }}
+                  />
+                </div>
+              )}
             </div>
             {newBoardOpen && (
               <div className="wb-admin__section">
@@ -483,33 +511,6 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
 
             {activeBoardId && (
               <>
-                <div className="wb-admin__section">
-                  <Text size="xs" c="dimmed">看板名称</Text>
-                  <Group gap="xs" wrap="nowrap">
-                    <TextInput
-                      size="xs"
-                      className="wb-grow"
-                      defaultValue={boards.boards.find((b) => b.id === activeBoardId)?.title ?? ""}
-                      aria-label="看板名称"
-                      onBlur={(e) => {
-                        const v = e.currentTarget.value.trim();
-                        const cur = boards.boards.find((b) => b.id === activeBoardId);
-                        if (v && cur && v !== cur.title) void m.renameBoard(activeBoardId, v);
-                      }}
-                    />
-                    <ConfirmAction
-                      label="删除看板"
-                      size="compact-xs"
-                      variant="subtle"
-                      title="删除看板？"
-                      message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
-                      onConfirm={() => {
-                        void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
-                      }}
-                    />
-                  </Group>
-                </div>
-
                 {/* Q28b：真·看板式列排布（列并排横排、列内卡片纵排） */}
                 <div className="wb-admin__board">
                   {(tree.tree?.columns ?? [])

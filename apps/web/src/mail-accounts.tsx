@@ -66,7 +66,7 @@ export function MailAccountsPanel() {
         <Button
           size="xs"
           variant={formOpen ? "default" : "filled"}
-          className="wb-admin__addbtn"
+          className="wb-admin__bar-right"
           onClick={() => setFormOpenNew((v) => !v)}
         >
           {formOpen ? "收起表单" : "＋ 添加邮箱"}

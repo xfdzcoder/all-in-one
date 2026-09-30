@@ -832,7 +832,14 @@
   max-width: 150px;
 }
 
-/* 管理页顶栏：添加入口右上角（Q29e 四.3/五.4） */
-.wb-admin__addbtn {
+/* 管理页顶栏内分组（Q30 一.1：左组=下拉+新建；右组=名称+删除，缩短靠右） */
+.wb-admin__bar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  min-width: 0;
+}
+
+.wb-admin__bar-right {
   margin-left: auto;
 }
