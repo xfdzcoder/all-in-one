@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 30 轮 · Q-G1/Q-G2 ✅ Gmail OAuth 打通（D37）；下一项 Q-G3 文档 + Q10 受限 JSX） |
+| 最近更新 | 2026-09-30（第 31 轮 · Q-G3 ✅ Gmail 文档收口 —— **Gmail 打通全部完成**；下一项 Q10 受限 JSX 模板（D35）） |
 
 ## 迭代队列
 
@@ -38,7 +38,7 @@
 - [ ] Q10 · 二期：自定义 API 受限 JSX 模板（**D35**：Homarr 模式 —— 组件白名单 + 安全绑定 + 危险标识符拒绝 + 渲染期剥离 + 恶意样例回归）
 - [x] Q-G1 · Gmail OAuth 绑定流程（client_id/secret 环境变量、callback 端点、state 防伪、refresh_token 入凭证库，**D37**）**✅ 2026-09-30**
 - [x] Q-G2 · Gmail 拉取映射（messages.list/get 只读 → 归一并入邮件聚合列表；uid 放宽 IMAP/Gmail 双形态）**✅ 2026-09-30**
-- [ ] Q-G3 · Gmail 部署文档 + 验收记录（Google Cloud OAuth 配置步骤、GMAIL_* 环境变量说明、手工旅程记录）
+- [x] Q-G3 · Gmail 部署文档 + 验收记录（Google Cloud OAuth 配置步骤、GMAIL_* 环境变量、Testing 模式 token 7 天过期等注意项、手工旅程记录）**✅ 2026-09-30**
 - [x] Q20 · 用户反馈①：深色模式根治（Mantine dark scheme + 灰阶标定 + verify-dark AA 快检 3/3）**✅ 2026-09-30**
 - [x] Q21 · 用户反馈②：编辑态组件内容惰性（**D38**：inert + FR-P8 语义；verify-p8 8/8）**✅ 2026-09-30**
 - [ ] Q19 · 用户反馈③：视觉设计优化（主题 token 统一、间距/字号节奏、卡片与页签样式、空态设计）——后置
@@ -88,6 +88,7 @@
 | 28 | 2026-09-30 | **用户反馈修复轮 + 拍板落盘**：① 深色模式根治（反馈"看不清"）——根因是 Mantine 未开深色主题（浅色组件套深色外壳）：`defaultColorScheme="dark"` + `color-scheme: dark` + dimmed/placeholder 灰阶标定（!important 抗运行时注入覆盖）+ 占位组件白字；`verify-dark.mjs` 3/3 WCAG AA 快检（438–476 元素/面，0 失败）。② 编辑态组件内容惰性（**D38**，反馈"编辑时禁止改卡片"）：WidgetChrome 内容层 `inert` + `pointer-events:none`，「配置」入口保留；`verify-p8.mjs` 8/8（真实鼠标语义：浏览可操作/编辑惰性/配置可用/恢复）；旅程脚本（j4/j6/kan/mail + Playwright J4）改为浏览态操作。③ 三项拍板销项：**D35** 受限 JSX 模板（Homarr 模式）、**D36** 监控打通（Glances 等第三方服务）、**D37** Gmail OAuth 专项 —— 队列改写 Q9/Q10 + 新增 Q-G1~3；样式优化排 Q19 后置。顺带：vite 代理目标可用 VITE_API_PROXY 覆盖（并行实例互不干扰） | 全量 22 脚本 371 项 ✅（含 verify-dark/verify-p8 新增）；Playwright 5/5 ✅；Vitest 123/123 ✅；typecheck/lint ✅ | `bd91382`、`ee06c6c` |
 | 29 | 2026-09-30 | **Q9 监控打通（D36）**：`connector/monitor.ts` Glances REST API v4 适配器（quicklook/load/mem/fs/uptime/version → 归一化指标；端点 best-effort + **形状校验**——全 200 但字段不符显式"形状不符"，绝不空白）；认证 none/basic/bearer（口令入凭证库 SEC3）；`monitor-widget.tsx` 指标卡（CPU/内存/负载）+ 磁盘进度条（按使用率着色）+ 运行时长/CPU 名 + 版本徽标 + 手动刷新（force）+ FR-I4 详情弹层。**对齐修正**：`outboundRequest` 增加 allowPrivate 通道，opencode/monitor 与 app-launcher 同族按 D22/D32/D36 默认放行内网（代码与文档一致化） | server 128/128（新增 6 项：归一化/奇形字段、Basic+Bearer 注入、部分失败容忍、不可达/形状不符探测错）✅；verify-mon 15/15 ✅；全量 23 脚本 386 项 ✅；Playwright 5/5 ✅ | `725b694` |
 | 30 | 2026-09-30 | **Q-G1/Q-G2 Gmail 打通（D37）**：`mail/gmail.ts` OAuth 授权流（authorize URL（gmail.readonly/离线访问/CSRF state）→ code-token 交换 → access_token 缓存刷新）+ 拉取映射（messages.list → 逐封 metadata 头；正文 format=raw + mailparser MIME；SEEN 只读不回写）；schema `mail_account.kind`（imap/gmail，迁移 0008）+ uid 放宽数字/字符串双形态；服务端 kind 感知客户端工厂（gmail 借凭证位存 refresh_token，client_id/secret 走部署环境变量）；回调端点建账号+凭证、极简 HTML 结果、state 防伪（10 分钟 TTL）；web「绑定 Gmail 账号（OAuth）」入口 | server 133/133（新增 5 项：授权参数/令牌交换/缓存/列表序与头/MIME 正文）✅；verify-gmail 14/14（连跑两轮：完整绑定旅程 —— 授权 URL 参数、回调建账号（refresh_token 仅凭证引用）、令牌交换可见、非法 state 拒绝、清理）✅；全量 24 脚本 400 项 ✅；Playwright 5/5 ✅ | `fa01344` |
+| 31 | 2026-09-30 | **Q-G3 Gmail 文档收口**：deploy.md「接入 Gmail（可选，D37）」——Google Cloud 五步（启用 Gmail API / 同意屏幕测试用户 / Web OAuth 客户端与逐字符一致的回调 URI / 环境变量 / 绑定旅程）、compose 透传 GMAIL_CLIENT_ID/SECRET；运营注意项：Testing 模式 refresh_token 7 天过期（或"发布上线"）、redirect_uri_mismatch 排查。验收记录 = verify-gmail.mjs 14 项（mock Google 完整绑定旅程）+ 五步即真实 Google 手工旅程记录 | compose config 校验 ✅；Vitest 133/133 ✅ | `271979d` |
 
 ## 待用户确认
 
