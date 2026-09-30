@@ -7,10 +7,11 @@
 
 | 层级 | 位置 | 内容 |
 |---|---|---|
-| 问题台账 | [00-issues.md](00-issues.md) | ★ 全部样式/逻辑问题（分级、复现、证据、建议） |
+| 问题台账 | [00-issues.md](00-issues.md) | ★ 全部样式/逻辑问题（分级、复现、证据、Q24 建议） |
+| 按钮总索引 | [00-button-index.md](00-button-index.md) | 全站按钮/交互点一览（含确认/写回/同步标注） |
 | 页面 | [pages/01-login.md](pages/01-login.md) · [02-workspace.md](pages/02-workspace.md) · [03-edit-mode.md](pages/03-edit-mode.md) | 页面结构 → 组件 → 按钮/交互点 |
-| 组件 | [components/](components/)（Q23b：todo/rss/kanban/mail/monitor/opencode/launcher/iframe/custom-api/placeholder/statbox/plugin-widget） | 内置组件的配置、数据流、状态与交互点 |
-| 交互面 | [surfaces/](surfaces/)（Q23c：widget-picker/config-form/confirm/data-admin/plugin-admin/detail-modals/plugin-runtime） | 弹窗/管理面/插件体系 |
+| 组件 | [components/](components/)：todo · rss · kanban · mail · monitor · opencode · launcher · iframe · custom-api · placeholder-statbox · plugin-widget | 内置组件的配置、数据流、状态与交互点 |
+| 交互面 | [surfaces/](surfaces/)：widget-picker · config-form · confirm · data-admin · plugin-admin · detail-modals · plugin-runtime | 弹窗/管理面/插件体系 |
 | 截图 | [assets/](assets/) | 关键态截图，命名 = 文档引用锚点 |
 
 ## 全局交互约定（各篇交叉引用此处）

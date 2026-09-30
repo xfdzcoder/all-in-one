@@ -181,6 +181,34 @@ try {
   await clickBtn("完成编辑");
   await sleep(400);
 
+  // ── 交互面 · 数据管理（三页签）──
+  await clickBtn("数据管理");
+  await sleep(500);
+  await shot("s-data-admin-todo");
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+      (t) => t.offsetParent !== null && t.textContent.trim() === "信息源",
+    );
+    tab?.click();
+  });
+  await sleep(300);
+  await shot("s-data-admin-feeds");
+  await page.evaluate(() => {
+    const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+      (t) => t.offsetParent !== null && t.textContent.trim() === "标签",
+    );
+    tab?.click();
+  });
+  await sleep(300);
+  await shot("s-data-admin-tags");
+  await page.evaluate(() => {
+    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+      (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+    );
+    roots[roots.length - 1]?.querySelector(".mantine-Modal-close")?.click();
+  });
+  await sleep(300);
+
   // ── 移动端视图（D10 只读差异）──
   await page.setViewport({ width: 375, height: 780 });
   await sleep(600);
