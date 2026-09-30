@@ -17,6 +17,7 @@ import type { FeedSource, TagRow, TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useFeedMutations, useFeedSources, useTagMutations, useTags, useTodoMutations, useTodos } from "./data-hooks";
 import { WbAlert } from "./ui";
+import { listLabel } from "./widget-registry";
 
 /**
  * 数据管理（FR-D2 / D40）：Workspace 级数据的统一管理处。
@@ -47,6 +48,8 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
   const [newTagName, setNewTagName] = useDraft();
   const [newTagColor, setNewTagColor] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  // ISS-26：列表搜索（标题/URL/名称）
+  const [q, setQ] = useState("");
 
   const tagOptions = (tags.data ?? []).map((t: TagRow) => ({ value: t.id, label: t.name }));
 
@@ -54,6 +57,12 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
     <Modal opened={opened} onClose={onClose} title="数据管理" size="lg">
       <Stack gap="sm">
         {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
+        <TextInput
+          size="xs"
+          placeholder="搜索任务 / 订阅源 / 标签…"
+          value={q}
+          onChange={(e) => setQ(e.currentTarget.value)}
+        />
         <Tabs defaultValue="todo">
           <Tabs.List>
             <Tabs.Tab value="todo">Todo</Tabs.Tab>
@@ -89,7 +98,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                   添加
                 </Button>
               </Group>
-              {(todos.data ?? []).map((t: TodoItem) => (
+              {(todos.data ?? []).filter((t: TodoItem) => !q || t.title.includes(q) || listLabel(t.list).includes(q)).map((t: TodoItem) => (
                 <Group key={t.id} gap="xs" wrap="nowrap">
                   <Checkbox
                     checked={t.done}
@@ -100,7 +109,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                     {t.title}
                   </Text>
                   <Badge size="xs" variant="outline">
-                    {t.list}
+                    {listLabel(t.list)}
                   </Badge>
                   <MultiSelect
                     size="xs"
@@ -171,7 +180,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                   订阅
                 </Button>
               </Group>
-              {(sources.data ?? []).map((s: FeedSource) => (
+              {(sources.data ?? []).filter((src: FeedSource) => !q || src.title.includes(q) || src.url.includes(q)).map((s: FeedSource) => (
                 <Group key={s.id} gap="xs" wrap="nowrap">
                   <Text size="xs" fw={600} style={{ width: 110 }} truncate>
                     {s.title}
@@ -247,7 +256,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                   添加
                 </Button>
               </Group>
-              {(tags.data ?? []).map((t: TagRow) => (
+              {(tags.data ?? []).filter((t: TagRow) => !q || t.name.includes(q)).map((t: TagRow) => (
                 <Group key={t.id} gap="xs" wrap="nowrap">
                   <TextInput
                     size="xs"

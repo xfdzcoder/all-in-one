@@ -48,11 +48,16 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
     password: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
+  // ISS-17：账号可编辑（留空口令 = 不改）
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const resetForm = () =>
+    setForm({ name: "", host: "", port: "993", security: "ssl", username: "", folder: "INBOX", password: "" });
 
   const submitAccount = async () => {
     setFormError(null);
     try {
-      await m.createAccount({
+      const payload = {
         name: form.name.trim(),
         host: form.host.trim(),
         port: Number(form.port) || 993,
@@ -60,8 +65,11 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
         username: form.username.trim(),
         folder: form.folder.trim() || "INBOX",
         password: form.password || undefined,
-      });
-      setForm({ name: "", host: "", port: "993", security: "ssl", username: "", folder: "INBOX", password: "" });
+      };
+      if (editingId) await api.patchMailAccount(editingId, payload);
+      else await m.createAccount(payload);
+      setEditingId(null);
+      resetForm();
       refreshAccounts();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : String(e));
@@ -116,6 +124,14 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
               className="wb-card--interactive"
               style={{ cursor: "pointer" }}
               onClick={() => setOpen(item)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpen(item);
+                }
+              }}
             >
               <Group gap={6} wrap="nowrap">
                 {!item.seen && <Badge size="xs" color="blue" circle>
@@ -218,14 +234,45 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
           </Button>
           {formError && <WbAlert tone="error" size="sm">{formError}</WbAlert>}
           <Button size="xs" onClick={() => void submitAccount()}>
-            添加账号
+            {editingId ? "保存修改" : "添加账号"}
           </Button>
+          {editingId && (
+            <Button
+              size="xs"
+              variant="default"
+              onClick={() => {
+                setEditingId(null);
+                resetForm();
+              }}
+            >
+              取消编辑
+            </Button>
+          )}
           <Stack gap={4}>
             {accounts.map((a) => (
               <Group key={a.id} gap="xs" justify="space-between">
                 <Text size="xs">
                   {a.name} · {a.username}@{a.host}:{a.port} · {a.folder}
                 </Text>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  onClick={() => {
+                    // ISS-17：编辑回填（口令留空 = 不改）
+                    setEditingId(a.id);
+                    setForm({
+                      name: a.name,
+                      host: a.host,
+                      port: String(a.port),
+                      security: a.security ?? "ssl",
+                      username: a.username,
+                      folder: a.folder,
+                      password: "",
+                    });
+                  }}
+                >
+                  编辑
+                </Button>
                 <ConfirmAction
                   label="删除"
                   size="compact-xs"

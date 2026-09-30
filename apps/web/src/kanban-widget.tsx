@@ -172,7 +172,15 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                   <Text
                     className="wb-kanban__col-title"
                     title="点击重命名"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setEditingCol(col.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setEditingCol(col.id);
+                      }
+                    }}
                   >
                     {col.title}
                   </Text>
@@ -196,12 +204,20 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     className="wb-card--interactive"
                     style={{ cursor: "pointer" }}
                     draggable={!editMode}
+                    role="button"
+                    tabIndex={0}
                     onDragStart={(e) => {
                       e.dataTransfer.setData("text/plain", card.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
                     onDragEnd={() => setDragOverCol(null)}
                     onClick={() => setEditing(card)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setEditing(card);
+                      }
+                    }}
                   >
                     <Text size="xs">{card.title}</Text>
                     {card.body && (

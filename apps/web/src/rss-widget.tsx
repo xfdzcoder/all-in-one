@@ -49,8 +49,14 @@ export function RssWidget({
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {(data?.errors?.length ?? 0) > 0 && (
+        // ISS-16：逐源明细（源名 + 原因），排障不再只看到数字
         <WbAlert tone="warning" size="sm">
           {data?.errors.length} 个源拉取失败
+          {(data?.errors ?? []).map((e: { title: string; error: string }) => (
+            <div key={e.title} className="wb-text--xs">
+              {e.title}：{e.error}
+            </div>
+          ))}
         </WbAlert>
       )}
 
@@ -64,10 +70,19 @@ export function RssWidget({
               size="xs"
               fw={it.read ? 400 : 700}
               className="wb-clickable"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 // FR-I4：点开详情（弹层）；跳转原文在详情内（S6）
                 if (!it.read) markRead.mutate(it.itemKey);
                 setDetail(it);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (!it.read) markRead.mutate(it.itemKey);
+                  setDetail(it);
+                }
               }}
             >
               {it.title}

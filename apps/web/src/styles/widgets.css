@@ -521,3 +521,28 @@
   color: var(--wb-color-text-muted);
   font-size: var(--wb-text-xs);
 }
+
+/* ── 登录页「忘记口令？」（ISS-9 按钮语义但保持弱化文本外观）── */
+.wb-login-hint {
+  align-self: flex-start;
+  padding: 0;
+  color: var(--wb-color-text-muted);
+  font-size: var(--wb-text-xs);
+}
+
+.wb-login-hint:hover {
+  color: var(--wb-color-text-secondary);
+}
+
+/* ── 应用入口药丸（ISS-20 图标位）── */
+.wb-launcher__pill {
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-hover);
+}
+
+.wb-launcher__icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}

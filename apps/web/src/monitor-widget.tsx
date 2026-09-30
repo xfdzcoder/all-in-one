@@ -40,6 +40,17 @@ function MetricCard({ label, value, hint }: { label: string; value: string; hint
   );
 }
 
+/** ISS-18：运行时长本地化（"5 days, 1:02:03" → "5 天 1 小时 2 分"；原值由调用处留 title）。 */
+export function formatUptimeZh(raw: string): string {
+  const m = raw.match(/(?:(\d+)\s*days?,?\s*)?(\d+):(\d+):(\d+)/i);
+  if (!m) return raw;
+  const [, d, h, min] = m;
+  const parts: string[] = [];
+  if (d && Number(d) > 0) parts.push(`${Number(d)} 天`);
+  parts.push(`${Number(h)} 小时`, `${Number(min)} 分`);
+  return parts.join(" ");
+}
+
 export function MonitorWidget(config: { url?: string; refreshSec?: number } & Record<string, unknown>) {
   const { data, loading, error, refresh } = useMonitorData(config);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -112,7 +123,7 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
           </Group>
           {data.uptime && (
             <Text size="xs" c="dimmed">
-              运行时长：{data.uptime}
+              运行时长：{formatUptimeZh(data.uptime)}
               {data.cpuName ? ` · ${data.cpuName}` : ""}
             </Text>
           )}
@@ -150,8 +161,14 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
               size="compact-xs"
               variant="subtle"
               onClick={() => {
-                void navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-                setCopied(true);
+                // ISS-25：2s 复位 + 失败显式提示（clipboard 在非安全上下文不可用）
+                navigator.clipboard
+                  .writeText(JSON.stringify(data, null, 2))
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => setCopied(false));
               }}
             >
               {copied ? "已复制" : "复制 JSON"}

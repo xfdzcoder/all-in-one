@@ -4,6 +4,7 @@ import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@m
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
+import { listLabel } from "./widget-registry";
 import { TagFilter } from "./tag-filter";
 import { RelativeTime, WbAlert } from "./ui";
 
@@ -16,14 +17,7 @@ export type TodoConfig = {
   tagIds?: string[];
 };
 
-/** 清单显示名映射（P1-4）：默认键的人话名；未收录的键原样显示（用户自定义清单）。 */
-const LIST_NAMES: Record<string, string> = {
-  inbox: "收件箱",
-  work: "工作",
-  home: "家庭",
-  personal: "个人",
-};
-const listLabel = (key: string) => LIST_NAMES[key] ?? key;
+// 清单显示名（ISS-15）：与 manifest 选项同源（widget-registry.listLabel）
 
 /**
  * Todo Widget（FR：Workspace 级数据、勾选完成/新增）。
@@ -117,8 +111,16 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
               />
               <Text
                 size="sm"
+                role="button"
+                tabIndex={0}
                 style={{ flex: 1, textDecoration: t.done ? "line-through" : undefined, cursor: "pointer" }}
                 onClick={() => setDetail(t)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDetail(t);
+                  }
+                }}
               >
                 {t.title}
               </Text>

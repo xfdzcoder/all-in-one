@@ -215,6 +215,18 @@ export const api = {
     credentialId?: string | null;
     folder?: string;
   }) => req<MailAccountRow>("POST", "/api/mail/accounts", input),
+  patchMailAccount: (
+    id: string,
+    patch: {
+      name?: string;
+      host?: string;
+      port?: number;
+      security?: string;
+      username?: string;
+      folder?: string;
+      password?: string;
+    },
+  ) => req<unknown>("PATCH", `/api/mail/accounts/${id}`, patch),
   deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
   gmailAuthorize: (redirectUri: string) =>
     req<{ url: string }>("POST", "/api/mail/gmail/authorize", { redirectUri }),

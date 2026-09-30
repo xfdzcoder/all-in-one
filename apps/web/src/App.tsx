@@ -88,6 +88,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   }, [refresh]);
 
   const active = dashboards?.find((d) => d.id === activeId) ?? null;
+  // ISS-5：首/末页边界禁用上移/下移（不再静默无效）
+  const activeIndex = dashboards ? dashboards.findIndex((d) => d.id === activeId) : -1;
 
   const addDashboard = async () => {
     const title = newTitle.trim();
@@ -249,10 +251,10 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             >
               页面设置
             </Button>
-            <Button size="xs" variant="default" disabled={!active} onClick={() => void moveActive(-1)}>
+            <Button size="xs" variant="default" disabled={!active || activeIndex <= 0} onClick={() => void moveActive(-1)}>
               上移
             </Button>
-            <Button size="xs" variant="default" disabled={!active} onClick={() => void moveActive(1)}>
+            <Button size="xs" variant="default" disabled={!active || activeIndex >= (dashboards?.length ?? 0) - 1} onClick={() => void moveActive(1)}>
               下移
             </Button>
             {active && dashboards.length > 1 && (

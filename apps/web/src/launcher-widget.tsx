@@ -47,7 +47,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <Group gap="xs">
-        {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean }) => (
+        {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean; icon?: string }) => (
           <a
             key={it.url}
             href={it.url}
@@ -55,14 +55,21 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
             rel="noopener noreferrer"
             style={{ textDecoration: "none" }}
           >
-            <Group gap={6} wrap="nowrap" style={{ padding: "8px 12px", borderRadius: 8, background: "var(--mantine-color-default-hover)" }}>
+            <div className="wb-pill wb-launcher__pill">
+              {/* ISS-20：可选图标（emoji 文本或图片 URL） */}
+              {it.icon &&
+                (/^https?:\/\//.test(it.icon) ? (
+                  <img src={it.icon} alt="" width={16} height={16} className="wb-launcher__icon" />
+                ) : (
+                  <span aria-hidden>{it.icon}</span>
+                ))}
               <Badge size="xs" circle color={it.alive ? "green" : "red"}>
                 &nbsp;
               </Badge>
               <Text size="sm" c="white">
                 {it.name}
               </Text>
-            </Group>
+            </div>
           </a>
         ))}
       </Group>

@@ -164,7 +164,7 @@ try {
   const body = await page.evaluate(() => document.body.textContent ?? "");
   ok("MON version badge (probe)", body.includes("v4.9.0"), body.slice(-120));
   ok("MON cpu/mem/load cards", body.includes("23.5%") && body.includes("61.2%") && body.includes("1.2"), body.slice(-160));
-  ok("MON uptime + cpu name shown", body.includes("5 days, 1:02:03") && body.includes("Mock CPU"));
+  ok("MON uptime + cpu name shown", body.includes("5 天 1 小时 2 分") && body.includes("Mock CPU")); // ISS-18 本地化
   const progressCount = await page.evaluate(() => document.querySelectorAll(".mantine-Progress-root").length);
   ok("MON disk progress bars", body.includes("/backup") && progressCount >= 2, `progress=${progressCount}`);
   const expectedAuth = `Basic ${Buffer.from("glances:s3cret").toString("base64")}`;

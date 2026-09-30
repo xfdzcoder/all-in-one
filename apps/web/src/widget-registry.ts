@@ -158,7 +158,7 @@ export const launcherManifest: WidgetManifest = {
       label: "服务列表 JSON",
       type: "json",
       required: true,
-      help: '[{"name":"Portainer","url":"http://192.168.31.133:9000","probe":"http"}]；probe: http|tcp',
+      help: '[{"name":"Portainer","url":"http://…:9000","probe":"http","icon":"🧩"}]；probe: http|tcp；icon 可选（emoji 或图片 URL）',
     },
   ],
   capabilities: {
@@ -328,3 +328,13 @@ export const FALLBACK_LAYOUT = [
   { id: "fb-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
   { id: "fb-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
 ];
+
+/** 清单显示名（ISS-15 修复）：manifest 选项与各处显示同源；未收录键原样回落。 */
+export const LIST_LABELS: Record<string, string> = {
+  inbox: "收件箱",
+  work: "工作",
+  life: "生活",
+  home: "家庭",
+  personal: "个人",
+};
+export const listLabel = (key: string) => LIST_LABELS[key] ?? key;

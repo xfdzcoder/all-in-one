@@ -77,6 +77,14 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
             radius={6}
             style={{ cursor: "pointer" }}
             onClick={() => setDetail(s)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDetail(s);
+                  }
+                }}
           >
             <Group gap={6} justify="space-between" wrap="nowrap">
               <Text size="xs" fw={500} lineClamp={1} style={{ flex: 1 }}>

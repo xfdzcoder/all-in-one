@@ -83,8 +83,14 @@ export function CustomApiWidget(props: CustomApiConfig) {
               size="compact-xs"
               variant="subtle"
               onClick={() => {
-                void navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-                setCopied(true);
+                // ISS-25：2s 复位 + 失败显式提示（clipboard 在非安全上下文不可用）
+                navigator.clipboard
+                  .writeText(JSON.stringify(data, null, 2))
+                  .then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  })
+                  .catch(() => setCopied(false));
               }}
             >
               {copied ? "已复制" : "复制 JSON"}
