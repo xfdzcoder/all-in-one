@@ -16,7 +16,7 @@ export type RssConfig = {
 };
 
 export function RssWidget({ limit = 10, filter = "all", refreshSec }: RssConfig & { refreshSec?: number }) {
-  const { data, loading, error, refresh } = useFeeds(limit, refreshSec);
+  const { data, loading, error, refresh } = useFeeds(limit, refreshSec, filter);
   const sources = useFeedSources();
   const { markRead, addSource, removeSource } = useFeedMutations();
   const [newUrl, setNewUrl] = useDraft();

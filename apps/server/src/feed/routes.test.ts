@@ -179,3 +179,54 @@ describe("rss connector (multi-source + read state)", () => {
     expect(res.json().data.errors.length).toBe(1);
   });
 });
+
+describe("rss 条目数语义（Q22a：展示条数 = 过滤后切片；数值容错）", () => {
+  it("字符串型 limit 照常生效（不再静默回退 20）", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/feeds",
+      cookies: { sid },
+      payload: { title: "Blog2", url: `http://127.0.0.1:${port}/rss2` },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/widgets/data",
+      cookies: { sid },
+      payload: { type: "rss", config: { limit: "2" }, force: true },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.items.length).toBe(2);
+  });
+
+  it("filter=unread 时先过滤再切片（条目数=展示条数）", async () => {
+    const all = await app.inject({
+      method: "POST",
+      url: "/api/widgets/data",
+      cookies: { sid },
+      payload: { type: "rss", config: { limit: 3 }, force: true },
+    });
+    const items = all.json().data.items as Array<{ itemKey: string; read: boolean }>;
+    // 标记一条未读为已读（前置用例可能已读过最新条 —— 取未读项保证落差）
+    const target = items.find((i) => !i.read);
+    expect(target).toBeDefined();
+    await app.inject({
+      method: "POST",
+      url: "/api/feeds/read",
+      cookies: { sid },
+      payload: { itemKey: target!.itemKey },
+    });
+    const unreadOnly = await app.inject({
+      method: "POST",
+      url: "/api/widgets/data",
+      cookies: { sid },
+      payload: { type: "rss", config: { limit: 2, filter: "unread" }, force: true },
+    });
+    const got = unreadOnly.json().data;
+    expect(got.items.length).toBe(2);
+    expect(got.items.every((i: { read: boolean }) => !i.read)).toBe(true);
+    // 未读徽标 = 全部未读（非仅展示条）：标记 1 条后比取数里的未读总数少 1
+    const unreadBefore = all.json().data.unread as number;
+    expect(got.unread).toBe(unreadBefore - 1);
+    expect(got.unread).toBeGreaterThan(got.items.length - 1);
+  });
+});

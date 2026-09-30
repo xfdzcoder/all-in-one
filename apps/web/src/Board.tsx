@@ -59,14 +59,12 @@ function BoardToolbar({
   canEdit,
   dirty,
   pluginManifests,
-  onToggleEdit,
 }: {
   editMode: boolean;
   canEdit: boolean;
   dirty: boolean;
   /** 启用中的插件 manifest（选择器清单动态合并，J8）。 */
   pluginManifests: WidgetManifest[];
-  onToggleEdit: () => void;
 }) {
   const { grid, addWidget, removeWidget } = useGridStack();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -77,11 +75,6 @@ function BoardToolbar({
 
   return (
     <Group mb="sm" gap="xs" style={{ position: "relative", zIndex: 2 }}>
-      {canEdit && (
-        <Button size="xs" variant={editMode ? "filled" : "default"} onClick={onToggleEdit}>
-          {editMode ? "完成编辑" : "编辑布局"}
-        </Button>
-      )}
       {editMode && (
         <>
           <Button size="xs" variant="light" onClick={() => setPickerOpen(true)}>
@@ -139,15 +132,17 @@ export function Board({
   dashboardId,
   layoutJson,
   canEdit,
+  editMode,
   onLayoutSaved,
 }: {
   dashboardId: string;
   layoutJson: string;
   canEdit: boolean;
+  /** 编辑态（Q22a）：上提到 App —— 入口按钮在头部「插件管理」旁，不再在页面底部。 */
+  editMode: boolean;
   onLayoutSaved: (dashboardId: string, layoutJson: string) => void;
 }) {
   const gridRef = useRef<GridStackHandle>(null);
-  const [editMode, setEditMode] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -250,6 +245,13 @@ export function Board({
   useEffect(() => {
     flushRef.current = flush;
   });
+
+  // Q22a：编辑态在 App —— true→false 转移时冲刷未保存布局（原 toggle 内联逻辑迁移至此）
+  const prevEditRef = useRef(editMode);
+  useEffect(() => {
+    if (prevEditRef.current && !editMode) void flush();
+    prevEditRef.current = editMode;
+  }, [editMode, flush]);
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -335,13 +337,6 @@ export function Board({
           canEdit={canEdit}
           dirty={dirty}
           pluginManifests={pluginBindings.map((b) => b.manifest)}
-          onToggleEdit={() => {
-            setEditMode((v) => {
-              const next = !v;
-              if (!next) void flush();
-              return next;
-            });
-          }}
         />
         </GridStack>
       </WidgetEditContext.Provider>

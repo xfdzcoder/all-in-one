@@ -53,6 +53,8 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [settingsBackground, setSettingsBackground] = useState("");
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
+  const [layoutEdit, setLayoutEdit] = useState(false);
 
   const refresh = useCallback(async () => {
     const rows = await api.listDashboards();
@@ -137,6 +139,15 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             </Text>
           </Group>
           <Group gap="xs">
+            {isDesktop && (
+              <Button
+                variant={layoutEdit ? "filled" : "default"}
+                size="xs"
+                onClick={() => setLayoutEdit((v) => !v)}
+              >
+                {layoutEdit ? "完成编辑" : "编辑布局"}
+              </Button>
+            )}
             {isDesktop && (
               <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
                 插件管理
@@ -248,6 +259,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 dashboardId={d.id}
                 layoutJson={d.layoutJson}
                 canEdit={isDesktop}
+                editMode={layoutEdit}
                 onLayoutSaved={handleLayoutSaved}
               />
             </Tabs.Panel>

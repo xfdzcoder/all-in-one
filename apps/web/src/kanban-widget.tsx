@@ -40,6 +40,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const [cardDrafts, setCardDrafts] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
   /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
   const selectBoard = (id: string) => {
@@ -128,19 +129,24 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {boardId && (
-        <Group gap="xs" align="flex-start" wrap="nowrap" style={{ flex: 1, overflow: "auto" }}>
+        <Group className="wb-kanban__board" gap="xs" wrap="nowrap">
           {(tree?.columns ?? []).map((col) => (
             <div
               key={col.id}
-              className="wb-kanban__col"
+              className={`wb-kanban__col${dragOverCol === col.id ? " wb-kanban__col--drop" : ""}`}
               data-col-title={col.title}
               onDragOver={(e) => {
                 // Q6c 拖拽冲突方案（D29）：仅浏览模式接卡片拖放；编辑模式让位布局拖拽
-                if (!editMode) e.preventDefault();
+                if (!editMode) {
+                  e.preventDefault();
+                  setDragOverCol(col.id);
+                }
               }}
+              onDragLeave={() => setDragOverCol((v) => (v === col.id ? null : v))}
               onDrop={(e) => {
                 if (editMode) return;
                 e.preventDefault();
+                setDragOverCol(null);
                 const cardId = e.dataTransfer.getData("text/plain");
                 if (cardId) moveCardTo(cardId, col.id);
               }}
@@ -194,6 +200,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                       e.dataTransfer.setData("text/plain", card.id);
                       e.dataTransfer.effectAllowed = "move";
                     }}
+                    onDragEnd={() => setDragOverCol(null)}
                     onClick={() => setEditing(card)}
                   >
                     <Text size="xs">{card.title}</Text>
@@ -204,6 +211,9 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     )}
                   </Card>
                 ))}
+                {dragOverCol === col.id && (
+                  <div className="wb-kanban__drop-slot">放在这里</div>
+                )}
                 <Group gap={4} wrap="nowrap">
                   <TextInput
                     size="compact-xs"

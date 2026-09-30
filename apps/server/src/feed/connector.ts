@@ -74,7 +74,12 @@ function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, 
 export const rssConnector: WidgetConnector = {
   type: "rss",
   async fetch(query: WidgetDataQuery, ctx: FetchContext) {
-    const limit = typeof query.config.limit === "number" ? query.config.limit : 20;
+    // Q22a 条目数语义 =「展示条数」：先按 filter 过滤再切片（否则「仅未读 + 条目数 10」
+    // 会先混切 10 条再过滤 → 实际不足 10 行）；数值容错（配置/种子可能给字符串）。
+    const rawLimit = query.config.limit;
+    const parsedLimit = typeof rawLimit === "number" ? rawLimit : Number(rawLimit);
+    const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.floor(parsedLimit)) : 20;
+    const onlyUnread = query.config.filter === "unread";
     const sources = await ctx.db
       .select()
       .from(feedSource)
@@ -106,14 +111,16 @@ export const rssConnector: WidgetConnector = {
           .where(and(eq(feedRead.userId, ctx.userId), inArray(feedRead.itemKey, keys)))
       : [];
     const readSet = new Set(readRows.map((r) => r.itemKey));
-    const items = entries.slice(0, limit).map((e) => ({
+    const all = entries.map((e) => ({
       ...e,
       read: readSet.has(String(e.itemKey)),
     }));
+    const items = (onlyUnread ? all.filter((i) => !i.read) : all).slice(0, limit);
 
     return {
       items,
-      unread: items.filter((i) => !i.read).length,
+      // 徽标语义 = 全部未读（非仅当前页）——「未读 N」反映 Workspace 真实未读
+      unread: all.filter((i) => !i.read).length,
       sourceCount: sources.length,
       errors,
     };

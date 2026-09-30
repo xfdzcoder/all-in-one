@@ -406,3 +406,47 @@
 .wb-code textarea {
   font-family: var(--wb-font-mono);
 }
+
+/* ── 统计卡铺满（Q22a 反馈③）：卡底色与容器一致 ——
+ * 网格/单卡补足剩余高度（否则卡片框比底色块高，视觉不一致） */
+.wb-stat-grid {
+  flex: 1;
+}
+
+.wb-widget__body > .wb-metric {
+  flex: 1;
+}
+
+/* ── 看板拖拽落点（Q22a 反馈②）：整列可落 + 高亮 + 列尾占位框 ── */
+.wb-kanban__board {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.wb-kanban__col {
+  min-height: 96px;
+}
+
+.wb-kanban__col--drop {
+  border: 1px dashed var(--wb-color-accent);
+  background: color-mix(in srgb, var(--wb-color-accent) 8%, var(--wb-color-surface-raised));
+}
+
+.wb-kanban__drop-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--wb-touch-min);
+  border: 1px dashed var(--wb-color-accent);
+  border-radius: var(--wb-radius-sm);
+  color: var(--wb-color-text-muted);
+  font-size: var(--wb-text-xs);
+}
+
+/* 指标卡作为整个组件（StatBox）：铺满格子 —— 框与底色一致（Q22a 反馈③） */
+.wb-metric--tile {
+  height: 100%;
+}

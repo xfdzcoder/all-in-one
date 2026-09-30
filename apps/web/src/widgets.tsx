@@ -11,7 +11,7 @@ export function Placeholder({ title, color }: Record<string, unknown>) {
 
 export function StatBox({ label, value }: Record<string, unknown>) {
   return (
-    <div className="wb-metric">
+    <div className="wb-metric wb-metric--tile">
       <div className="wb-metric__label">{String(label ?? "")}</div>
       <div className="wb-metric__value">{String(value ?? "")}</div>
     </div>

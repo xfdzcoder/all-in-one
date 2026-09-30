@@ -457,12 +457,12 @@ export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
 }
 
 /** RSS 聚合数据（走数据通道 + 已读态 Workspace 同步）。 */
-export function useFeeds(limit: number, refreshSec?: unknown) {
+export function useFeeds(limit: number, refreshSec?: unknown, filter?: "all" | "unread") {
   const qc = useQueryClient();
-  const key = ["feeds", limit];
+  const key = ["feeds", limit, filter ?? "all"];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("rss", { limit }) as Promise<import("./api").FeedAgg>,
+    queryFn: () => api.widgetData("rss", { limit, filter }) as Promise<import("./api").FeedAgg>,
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });
