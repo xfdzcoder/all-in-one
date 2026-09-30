@@ -4,6 +4,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
+import { deleteTargetLinks, tagLinksFor } from "../tag/routes.ts";
 import { feedRead, feedSource } from "../db/schema.ts";
 
 const createSource = z.object({
@@ -16,11 +17,14 @@ const readBody = z.object({ itemKey: z.string().min(1).max(128) });
 /** RSS 订阅源 + 已读标记（Workspace 级，D21）。 */
 export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void): void {
   app.get("/api/feeds", { preHandler: authGuard }, async (req) => {
-    return app.db
+    const rows = await app.db
       .select()
       .from(feedSource)
       .where(eq(feedSource.userId, req.user!.id))
       .orderBy(asc(feedSource.createdAt));
+    // FR-D3：内嵌标签（组件按标签选源）
+    const links = await tagLinksFor(app.db, req.user!.id, "feed", rows.map((r) => r.id));
+    return rows.map((r) => ({ ...r, tagIds: links.get(r.id) ?? [] }));
   });
 
   app.post("/api/feeds", { preHandler: authGuard }, async (req, reply) => {
@@ -48,6 +52,8 @@ export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void):
       .where(and(eq(feedSource.id, params.data.id), eq(feedSource.userId, req.user!.id)))
       .returning();
     if (!row) return reply.code(404).send({ error: "not found" });
+    // D40：多态关联无外键 —— 实体删除时应用层清理
+    await deleteTargetLinks(app.db, req.user!.id, "feed", params.data.id);
     onChanged();
     return { ok: true };
   });

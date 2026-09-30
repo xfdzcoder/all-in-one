@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 37 轮 · Q22a ✅ 用户反馈④快修批；下一项 Q22b-1 Workspace 标签体系（模型+REST）） |
+| 最近更新 | 2026-09-30（第 38 轮 · Q22b-1 ✅ Workspace 标签体系（模型+REST）；下一项 Q22b-2 数据管理面 + 组件标签筛选） |
 
 ## 迭代队列
 
@@ -60,7 +60,7 @@
 
 - [ ] Q22 · 用户反馈④：交互与数据管理（2026-09-30 新指令，已解除 STOP）
   - [x] Q22a · 快修批：RSS 条目数语义（=展示条数：filter 后切片 + 数值容错）、看板拖拽落点（整列可落 + 高亮 + 列尾占位框「放在这里」）、指标卡铺满（tile/网格补足高度，框与底色一致）、编辑布局按钮移头部（插件管理旁，编辑态上提 App）**✅ 2026-09-30**
-  - [ ] Q22b-1 · Workspace 标签体系（新需求，先落 01-requirements + **D40**）：tag 表 + 多对多关联（Todo 项 / RSS 订阅源，预留扩展）+ REST + 契约测试
+  - [x] Q22b-1 · Workspace 标签体系（**FR-D1~D4** 入 01-requirements §2.6 + **D40**）：tag + tag_target 多态关联（复合主键、FK 级联、实体删除应用层清理）+ REST（CRUD/覆盖式打标/目标查询）+ 实体内嵌 tagIds + 迁移 0009 + 契约测试 8 项 **✅ 2026-09-30**
   - [ ] Q22b-2 · 数据管理面 + 组件标签筛选：头部「数据管理」弹窗（Todo / 信息源 / 标签 三页签，退订带确认）；Todo/RSS 组件「筛选」入口勾选标签 → 写回配置（D28 同款）；RSS 底部订阅药丸行移除（并入管理面）
 
 ## 历轮记录
@@ -120,3 +120,4 @@
 - **恢复**：`/loop-resume`，或按 D22 中的启动命令重新执行 `/loop`（注意删除 `.opencode/opencode-loop/STOP`）。
 - 运行时状态与日志在 `.opencode/opencode-loop/`（已 gitignore）。
 | 37 | 2026-09-30 | **Q22a 用户反馈④快修批**：① RSS 条目数语义修复——`limit` 原在「未读过滤」前切片（配置 10 实显不足），改为 **先 filter 后 slice（条目数=展示条数）**；顺带修字符串型 limit 被静默忽略回退 20 的真 bug（数值容错）；未读徽标语义改为全部未读；契约测试 2 项。② 看板拖拽：列拉伸补高 + 拖拽整列高亮（`--drop` 虚线框）+ 列尾占位框「放在这里」+ dragEnd 清态。③ 指标卡铺满：`.wb-metric--tile`（StatBox 整卡）与 `.wb-stat-grid`（custom-api 统计卡）补足高度——实证 tile=content box（148=148；与 grid-stack-item 的 12px 差是 gridstack 行距水沟，非框内空隙）。④ 「编辑布局」移头部「插件管理」旁：编辑态上提到 App（`layoutEdit`），Board 改受控 + true→false 转移 flush（原 toggle 内联逻辑迁移），BoardToolbar 保留编辑态工具 | verify-dark 3/3 AA ✅；全量 24 脚本 397 项 ✅；Vitest 158（server 137+sdk 21）✅；Playwright 5/5 ✅；typecheck ✅ | `7eb7dd8` |
+| 38 | 2026-09-30 | **Q22b-1 Workspace 标签体系**（需求先行）：① 01-requirements §2.6 新增 FR-D1 多标签 / FR-D2 数据管理面 / FR-D3 组件按标签选数据 / FR-D4 数据边界不变；② **D40** 决策（多态 tag_target + 白名单 targetType「todo/feed」，扩展=加枚举不迁移；标签删除 FK 级联、实体删除应用层清理；list 字段保留标签叠加）；③ schema：tag（user_id + 唯一名 + 可选色）+ tag_target（复合主键 + 两索引），迁移 0009 drizzle-kit 生成（D18）；④ REST：GET/POST/PATCH/DELETE /api/tags（同名 409、计数 targetCount）、GET /api/tags/targets/:type/:id、PUT /api/tags/targets（覆盖式设标，未知 tagId 400、非法 targetType 400）；⑤ Todo/RSS 列表内嵌 tagIds（FR-D3 数据侧就绪），删除 Todo/源清理关联（D40 无多态 FK 的应用层兜底） | server Vitest 143/143（新增 tag 契约 8 项）✅；全量 24 脚本 397 项 + verify-dark 3/3 ✅；Playwright 5/5 ✅；typecheck ✅ | 待提交 |

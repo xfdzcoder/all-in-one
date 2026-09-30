@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
 import { todo } from "../db/schema.ts";
+import { deleteTargetLinks, tagLinksFor } from "../tag/routes.ts";
 
 const createBody = z.object({
   title: z.string().min(1).max(500),
@@ -36,7 +37,9 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
       .from(todo)
       .where(where)
       .orderBy(asc(todo.sortOrder), asc(todo.createdAt));
-    return rows;
+    // FR-D3：内嵌标签（组件按标签选数据；管理面打标签展示）
+    const links = await tagLinksFor(app.db, req.user!.id, "todo", rows.map((r) => r.id));
+    return rows.map((r) => ({ ...r, tagIds: links.get(r.id) ?? [] }));
   });
 
   app.post("/api/todos", { preHandler: authGuard }, async (req, reply) => {
@@ -88,6 +91,8 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
       .where(and(eq(todo.id, params.data.id), eq(todo.userId, req.user!.id)))
       .returning();
     if (!row) return reply.code(404).send({ error: "not found" });
+    // D40：多态关联无外键 —— 实体删除时应用层清理
+    await deleteTargetLinks(app.db, req.user!.id, "todo", params.data.id);
     onChanged();
     return { ok: true };
   });

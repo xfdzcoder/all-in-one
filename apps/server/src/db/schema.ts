@@ -1,8 +1,10 @@
 import {
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 /**
@@ -288,3 +290,55 @@ export const mailAccount = sqliteTable("mail_account", {
 
 export type MailAccount = typeof mailAccount.$inferSelect;
 export type NewMailAccount = typeof mailAccount.$inferInsert;
+
+/**
+ * Workspace 标签（Q22b-1 / FR-D1 / D40）：标签本身是 Workspace 级数据（D21）。
+ * 数据项（Todo 项 / RSS 订阅源）可打多个标签；组件按标签选数据（数据/视图分离）。
+ */
+export const tag = sqliteTable(
+  "tag",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** 可选色（管理面展示用；留空走主题语义色）。 */
+    color: text("color"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("tag_user_id_idx").on(t.userId),
+    uniqueIndex("tag_user_name_idx").on(t.userId, t.name),
+  ],
+);
+
+/**
+ * 标签关联（D40 多态）：targetType 白名单 ["todo","feed"]（应用层 zod 枚举校验，扩展=加枚举）。
+ * SQLite 无多态外键 —— 目标实体删除时应用层清理（deleteTargetLinks）；标签删除 FK 级联。
+ */
+export const tagTarget = sqliteTable(
+  "tag_target",
+  {
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tag.id, { onDelete: "cascade" }),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id").notNull(),
+    /** Ownership field (D21/NFR5)。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.tagId, t.targetType, t.targetId] }),
+    index("tag_target_user_idx").on(t.userId),
+    index("tag_target_target_idx").on(t.targetType, t.targetId),
+  ],
+);
+
+export type Tag = typeof tag.$inferSelect;
+export type NewTag = typeof tag.$inferInsert;
+export type TagTarget = typeof tagTarget.$inferSelect;
+export type NewTagTarget = typeof tagTarget.$inferInsert;
