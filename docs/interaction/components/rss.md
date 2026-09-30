@@ -1,7 +1,7 @@
 # 组件 · 信息流（RSS）
 
 > 层级：页面 → 组件 → 按钮。约定见 [../README.md](../README.md)；问题见 [../00-issues.md](../00-issues.md)。
-> FR：多源 RSS/Atom 聚合、摘要、未读标记归 Workspace（跨组件同步 FR-I6）、跳转原文。订阅管理在「数据管理」（D40）。
+> FR：多源 RSS/Atom 聚合、摘要、未读标记归 Workspace（跨组件同步 FR-I6）、跳转原文。订阅管理在「数据源管理」（D40）。
 
 **截图**：![组件特写](../assets/c-rss.png)
 

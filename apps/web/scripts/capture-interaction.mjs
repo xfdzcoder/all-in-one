@@ -181,8 +181,8 @@ try {
   await clickBtn("完成编辑");
   await sleep(400);
 
-  // ── 交互面 · 数据管理（三页签）──
-  await clickBtn("数据管理");
+  // ── 交互面 · 数据源管理（三页签）──
+  await clickBtn("数据源管理");
   await sleep(500);
   await shot("s-data-admin-todo");
   await page.evaluate(() => {

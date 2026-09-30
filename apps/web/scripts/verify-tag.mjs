@@ -1,6 +1,6 @@
 /**
  * verify-tag —— Q22b-2 验收（FR-D1/D2/D3/D4，D40）：
- *  ① 数据管理面：三页签（Todo / 信息源 / 标签）；UI 新建标签、给任务打标（MultiSelect）；
+ *  ① 数据源管理面：三页签（Todo / 信息源 / 标签）；UI 新建标签、给任务打标（MultiSelect）；
  *  ② Todo 组件「筛选」：勾选标签 → 只显示打标任务（服务端过滤）；清除 → 全部回来；
  *  ③ RSS 组件「筛选」：按标签选源 —— 打标源条目显示、未打标源条目隐藏；
  *  ④ 删除标签二次确认标题情境化（D34：「删除标签？」）；
@@ -78,7 +78,7 @@ const TOP = `(() => {
 /** Mantine Tabs 面板挂载但隐藏 —— 所有面板内选择器必须过滤可见元素。 */
 const vis = "(el) => el.offsetParent !== null";
 
-/** 在某容器内按文本找行（用于数据管理列表定位）。 */
+/** 在某容器内按文本找行（用于数据源管理列表定位）。 */
 const rowByText = (text) =>
   page.evaluate((t) => {
     const leaf = [...document.querySelectorAll(".mantine-Modal-root *")].find(
@@ -142,29 +142,29 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(1200);
 
-  // ① 数据管理面：三页签 + UI 新建标签
-  ok(await clickBtn("数据管理"), "TAG open data admin");
-  await sleep(400);
+  // ① 数据源管理面：三页签 + UI 新建标签
+  ok(await clickBtn("数据源管理"), "TAG open data admin page");
+  await sleep(500);
   ok(
     await page.evaluate(
       () =>
-        ["Todo", "信息源", "标签"].every((t) =>
-          [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].some((el) => el.textContent.trim() === t),
+        ["任务", "信息源", "标签"].every((t) =>
+          [...document.querySelectorAll(".wb-admin [role=tab]")].some((el) => el.textContent.trim() === t),
         ),
       ),
-    "TAG admin has 3 tabs (Todo/信息源/标签)",
+    "TAG admin has 3 tabs (任务/信息源/标签)",
   );
-  // 先切到「标签」页签（默认在 Todo）
+  // 先切到「标签」页签（默认在任务）——页面态选择器作用域 .wb-admin
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll(".mantine-Modal-root [role=tab]")].find(
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find(
       (t) => t.textContent.trim() === "标签",
     );
     tab?.click();
   });
   await sleep(300);
   const gotInput = await page.evaluate(() => {
-    const input = [...document.querySelectorAll(".mantine-Modal-root input")].find(
-      (i) => i.placeholder === "新标签名" && i.offsetParent !== null,
+    const input = [...document.querySelectorAll(".wb-admin input")].find(
+      (i) => i.placeholder.startsWith("新标签名") && i.offsetParent !== null,
     );
     input?.focus();
     input?.click();
@@ -174,7 +174,7 @@ try {
   await page.keyboard.type(tagName);
   ok(
     await page.evaluate(() => {
-      const btn = [...document.querySelectorAll(".mantine-Modal-root button")].find(
+      const btn = [...document.querySelectorAll(".wb-admin button")].find(
         (b) => b.textContent.trim() === "添加" && b.offsetParent !== null,
       );
       if (!btn) return false;
@@ -186,47 +186,49 @@ try {
   await sleep(500);
   ok(
     await page.evaluate((n) => {
-      const leaf = [...document.querySelectorAll(".mantine-Modal-root *")].find(
-        (e) => e.children.length === 0 && e.offsetParent !== null && (e.textContent ?? "").includes(n),
+      // 标签名在行内重命名输入框的 value 里（不进 textContent）——按输入值断言
+      return [...document.querySelectorAll(".wb-admin [data-admin-row=tag]")].some((r) =>
+        [...r.querySelectorAll("input")].some((i) => i.defaultValue === n),
       );
-      return Boolean(leaf);
     }, tagName),
     "TAG created tag listed",
   );
 
-  // ② Todo 页签：给任务打标（MultiSelect）
+  // ② 任务页签：给任务打标（TagInput：输入搜索 + 回车选中）
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll("[role=tab]")].find((t) => t.textContent.trim() === "Todo");
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "任务");
     tab?.click();
   });
   await sleep(300);
   const assigned = await page.evaluate(async (t) => {
-    const leaf = [...document.querySelectorAll(".mantine-Modal-root *")].find(
-      (n) => n.children.length === 0 && n.offsetParent !== null && (n.textContent ?? "").includes(t),
+    const leaf = [...document.querySelectorAll(".wb-admin [data-admin-row=todo]")].find((r) =>
+      (r.textContent ?? "").includes(t),
     );
-    if (!leaf) return false;
-    let row = leaf.parentElement;
-    while (row && !row.querySelector("[role=combobox]")) row = row.parentElement;
-    row?.querySelector("[role=combobox]")?.click();
+    const input = leaf?.querySelector("input[placeholder=标签]");
+    if (!input) return false;
+    input.focus();
     return true;
   }, taskTagged);
-  ok(assigned, "TAG open tag MultiSelect on task row");
+  ok(assigned, "TAG focus tag input on task row");
+  await page.keyboard.type(tagName);
   await sleep(400);
-  ok(
-    await page.evaluate((n) => {
-      const opt = [...document.querySelectorAll("[data-combobox-option]")].find(
-        (e) => e.offsetParent !== null && e.textContent.includes(n),
-      );
-      opt?.click();
-      return Boolean(opt);
-    }, tagName),
-    "TAG assign tag to task via MultiSelect",
-  );
+  await page.keyboard.press("Enter");
   await sleep(600);
-  await page.evaluate(() => {
-    const close = [...document.querySelectorAll(".mantine-Modal-close")].find((c) => c.offsetParent !== null);
-    close?.click();
-  });
+  ok(
+    await page.evaluate(
+      ({ t, n }) => {
+        const row = [...document.querySelectorAll(".wb-admin [data-admin-row=todo]")].find((r) =>
+          (r.textContent ?? "").includes(t),
+        );
+        return (row?.textContent ?? "").includes(n);
+      },
+      { t: taskTagged, n: tagName },
+    ),
+    "TAG assign tag to task via TagInput",
+  );
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
+  );
   await sleep(400);
 
   // ③ Todo 组件筛选：勾选标签 → 只显示打标任务
@@ -320,32 +322,23 @@ try {
   });
   await sleep(600);
 
-  // ⑤ 数据管理：删除标签确认标题情境化（D34）+ 数据仍在（FR-D4）
-  ok(await clickBtn("数据管理"), "TAG reopen data admin");
-  await sleep(400);
+  // ⑤ 数据源管理：删除标签确认标题情境化（D34）+ 数据仍在（FR-D4）
+  ok(await clickBtn("数据源管理"), "TAG reopen data admin page");
+  await sleep(500);
   await page.evaluate(() => {
-    const tab = [...document.querySelectorAll("[role=tab]")].find((t) => t.textContent.trim() === "标签");
+    const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "标签");
     tab?.click();
   });
   await sleep(300);
   await page.evaluate((n) => {
-    const leaf = [...document.querySelectorAll(".mantine-Modal-root *")].find(
-      (el) =>
-        el.children.length === 0 &&
-        el.offsetParent !== null &&
-        (el.textContent ?? "").includes(n) &&
-        el.tagName !== "INPUT",
+    const row = [...document.querySelectorAll(".wb-admin [data-admin-row=tag]")].find((r) =>
+      [...r.querySelectorAll("input")].some((i) => i.defaultValue === n),
     );
-    if (!leaf) return false;
-    let row = leaf.parentElement;
-    while (row && ![...row.querySelectorAll("button")].some((b) => b.textContent.trim() === "×")) {
-      row = row.parentElement;
-    }
-    const del = [...row.querySelectorAll("button")].find(
+    const del = [...(row?.querySelectorAll("button") ?? [])].find(
       (b) => b.textContent.trim() === "×" && b.offsetParent !== null,
     );
     del?.click();
-    return true;
+    return Boolean(del);
   }, tagName);
   await sleep(400);
   ok(

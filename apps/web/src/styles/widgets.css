@@ -552,3 +552,52 @@
 .wb-kanban__drop-slot--inline {
   min-height: 32px;
 }
+
+/* ── 数据源管理 · 全页视图（Q25c/#2）── */
+.wb-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-3);
+  padding: var(--wb-space-4);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.wb-admin__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-3);
+}
+
+.wb-admin__title {
+  margin: 0;
+}
+
+.wb-admin__search {
+  margin-left: auto;
+  width: min(320px, 100%);
+}
+
+.wb-admin__table {
+  display: flex;
+  flex-direction: column;
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  overflow: hidden;
+}
+
+.wb-admin__row {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2) var(--wb-space-3);
+}
+
+.wb-admin__row + .wb-admin__row {
+  border-top: var(--wb-border);
+}
+
+.wb-admin__row:hover {
+  background: var(--wb-color-surface-hover);
+}

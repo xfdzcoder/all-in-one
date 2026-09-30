@@ -1,9 +1,9 @@
-# 交互面 · 数据管理（Workspace 数据 + 标签）
+# 交互面 · 数据源管理（Workspace 数据 + 标签）
 
 > 层级：页面 → 组件 → 按钮。约定见 [../README.md](../README.md)；问题见 [../00-issues.md](../00-issues.md)。
 > **FR-D2/D40**：Todo / 信息源 / 标签的统一管理处；卡片只做视图（数据/视图分离）。
 
-**入口**：头部「数据管理」（全端可达，**D41**）。
+**入口**：头部「数据源管理」（全端可达，**D41**）。
 **截图**：![Todo 页签](../assets/s-data-admin-todo.png) · ![信息源页签](../assets/s-data-admin-feeds.png) · ![标签页签](../assets/s-data-admin-tags.png)
 
 ## 三页签总览

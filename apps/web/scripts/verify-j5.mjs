@@ -106,7 +106,8 @@ try {
   const state = await page.evaluate(() => ({
     showsValue: document.body.textContent.includes("api-ok"),
     showsBadge: document.body.textContent.includes("42"),
-    showsAuthError: document.body.textContent.includes("401"),
+    // 只认错误条里的 401（全文匹配会被任务名/时间戳里的 "401" 误伤）
+    showsAuthError: [...document.querySelectorAll(".wb-alert--error")].some((a) => a.textContent.includes("401")),
   }));
   ok(
     "J5 custom-api widget renders upstream data (auth + template)",

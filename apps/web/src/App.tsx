@@ -57,8 +57,17 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
   const [layoutEdit, setLayoutEdit] = useState(false);
-  // FR-D2：Workspace 数据管理面（Todo / 信息源 / 标签）
-  const [dataAdminOpen, setDataAdminOpen] = useState(false);
+  // FR-D2 / Q25c：数据源管理 = 独立全页视图（大数量好展示；?view=data 深链）
+  const [view, setView] = useState<"workspace" | "data">(() =>
+    new URLSearchParams(window.location.search).get("view") === "data" ? "data" : "workspace",
+  );
+  const gotoView = (v: "workspace" | "data") => {
+    setView(v);
+    const url = new URL(window.location.href);
+    if (v === "data") url.searchParams.set("view", "data");
+    else url.searchParams.delete("view");
+    window.history.replaceState(null, "", url.toString());
+  };
 
   // ISS-1 修复：页面 CRUD 统一错误提示（失败不再静默）
   const [pageError, setPageError] = useState<string | null>(null);
@@ -186,9 +195,9 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 {layoutEdit ? "完成编辑" : "编辑布局"}
               </Button>
             )}
-            {/* D41：数据管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
-            <Button variant="default" size="xs" onClick={() => setDataAdminOpen(true)}>
-              数据管理
+            {/* D41：数据源管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
+            <Button variant="default" size="xs" onClick={() => gotoView("data")}>
+              数据源管理
             </Button>
             {isDesktop && (
               <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
@@ -201,10 +210,16 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
           </Group>
         </Group>
       </AppShell.Header>
-      <DataAdmin opened={dataAdminOpen} onClose={() => setDataAdminOpen(false)} />
       <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
-      <AppShell.Main style={{ background: active?.background ?? "transparent", minHeight: "100vh" }}>
+      <AppShell.Main
+        style={{
+          background: view === "data" ? "transparent" : active?.background ?? "transparent",
+          minHeight: "100vh",
+        }}
+      >
+        {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} />}
+        {view === "workspace" && (
         <Tabs
           value={activeId}
           onChange={(v) => {
@@ -323,6 +338,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
             </Center>
           )}
         </Tabs>
+        )}
       </AppShell.Main>
     </AppShell>
   );
