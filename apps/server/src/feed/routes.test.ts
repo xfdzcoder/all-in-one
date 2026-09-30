@@ -232,7 +232,7 @@ describe("rss 条目数语义（Q22a：展示条数 = 过滤后切片；数值�
 
   it("Q29c: successful fetch snapshots items; failure falls back to snapshot", async () => {
     let fail = false;
-    const flaky = createServer((req, res) => {
+    const flaky = createServer((_req, res) => {
       if (fail) {
         res.writeHead(500).end();
         return;

@@ -114,7 +114,7 @@ try {
   ok("P8 browse mode: checkbox toggles", afterBrowseClick === "clicked" && browseChecked === "true", `${afterBrowseClick} checked=${browseChecked}`);
 
   // ② 编辑模式：内容惰性 —— 勾选不生效
-  ok("P8 enter edit", await clickBtn("编辑布局"));
+  ok("P8 enter edit", await clickBtn("编辑页面"));
   await sleep(400);
   const afterEditClick = await toggleTask(taskTitle);
   await sleep(600);

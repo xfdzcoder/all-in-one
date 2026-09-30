@@ -7,9 +7,7 @@ import {
   Group,
   Loader,
   MantineProvider,
-  Modal,
   Popover,
-  Stack,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -49,10 +47,6 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [pluginAdminOpen, setPluginAdminOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTitle, setSettingsTitle] = useState("");
-  const [settingsIcon, setSettingsIcon] = useState("");
-  const [settingsBackground, setSettingsBackground] = useState("");
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
   // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
@@ -142,22 +136,19 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   };
 
   // FR-P1/P9：页面设置（名称/图标/背景色）
-  const savePageSettings = async () => {
-    const title = settingsTitle.trim();
-    if (!active || !title) return;
+  // Q29d/三.3：内联页面设置（失焦即存，无弹窗）
+  const savePageSettingsFields = async (patch: { icon?: string | null; background?: string | null; title?: string }) => {
+    if (!active) return;
     try {
-      await api.patchDashboard(active.id, {
-        title,
-        icon: settingsIcon.trim() || null,
-        background: settingsBackground.trim() || null,
-      });
-      setSettingsOpen(false);
+      await api.patchDashboard(active.id, patch);
       setPageError(null);
       await refresh();
     } catch (e) {
       setPageError(`保存页面设置失败：${e instanceof Error ? e.message : String(e)}`);
     }
   };
+  const savePageSettingsWithName = (title: string) => savePageSettingsFields({ title });
+
 
   // FR-P1：页面排序（现状 sortOrder 多为 0 —— 移动后按新序统一编号）
   const moveActive = async (delta: -1 | 1) => {
@@ -238,20 +229,6 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                     <Button size="xs" disabled={!newTitle.trim()} onClick={() => void addDashboard()}>
                       新建页面
                     </Button>
-                    <Button
-                      size="xs"
-                      variant="default"
-                      disabled={!active}
-                      onClick={() => {
-                        setSettingsTitle(active?.title ?? "");
-                        setSettingsIcon(active?.icon ?? "");
-                        setSettingsBackground(active?.background ?? "");
-                        setSettingsOpen(true);
-                        setMenuOpen(false);
-                      }}
-                    >
-                      页面设置
-                    </Button>
                     <Button size="xs" variant="default" disabled={!active || activeIndex <= 0} onClick={() => void moveActive(-1)}>
                       上移
                     </Button>
@@ -278,15 +255,17 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               </Popover>
             )}
             {isDesktop && view === "workspace" && (
-              // Q27b#4：数据源管理页不显示布局编辑入口
+              // Q27b#4：数据源管理页不显示布局编辑入口；Q29d/三.3：编辑布局 → 编辑页面
               <Button
                 variant={layoutEdit ? "filled" : "default"}
                 size="xs"
                 onClick={() => setLayoutEdit((v) => !v)}
               >
-                {layoutEdit ? "完成编辑" : "编辑布局"}
+                {layoutEdit ? "完成编辑" : "编辑页面"}
               </Button>
             )}
+            {/* Q29d/三.2：「添加组件」入口在头部（编辑页面旁）—— Board 经 Portal 注入 */}
+            <span id="wb-header-edit-slot" />
             {/* D41：数据源管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
             <Button variant="default" size="xs" onClick={() => gotoView("data")}>
               数据源管理
@@ -313,6 +292,40 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
         {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />}
         {view === "workspace" && (
           <>
+            {layoutEdit && isDesktop && (
+              <div className="wb-pagerow">
+                <TextInput
+                  size="xs"
+                  placeholder="页面名称"
+                  defaultValue={active?.title ?? ""}
+                  aria-label="页面名称"
+                  onBlur={(e) => {
+                    const v = e.currentTarget.value.trim();
+                    if (v && v !== active?.title) void savePageSettingsWithName(v);
+                  }}
+                />
+                <TextInput
+                  size="xs"
+                  placeholder="图标（emoji）"
+                  defaultValue={active?.icon ?? ""}
+                  aria-label="页面图标"
+                  onBlur={(e) => {
+                    const v = e.currentTarget.value;
+                    if (v !== (active?.icon ?? "")) void savePageSettingsFields({ icon: v.trim() || null });
+                  }}
+                />
+                <TextInput
+                  size="xs"
+                  placeholder="背景色（如 #102030）"
+                  defaultValue={active?.background ?? ""}
+                  aria-label="页面背景色"
+                  onBlur={(e) => {
+                    const v = e.currentTarget.value;
+                    if (v !== (active?.background ?? "")) void savePageSettingsFields({ background: v.trim() || null });
+                  }}
+                />
+              </div>
+            )}
             {pageError && (
               <WbAlert tone="error" size="sm" onClose={() => setPageError(null)}>
                 {pageError}
@@ -327,40 +340,6 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 editMode={layoutEdit}
                 onLayoutSaved={handleLayoutSaved}
               />
-            )}
-            {settingsOpen && (
-              <Modal opened onClose={() => setSettingsOpen(false)} title="页面设置" size="sm">
-                <Stack gap="xs">
-                  <TextInput
-                    size="xs"
-                    label="页面名称"
-                    value={settingsTitle}
-                    onChange={(e) => setSettingsTitle(e.currentTarget.value)}
-                  />
-                  <TextInput
-                    size="xs"
-                    label="图标（emoji / 短文本）"
-                    value={settingsIcon}
-                    onChange={(e) => setSettingsIcon(e.currentTarget.value)}
-                    placeholder="如 🧪（留空 = 无图标）"
-                  />
-                  <TextInput
-                    size="xs"
-                    label="背景色"
-                    value={settingsBackground}
-                    onChange={(e) => setSettingsBackground(e.currentTarget.value)}
-                    placeholder="如 #102030（留空 = 默认底色）"
-                  />
-                  <Group gap="xs">
-                    <Button size="xs" disabled={!settingsTitle.trim()} onClick={() => void savePageSettings()}>
-                      保存
-                    </Button>
-                    <Button size="xs" variant="default" onClick={() => setSettingsOpen(false)}>
-                      取消
-                    </Button>
-                  </Group>
-                </Stack>
-              </Modal>
             )}
           </>
         )}

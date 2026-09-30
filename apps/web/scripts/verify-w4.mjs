@@ -155,7 +155,7 @@ try {
 
   const oldTitle = `W4-旧-${uniq}`;
   const newTitle = `W4-新-${uniq}`;
-  ok("W4 enter edit", await clickBtn("编辑布局"));
+  ok("W4 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
 
   // ① ② ③ text 字段配置变更（占位组件标题）

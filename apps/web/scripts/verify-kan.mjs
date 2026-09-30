@@ -214,7 +214,7 @@ try {
   await sleep(500);
 
   // 添加看板组件（Q26c#3：看板在「配置」里选，头部只显标题）
-  ok("KAN enter edit", await clickBtn("编辑布局"));
+  ok("KAN enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("KAN open picker", await clickBtn("添加组件"));
   await sleep(300);
@@ -337,7 +337,7 @@ try {
   await sleep(800);
 
   // 编辑模式：卡片不可拖（拖动 = 布局）+ 提示 + 内容惰性（Q6c/D29 + FR-P8）
-  ok("KAN re-enter edit", await clickBtn("编辑布局"));
+  ok("KAN re-enter edit", await clickBtn("编辑页面"));
   await sleep(400);
   const draggableInEdit = await cardDraggable(cardC);
   ok("KAN cards not draggable in edit mode", draggableInEdit === false, `draggable=${draggableInEdit}`);

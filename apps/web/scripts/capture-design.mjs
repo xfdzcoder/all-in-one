@@ -251,7 +251,7 @@ try {
   }
 
   // 弹层/模态
-  await clickBtn("编辑布局");
+  await clickBtn("编辑页面");
   await sleep(500);
   await shot("03-edit-mode");
   await clickBtn("添加组件");

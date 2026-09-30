@@ -135,7 +135,7 @@ try {
   await sleep(500);
 
   // ① 正常模板
-  ok("JSX enter edit", await clickBtn("编辑布局"));
+  ok("JSX enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("JSX add widget with template", await addJsxWidget(goodTemplate));
   await sleep(2500);

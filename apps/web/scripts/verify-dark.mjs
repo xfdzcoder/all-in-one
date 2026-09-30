@@ -122,7 +122,7 @@ try {
   await sleep(400);
 
   // 选择器表面：添加组件
-  await clickBtn("编辑布局");
+  await clickBtn("编辑页面");
   await sleep(300);
   await clickBtn("添加组件");
   await sleep(500);

@@ -84,7 +84,7 @@ try {
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 
-  ok("J6 enter edit", await clickBtn("编辑布局"));
+  ok("J6 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("J6 open widget picker", await clickBtn("添加组件"));
   await sleep(300);

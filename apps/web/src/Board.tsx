@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ComponentType } from "react";
 import { GridStack, useGridStack } from "gridstack/dist/react";
 import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/dist/react";
@@ -105,9 +106,16 @@ function BoardToolbar({
     <Group mb="sm" gap="xs" style={{ position: "relative", zIndex: 2 }}>
       {editMode && (
         <>
-          <Button size="xs" variant="light" onClick={() => setPickerOpen(true)}>
-            添加组件
-          </Button>
+          {(() => {
+            // Q29d/三.2：「添加组件」入口移到头部（编辑页面旁）—— Portal 注入头部槽位
+            const btn = (
+              <Button size="xs" variant="light" onClick={() => setPickerOpen(true)}>
+                添加组件
+              </Button>
+            );
+            const slot = typeof document !== "undefined" ? document.getElementById("wb-header-edit-slot") : null;
+            return slot ? createPortal(btn, slot) : btn;
+          })()}
           <WidgetPicker
             opened={pickerOpen}
             onClose={() => setPickerOpen(false)}

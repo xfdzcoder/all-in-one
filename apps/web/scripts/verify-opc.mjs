@@ -129,7 +129,7 @@ try {
   await sleep(500);
 
   // ① 正常 API（refreshSec=3600：定时刷新单测走另一个组件，避免相互污染）
-  ok("OPC enter edit", await clickBtn("编辑布局"));
+  ok("OPC enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("OPC add opencode widget", await addOpencodeWidget(goodUrl, "sk-opc", 3600));
   await sleep(2500);

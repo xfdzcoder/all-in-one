@@ -166,7 +166,7 @@ try {
   await sleep(300);
 
   // ── 页面 03 · 编辑态 ──
-  await clickBtn("编辑布局");
+  await clickBtn("编辑页面");
   await sleep(600);
   await shot("p09-edit-mode");
   await elShot("p10-edit-toolbar", ".grid-stack > :nth-child(2)");

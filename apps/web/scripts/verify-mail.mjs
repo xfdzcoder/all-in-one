@@ -155,7 +155,7 @@ try {
     }
   });
   // 添加邮件组件
-  ok("MAIL enter edit", await clickBtn("编辑布局"));
+  ok("MAIL enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("MAIL open picker", await clickBtn("添加组件"));
   await sleep(300);

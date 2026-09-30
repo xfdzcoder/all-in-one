@@ -156,7 +156,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
-  ok("PL8 enter edit", await clickBtn("编辑布局"));
+  ok("PL8 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
 
   // ① 动作通道：沙箱按钮 → 桥 → 服务端执行 todo.create

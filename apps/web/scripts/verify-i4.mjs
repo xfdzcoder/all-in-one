@@ -201,7 +201,7 @@ try {
   await sleep(400);
 
   // ③ 自定义 API 详情（完整响应）
-  ok("I4 enter edit", await clickBtn("编辑布局"));
+  ok("I4 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("I4 add custom-api", await clickBtn("添加组件"));
   await sleep(300);

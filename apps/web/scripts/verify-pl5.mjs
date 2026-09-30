@@ -137,7 +137,7 @@ try {
   await sleep(500);
 
   // ② 选择器清单动态出现（J8：manifest 驱动，新增组件不改核心）
-  ok("PL5 enter edit", await clickBtn("编辑布局"));
+  ok("PL5 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("PL5 open picker", await clickBtn("添加组件"));
   await sleep(400);

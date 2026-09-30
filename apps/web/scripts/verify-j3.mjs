@@ -51,7 +51,7 @@ try {
 
   // D10: 编辑入口不可见
   const editVisible = await page.evaluate(() =>
-    [...document.querySelectorAll("button")].some((b) => b.textContent.includes("编辑布局")),
+    [...document.querySelectorAll("button")].some((b) => b.textContent.includes("编辑页面")),
   );
   ok("J3/D10 no edit entry on mobile", editVisible === false);
 

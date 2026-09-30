@@ -214,7 +214,7 @@ try {
   }, { s1: seeded.s1, tName: tagName });
   ok(linked, "TAG link source A to tag (API seeding)");
   await sleep(600);
-  ok("TAG enter edit for config filter", await clickBtn("编辑布局"));
+  ok("TAG enter edit for config filter", await clickBtn("编辑页面"));
   await sleep(400);
   ok(
     "TAG open rss config",

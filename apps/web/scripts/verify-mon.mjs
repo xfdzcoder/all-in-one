@@ -157,7 +157,7 @@ try {
   await sleep(500);
 
   // ①② 指标渲染 + Basic 认证注入
-  ok("MON enter edit", await clickBtn("编辑布局"));
+  ok("MON enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("MON add monitor widget", await addMonitorWidget(glancesUrl, true));
   await sleep(2500);
@@ -188,7 +188,7 @@ try {
   await sleep(300);
 
   // ⑤ 非 Glances 源 → 显式探测失败
-  ok("MON enter edit again", await clickBtn("编辑布局"));
+  ok("MON enter edit again", await clickBtn("编辑页面"));
   await sleep(300);
   ok("MON add widget against weird source", await addMonitorWidget(weirdUrl, false));
   await sleep(2500);

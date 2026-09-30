@@ -54,7 +54,7 @@ try {
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 
-  ok("J5 enter edit", await clickBtn("编辑布局"));
+  ok("J5 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   // FR-W2：选择器 → 自定义 API → configSchema 驱动表单
   ok("J5 open widget picker", await clickBtn("添加组件"));

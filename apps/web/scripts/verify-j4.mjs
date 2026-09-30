@@ -96,7 +96,7 @@ try {
 
   // ── J4（D43 语义）：任务归属 = 卡片名称；数据/视图分离 = 组件 ↔ 数据源管理同一数据 ──
   const uniqA = `A-${Date.now().toString(36).slice(-4)}`;
-  ok("J4 enter edit A", await clickBtn("编辑布局"));
+  ok("J4 enter edit A", await clickBtn("编辑页面"));
   await sleep(300);
   ok("J4 add Todo on page A", await addWidgetViaPicker("个人 Todo", "名称", `J4A-${uniqA}`));
   await sleep(1200);
@@ -183,7 +183,7 @@ try {
   await page.type('input[placeholder="新页面名"]', uniq);
   ok("J4 create page B", await clickBtn("新建页面"));
   await sleep(800);
-  ok("J4 enter edit B", await clickBtn("编辑布局"));
+  ok("J4 enter edit B", await clickBtn("编辑页面"));
   await sleep(300);
   ok("J4 add Todo on page B", await addWidgetViaPicker("个人 Todo", "名称", `J4B-${uniq}`));
   await sleep(1500);

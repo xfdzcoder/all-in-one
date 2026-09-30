@@ -112,7 +112,7 @@ try {
   await sleep(500);
 
   // 添加邮件组件 + 打开账号管理
-  ok("GMAIL enter edit", await clickBtn("编辑布局"));
+  ok("GMAIL enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("GMAIL add mail widget", await clickBtn("添加组件") && (await sleep(300), await clickBtn("邮件")));
   await sleep(400);

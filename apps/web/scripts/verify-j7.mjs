@@ -107,7 +107,7 @@ try {
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 
-  ok("J7 enter edit", await clickBtn("编辑布局"));
+  ok("J7 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
 
   // 可嵌入页面：自定义沙箱策略生效，禁嵌检测通过（不出现提示）

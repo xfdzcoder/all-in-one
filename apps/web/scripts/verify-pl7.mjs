@@ -164,7 +164,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
-  ok("PL7 enter edit", await clickBtn("编辑布局"));
+  ok("PL7 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
 
   // ① 数据桥 + 凭证注入（声明的 credentialKinds 放行）

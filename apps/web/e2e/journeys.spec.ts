@@ -48,7 +48,7 @@ test("J2 edit → drag → auto-save → reload restores layout", async ({ page 
   await page.reload();
   await page.waitForSelector(".grid-stack", { timeout: 15_000 });
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "编辑布局" }).click();
+  await page.getByRole("button", { name: "编辑页面" }).click();
   await page.waitForTimeout(400);
 
   const item = page.locator('.grid-stack-item[gs-id="seed-1"]');
@@ -78,7 +78,7 @@ test("J2 edit → drag → auto-save → reload restores layout", async ({ page 
 
 test("J2b add widget persists with props after reload", async ({ page }) => {
   await login(page);
-  await page.getByRole("button", { name: "编辑布局" }).click();
+  await page.getByRole("button", { name: "编辑页面" }).click();
   await page.waitForTimeout(400);
   const before = await page.locator(".grid-stack-item").count();
   // FR-W2：选择器 → 占位组件 → configSchema 表单填标题 → 确认添加
@@ -102,7 +102,7 @@ test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(2);
   // D10：无编辑入口
-  await expect(page.getByRole("button", { name: "编辑布局" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "编辑页面" })).toHaveCount(0);
   // NFR2：触控目标 ≥44px
   const small = await page.evaluate(() => {
     const els = [...document.querySelectorAll("button, a[href], input, [role='checkbox']")].filter(
@@ -126,7 +126,7 @@ test("J4 data/view separation: card name = task group, data admin shares state (
   await login(page);
   const nm = `J4-${Date.now().toString(36).slice(-4)}`;
   // 页面 A：添加 Todo（名称全站唯一）并新建任务
-  await page.getByRole("button", { name: "编辑布局" }).click();
+  await page.getByRole("button", { name: "编辑页面" }).click();
   await page.waitForTimeout(400);
   await page.getByRole("button", { name: "添加组件" }).click();
   await page.getByRole("button", { name: "个人 Todo" }).click();

@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 62 轮 · Q29c ✅ RSS 改造（快照兜底/直开原文/筛选入配置）；余 Q29d–f） |
+| 最近更新 | 2026-10-01（第 63 轮 · Q29d ✅ Dashboard 编辑态重排；余 Q29e–f） |
 
 ## 迭代队列
 
@@ -97,7 +97,7 @@
   - [x] Q29a · 缺陷修复：**六**数据连接黑屏（setState updater 读 e.currentTarget —— updater 延迟执行时事件已回收 → 全树卸载；事件属性先取值修复）+ **四.1**邮箱超大 X（Mantine v9 InputClearButton **未定义 --cb-size-compact-\\*** 变量 → inline var 链失效 → 94×66 巨钮；补齐 compact 变量后 16×16）+ 验证栈重启（PORT=3001 漏设撞用户 :3000）**✅ 2026-09-30**
   - [x] Q29b · ToDo 重构（一）：`archived` 列+迁移 0011（归档项仅管理面可见 includeArchived）；widget 去标签/去筛选按钮、显示三档（未完成/已完成/全部）；picker「名称」= creatable 下拉（可选已有/输入新建）；管理页 = **单 ToDo 视图**（下拉切换 + 快捷筛选 SegmentedControl + 总数 + 所在 Dashboard/未挂载标注 + 删除 ToDo 带确认）**✅ 2026-09-30**
   - [x] Q29c · RSS 改造（二）：`feed_source.snapshotJson` 快照兜底（失败显缓存+提示）；去详情弹窗（点击=新标签开原文+标已读）；筛选入配置（ConfigField `multiselect` + dynamic tags）**✅ 2026-10-01**
-  - [ ] Q29d · Dashboard 编辑态（三）：编辑时隐藏组件自身按钮；添加组件移头部；编辑页面（内联页面设置）
+  - [x] Q29d · Dashboard 编辑态（三）：编辑态隐藏组件自身按钮（inert 层按钮 visibility:hidden）；「添加组件」Portal 入头部（编辑页面旁）；「编辑布局」→「编辑页面」+ 页面设置弹窗取消 → **编辑态内联行**（名称/图标/背景色，失焦即存）**✅ 2026-10-01**
   - [ ] Q29e · 邮箱+看板（四五）：picker 多选邮箱（缓存）；邮箱/看板管理页添加入右上角；看板空态引导/禁删列/列宽等分
   - [ ] Q29f · 收口：文档/台账/脚本 + 全量回归
 
@@ -183,3 +183,4 @@
 | 60 | 2026-09-30 | **Q28b 看板管理页列排布（用户反馈⑨）**：数据源管理·看板的列/卡由「一组一行」列表改为**真·看板式列排布**——各列并排横排（`wb-admin__board` 横向滚动）、列内卡片纵排（`wb-admin__card` 块 + 归档/删除元信息行）、列头=名称/删列、「＋ 卡片」列内 ghost；「添加列」收为**末列 ghost 列**（虚线，管理页仍是加列唯一入口） | 全量 26 脚本 437 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `3f11226` |
 | 61 | 2026-09-30 | **Q29a+b**：① **六 数据连接黑屏**——setState updater 内读 `e.currentTarget`（延迟执行时事件已回收）→ TypeError → React 卸载全树；事件属性先取值修复。② **四.1 邮箱巨钮**——Mantine v9 InputClearButton 未定义 `--cb-size-compact-*` → var 链失效 94×66；补齐 compact 变量（16×16）。③ **Q29b ToDo 重构**——`archived` 归档（仅管理面可见）；组件去标签/筛选按钮、显示三档；picker 名称 creatable（Mantine v9 无内建 creatable —— 搜索注入「＋ 新建」项 + 已选新值保持显示）；管理页单 ToDo 视图（下拉+快捷筛选+所在 Dashboard 标注）；`ConfigField.creatable` 契约扩展。旅程适配：j4/w4（creatable 交互=聚焦→键入→点新建）、verify-tag 去 ToDo 标签段（Q29b 后标签仅信息源）| server Vitest 151/151（+1 归档契约）；全量 26 脚本 431 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `9e92a26` / `e55c758` |
 | 62 | 2026-10-01 | **Q29c RSS 改造（二.1-3）**：① 快照兜底——`feed_source.snapshot_json/snapshot_at`（迁移 0012），拉取成功落快照；失败时回落上次快照（条目标 `stale`，UI 显「N 个源暂不可用，显示上次拉取的缓存条目」；无 TTL 不做清理配置）；契约测试含 5s 限流窗等待（force 强刷受最小间隔限流）。② 去详情弹窗——点击条目 = 新标签开原文 + 标已读（`window.open` noopener）；摘要沙箱渲染随弹层移除。③ 筛选并入配置——`ConfigField` 增 `multiselect`（dynamic=tags），组件头部「筛选」按钮移除；契约 `ConfigFieldType` 扩展。旅程：verify-i4 RSS 段改直开断言（拦截 window.open + /api/feeds/read 记录）、verify-tag 筛选段改配置 multiselect 流程（16/16）。**教训**：改 web 后必须重建 bundle（preview 服旧 dist，症状=新逻辑不生效） | server Vitest 152/152（+1）✅；全量 26 脚本 427 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |
+| 63 | 2026-10-01 | **Q29d Dashboard 编辑态重排（三.1-3）**：① 编辑态隐藏组件自身按钮（`.wb-chrome__content--inert button/role=button { visibility:hidden }`——与外框「配置/移除」重叠问题）；② 「添加组件」经 **Portal 注入头部槽位**（`#wb-header-edit-slot`，编辑页面旁；BoardToolbar 需在 GridStack 内取 useGridStack，故用 Portal 而非搬家）；③ 「编辑布局」→「编辑页面」（26 文件旅程批量改名）；页面设置弹窗取消 → **编辑态内联行**（页面名称/图标/背景色一行排开、失焦即存，`savePageSettingsFields`）。**事故与加固**：m1 清理段曾因断言失败继续执行而**误删「首页」**（API 重建 seed 布局恢复）——补守卫「确认弹窗必须点名目标页否则中止」；另记「改 web 必须重建 bundle」教训（本轮 J2b 误报由此而来） | 全量 26 脚本 428 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | 待提交 |

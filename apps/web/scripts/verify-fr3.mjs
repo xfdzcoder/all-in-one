@@ -129,7 +129,7 @@ try {
   await sleep(500);
 
   // 添加三个组件（自定义 API / 应用入口 / 看板）
-  ok("FR3 enter edit", await clickBtn("编辑布局"));
+  ok("FR3 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   ok("FR3 add custom-api", await clickBtn("添加组件") && (await sleep(300), await clickBtn("自定义 API")));
   await sleep(400);

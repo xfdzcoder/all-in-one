@@ -126,7 +126,7 @@ try {
 
   // J2: drag INTO EMPTY SPACE below (no collision → gridstack >50% rule not applicable).
   // Asserting the position actually CHANGED (non-vacuous).
-  ok("J2 enter edit mode", await clickBtn("编辑布局"));
+  ok("J2 enter edit mode", await clickBtn("编辑页面"));
   await sleep(300);
   const y0 = Number(await gs("seed-1", "gs-y"));
   const box = await (await page.$('.grid-stack-item[gs-id="seed-1"]')).boundingBox();
@@ -150,7 +150,7 @@ try {
   ok("J2 auto-save + reload restores moved position", y1 === y2 && y2 > y0, `moved=${y1} restored=${y2}`);
 
   // props round-trip: picker → configSchema 表单（标题）→ 添加 → save → reload → props survive
-  ok("J2b re-enter edit mode", await clickBtn("编辑布局"));
+  ok("J2b re-enter edit mode", await clickBtn("编辑页面"));
   await sleep(300);
   const countBefore = await page.$$eval(".grid-stack-item", (els) => els.length);
   const addedTitle = `N-${Date.now().toString(36).slice(-4)}`;
@@ -174,7 +174,7 @@ try {
   await page.setViewport({ width: 375, height: 720 });
   await sleep(600);
   const editVisible = await page.evaluate(() =>
-    [...document.querySelectorAll("button")].some((b) => b.textContent.includes("编辑布局")),
+    [...document.querySelectorAll("button")].some((b) => b.textContent.includes("编辑页面")),
   );
   ok("D10 mobile hides edit entry", editVisible === false);
 
@@ -233,24 +233,22 @@ try {
   await page.type('input[placeholder="新页面名"]', p1);
   ok("P1 create page", await clickBtn("新建页面"));
   await sleep(800);
-  await openSwitcher();
-  ok("P1 open page settings", await clickBtn("页面设置"));
+  // Q29d/三.3：页面设置改编辑态内联行（失焦即存，无弹窗）
+  ok("P1 enter edit for inline settings", await clickBtn("编辑页面"));
   await sleep(400);
   ok(
     "P1 fill new name",
     await page.evaluate((t) => {
-      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
-        w.querySelector("label")?.textContent.includes("页面名称"),
-      );
-      const input = wrapper?.querySelector("input");
+      const input = document.querySelector('input[aria-label="页面名称"]');
       if (!input) return false;
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       setter.call(input, t);
       input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      input.blur(); // 失焦即存
       return true;
     }, renamed),
   );
-  ok("P1 save settings", await clickBtn("保存", true));
   await sleep(1000);
   await openSwitcher();
   ok(
@@ -293,38 +291,34 @@ try {
     }, renamed),
   );
   await sleep(600);
-  await openSwitcher();
-  ok("P9 open page settings", await clickBtn("页面设置"));
+  ok("P9 enter edit for inline settings", await clickBtn("编辑页面"));
   await sleep(400);
   ok(
     "P9 fill icon",
     await page.evaluate(() => {
-      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
-        w.querySelector("label")?.textContent.includes("图标"),
-      );
-      const input = wrapper?.querySelector("input");
+      const input = document.querySelector('input[aria-label="页面图标"]');
       if (!input) return false;
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       setter.call(input, "🧪");
       input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      input.blur();
       return true;
     }),
   );
   ok(
     "P9 fill background",
     await page.evaluate(() => {
-      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
-        w.querySelector("label")?.textContent.includes("背景色"),
-      );
-      const input = wrapper?.querySelector("input");
+      const input = document.querySelector('input[aria-label="页面背景色"]');
       if (!input) return false;
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       setter.call(input, "#102030");
       input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      input.blur();
       return true;
     }),
   );
-  ok("P9 save settings", await clickBtn("保存", true));
   await sleep(1000);
   ok(
     "P9 icon shown on tab",
@@ -333,6 +327,8 @@ try {
       return page.evaluate((t) => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes(`🧪 ${t}`)), renamed);
     })(),
   );
+  ok("P9 exit edit", await clickBtn("完成编辑"));
+  await sleep(400);
   const bgApplied = await page.evaluate(() => {
     const main = document.querySelector(".mantine-AppShell-main");
     return main ? getComputedStyle(main).backgroundColor : null;
@@ -364,12 +360,17 @@ try {
   await openSwitcher();
   ok("P1 cleanup open confirm", await clickBtn("删除此页"));
   await sleep(400);
-  ok(
-    "P1 confirm dialog names the target page",
-    await page.evaluate((t) => (document.body.textContent ?? "").includes(`确认删除页面「${t}」`), renamed),
-  );
-  ok("P1 cleanup confirm", await clickBtn("确认", true));
-  await sleep(800);
+  const dialogOk = await page.evaluate((t) => (document.body.textContent ?? "").includes(`确认删除页面「${t}」`), renamed);
+  ok("P1 confirm dialog names the target page", dialogOk);
+  // 守卫：确认弹窗必须点名目标页 —— 否则中止（防止误删首页等他页）
+  if (dialogOk) {
+    ok("P1 cleanup confirm", await clickBtn("确认", true));
+    await sleep(800);
+  } else {
+    ok("P1 cleanup confirm", false, "aborted: dialog does not name target page");
+    await clickBtn("取消", true);
+    await sleep(300);
+  }
   await openSwitcher();
   ok(
     "P1 cleanup done",
