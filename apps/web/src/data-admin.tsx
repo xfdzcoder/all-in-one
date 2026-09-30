@@ -12,9 +12,13 @@ import {
   Title,
 } from "@mantine/core";
 
-import type { FeedSource, TagRow, TodoItem } from "./api";
+import type { DataSourceRow, FeedSource, TagRow, TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
+import { propsWithSecretRefs } from "./config-form-utils";
+import { api } from "./api";
 import {
+  useDataSources,
+  useDataSourceMutations,
   useDraft,
   useFeedMutations,
   useFeedSources,
@@ -68,6 +72,68 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
   const tree = useKanbanTree(activeBoardId);
   const m = useKanbanMutations(activeBoardId);
   const [newBoard, setNewBoard] = useState("");
+  // Q26b/D42：命名数据连接（monitor / opencode / http）
+  const dsMut = useDataSourceMutations();
+  const [dsKind, setDsKind] = useState<string>("monitor");
+  const dsRows = useDataSources(dsKind);
+  const [dsEditing, setDsEditing] = useState<string | null>(null);
+  const [dsName, setDsName] = useState("");
+  const [dsConfig, setDsConfig] = useState<Record<string, string>>({});
+  const [dsError, setDsError] = useState<string | null>(null);
+  const DS_KINDS = [
+    { value: "monitor", label: "监控源" },
+    { value: "opencode", label: "OpenCode" },
+    { value: "http", label: "HTTP / 自定义 API" },
+  ];
+  const DS_FIELDS: Record<string, Array<{ key: string; label: string; type: "text" | "select" | "secret"; options?: Array<{ value: string; label: string }> }>> = {
+    monitor: [
+      { key: "url", label: "监控源地址", type: "text" },
+      { key: "authMode", label: "认证方式", type: "select", options: [{ value: "none", label: "无认证" }, { value: "basic", label: "Basic" }] },
+      { key: "username", label: "用户名", type: "text" },
+      { key: "password", label: "口令", type: "secret" },
+    ],
+    opencode: [
+      { key: "url", label: "服务地址", type: "text" },
+      { key: "apiToken", label: "访问令牌", type: "secret" },
+    ],
+    http: [
+      { key: "url", label: "接口地址", type: "text" },
+      { key: "authHeader", label: "认证头名", type: "text" },
+      { key: "apiToken", label: "访问令牌", type: "secret" },
+    ],
+  };
+
+  const resetDsForm = () => {
+    setDsEditing(null);
+    setDsName("");
+    setDsConfig({});
+    setDsError(null);
+  };
+
+  const submitDs = async () => {
+    setDsError(null);
+    try {
+      const schema = DS_FIELDS[dsKind].map((f) => ({
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        ...(f.options ? { options: f.options } : {}),
+      }));
+      const config = await propsWithSecretRefs(
+        schema,
+        { ...dsConfig } as Record<string, unknown>,
+        (name, secret) => api.createCredential(name, secret),
+      );
+      const clean = Object.fromEntries(
+        Object.entries(config as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== ""),
+      );
+      if (dsEditing) await dsMut.update.mutateAsync({ id: dsEditing, name: dsName.trim(), config: clean });
+      else await dsMut.create.mutateAsync({ kind: dsKind, name: dsName.trim(), config: clean });
+      resetDsForm();
+    } catch (e) {
+      setDsError(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const tagRows = tags.data ?? [];
 
@@ -98,6 +164,7 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
           <Tabs.Tab value="todo">任务</Tabs.Tab>
           <Tabs.Tab value="feeds">信息源</Tabs.Tab>
           <Tabs.Tab value="kanban">看板</Tabs.Tab>
+          <Tabs.Tab value="sources">数据连接</Tabs.Tab>
           <Tabs.Tab value="tags">标签</Tabs.Tab>
         </Tabs.List>
 
@@ -394,6 +461,116 @@ export function DataAdmin({ onBack }: { onBack: () => void }) {
                 暂无看板 —— 新建后即可管理列与卡片
               </Text>
             )}
+          </Stack>
+        </Tabs.Panel>
+
+        {/* ── 数据连接（D42：monitor / opencode / http 命名连接） ── */}
+        <Tabs.Panel value="sources" pt="xs">
+          <Stack gap="xs">
+            {dsError && (
+              <WbAlert tone="error" size="sm" onClose={() => setDsError(null)}>
+                {dsError}
+              </WbAlert>
+            )}
+            <Group gap="xs" wrap="nowrap">
+              <Select
+                size="xs"
+                data={DS_KINDS}
+                value={dsKind}
+                onChange={(v) => {
+                  setDsKind(v ?? "monitor");
+                  resetDsForm();
+                }}
+                style={{ width: 150 }}
+                aria-label="连接类型"
+              />
+              <TextInput
+                size="xs"
+                placeholder="连接名称"
+                value={dsName}
+                onChange={(e) => setDsName(e.currentTarget.value)}
+                style={{ width: 150 }}
+              />
+              {DS_FIELDS[dsKind].map((f) =>
+                f.type === "select" ? (
+                  <Select
+                    key={f.key}
+                    size="xs"
+                    data={f.options ?? []}
+                    value={dsConfig[f.key] ?? "none"}
+                    onChange={(v) => setDsConfig((c) => ({ ...c, [f.key]: v ?? "" }))}
+                    style={{ width: 110 }}
+                    aria-label={f.label}
+                  />
+                ) : (
+                  <TextInput
+                    key={f.key}
+                    size="xs"
+                    type={f.type === "secret" ? "password" : "text"}
+                    placeholder={f.label}
+                    value={dsConfig[f.key] ?? ""}
+                    onChange={(e) => setDsConfig((c) => ({ ...c, [f.key]: e.currentTarget.value }))}
+                    style={{ width: 160 }}
+                  />
+                ),
+              )}
+              <Button size="xs" disabled={!dsName.trim()} onClick={() => void submitDs()}>
+                {dsEditing ? "保存修改" : "添加连接"}
+              </Button>
+              {dsEditing && (
+                <Button size="xs" variant="default" onClick={resetDsForm}>
+                  取消
+                </Button>
+              )}
+            </Group>
+            <div className="wb-admin__table">
+              {(dsRows.data ?? [])
+                .filter((r: DataSourceRow) => !q || r.name.includes(q))
+                .map((r: DataSourceRow) => (
+                  <div key={r.id} className="wb-admin__row" data-admin-row="source">
+                    <Badge size="xs" variant="outline">
+                      {DS_KINDS.find((k) => k.value === r.kind)?.label ?? r.kind}
+                    </Badge>
+                    <Text size="sm" fw={600} style={{ width: 140 }} truncate>
+                      {r.name}
+                    </Text>
+                    <Text size="xs" c="dimmed" className="wb-grow" truncate>
+                      {String(r.config.url ?? "")}
+                    </Text>
+                    <Button
+                      size="compact-xs"
+                      variant="subtle"
+                      onClick={() => {
+                        setDsEditing(r.id);
+                        setDsKind(r.kind);
+                        setDsName(r.name);
+                        setDsConfig(
+                          Object.fromEntries(
+                            Object.entries(r.config ?? {})
+                              .filter(([, v]) => typeof v === "string")
+                              .map(([k, v]) => [k, String(v)]),
+                          ),
+                        );
+                      }}
+                    >
+                      编辑
+                    </Button>
+                    <ConfirmAction
+                      label="删除"
+                      size="compact-xs"
+                      variant="subtle"
+                      title="删除连接？"
+                      message={`确认删除连接「${r.name}」？（引用它的组件将回落内联配置；业务数据保留）`}
+                      onConfirm={() => dsMut.remove.mutate(r.id)}
+                    />
+                  </div>
+                ))}
+              {(dsRows.data ?? []).length === 0 && (
+                <Text size="xs" c="dimmed">
+                  暂无{DS_KINDS.find((k) => k.value === dsKind)?.label}连接 —— 添加后组件可引用
+                </Text>
+              )}
+            </div>
           </Stack>
         </Tabs.Panel>
 

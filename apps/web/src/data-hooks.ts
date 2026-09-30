@@ -549,3 +549,36 @@ export function useTagMutations() {
   });
   return { create, update, remove, setTarget };
 }
+
+/** 命名数据连接（D42）：列表 + 变更。 */
+export function useDataSources(kind?: string) {
+  const query = useQuery({
+    queryKey: ["data-sources", kind ?? "all"],
+    queryFn: () => api.listDataSources(kind),
+  });
+  return {
+    data: query.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
+export function useDataSourceMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => void qc.invalidateQueries({ queryKey: ["data-sources"] });
+  const create = useMutation({
+    mutationFn: (v: { kind: string; name: string; config: Record<string, unknown> }) =>
+      api.createDataSource(v),
+    onSuccess: invalidate,
+  });
+  const update = useMutation({
+    mutationFn: (v: { id: string; name?: string; config?: Record<string, unknown> }) =>
+      api.updateDataSource(v.id, { name: v.name, config: v.config }),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteDataSource(id),
+    onSuccess: invalidate,
+  });
+  return { create, update, remove };
+}

@@ -342,3 +342,31 @@ export type Tag = typeof tag.$inferSelect;
 export type NewTag = typeof tag.$inferInsert;
 export type TagTarget = typeof tagTarget.$inferSelect;
 export type NewTagTarget = typeof tagTarget.$inferInsert;
+
+/**
+ * 命名数据连接（D42 / Q26）：监控源 / OpenCode 连接 / HTTP(自定义 API) 连接。
+ * kind 白名单 ["monitor","opencode","http"]（应用层 zod 校验，扩展=加枚举）。
+ * secret 字段不入 config_json —— 经凭证库存引用（SEC3）；邮箱沿用 mail_account。
+ */
+export const dataSource = sqliteTable(
+  "data_source",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (D21/NFR5)。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    configJson: text("config_json").notNull().default("{}"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("data_source_user_idx").on(t.userId),
+    uniqueIndex("data_source_user_kind_name_idx").on(t.userId, t.kind, t.name),
+  ],
+);
+
+export type DataSource = typeof dataSource.$inferSelect;
+export type NewDataSource = typeof dataSource.$inferInsert;

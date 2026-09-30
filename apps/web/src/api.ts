@@ -43,6 +43,16 @@ export type FeedSource = {
   tagIds?: string[];
 };
 
+/** 命名数据连接（D42）。 */
+export type DataSourceRow = {
+  id: string;
+  kind: string;
+  name: string;
+  config: Record<string, unknown>;
+  createdAt: number | string;
+  updatedAt: number | string;
+};
+
 /** Workspace 标签（FR-D1 / D40）。 */
 export type TagRow = {
   id: string;
@@ -168,6 +178,16 @@ export const api = {
     req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
+  // ── 命名数据连接（D42）：monitor / opencode / http ──
+  listDataSources: (kind?: string) =>
+    req<DataSourceRow[]>("GET", `/api/data-sources${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`),
+  createDataSource: (v: { kind: string; name: string; config: Record<string, unknown> }) =>
+    req<DataSourceRow>("POST", "/api/data-sources", v),
+  updateDataSource: (
+    id: string,
+    patch: { name?: string; config?: Record<string, unknown> },
+  ) => req<{ ok: boolean }>("PATCH", `/api/data-sources/${id}`, patch),
+  deleteDataSource: (id: string) => req<{ ok: boolean }>("DELETE", `/api/data-sources/${id}`),
   listFeeds: () => req<FeedSource[]>("GET", "/api/feeds"),
   // ── Workspace 标签（FR-D1/D2/D3，D40）──
   listTags: () => req<TagRow[]>("GET", "/api/tags"),

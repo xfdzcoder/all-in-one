@@ -71,6 +71,13 @@
       "when": 1790741114319,
       "tag": "0009_fast_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790761136601,
+      "tag": "0010_superb_nighthawk",
+      "breakpoints": true
     }
   ]
 }

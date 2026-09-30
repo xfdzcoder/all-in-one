@@ -351,6 +351,20 @@
 
 ---
 
+## D42 · 数据源全量迁入「数据源管理」：命名连接模型
+
+- **状态**：已决（用户拍板"一并"，2026-09-30，Q26）
+- **背景**：邮箱/监控源/OpenCode 连接/自定义 API 凭证均属"数据源"，此前分散在各组件配置里（url+密钥随组件走），管理不集中、凭证语义不统一。
+- **决策**：
+  1. **命名连接**：新增 `data_source` 表（`kind ∈ {monitor, opencode, http}` + name + config_json，user_id 归属 D21；同用户同 kind 唯一名）。**邮箱沿用 `mail_account`**（已具备 IMAP/OAuth/凭证语义），仅管理 UI 迁入统一门户。
+  2. **凭证不入 config**：secret 字段经凭证库（SEC3，`propsWithSecretRefs` 同款流程），config 只存引用。
+  3. **组件引用 + 内联回落**：monitor/opencode 组件配置可选 `sourceId`（解析出 url/auth）；未引用时沿用内联 url/字段（向后兼容，既有布局零迁移）。自定义 API 组件的 `sourceId` 提供**认证**（token/头名），`url` 仍由组件配置（端点各异）。
+  4. **管理门户**：数据源管理页签 = 任务 / 信息源 / 看板 / 邮箱 / **数据连接** / 标签。
+- **影响**：FR-D2 管理面扩展；ConfigForm 支持动态选项（供 `sourceId`/`boardId` 下拉）；widget 端配置解析走连接优先。
+- **被否备选**：mail_account 并入 data_source（迁移风险大、OAuth 语义特化）；组件配置强制改为引用（破坏既有布局）。
+
+---
+
 ## 命名约定（非编号决策，已确认）
 
 - 顶层概念 **Workspace（空间/工作台）**，其下 **Dashboard（页面）**，再下 **Widget（组件）**；文档统一用 Workspace 作顶层。
