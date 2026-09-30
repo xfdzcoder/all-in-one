@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@mantine/core";
+import { useMemo, useState } from "react";
+import { Alert, Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@mantine/core";
+import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 
 import { useCustomApiData } from "./data-hooks";
+import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
 /**
  * 自定义 API Widget（D14：声明式白名单模板，无代码执行）。
@@ -11,7 +13,9 @@ import { useCustomApiData } from "./data-hooks";
 export type CustomApiConfig = {
   url?: string;
   method?: "GET" | "POST";
-  display?: "stat" | "list" | "status" | "raw";
+  display?: "stat" | "list" | "status" | "raw" | "jsx";
+  /** display=jsx 时的受限 JSX 模板（D35）；绑定面 = data（完整响应）+ 安全子集。 */
+  templateJsx?: string;
   /** 点路径取值（如 "data.items"）；空 = 根。 */
   path?: string;
   /** list/status 模式的字段名（如 "name"、"value"）。 */
@@ -37,6 +41,13 @@ export function CustomApiWidget(props: CustomApiConfig) {
   const { data, loading, error, refresh } = useCustomApiData(props);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // 三层展示（D35）：声明式预设 → 受限 JSX → Raw；模板解析失败显式报错不白屏
+  const templateSrc = typeof props.templateJsx === "string" ? props.templateJsx : "";
+  const parsed = useMemo(
+    () => (display === "jsx" ? parseJsxTemplate(templateSrc, { allowedTags: ALLOWED_TAGS }) : null),
+    [display, templateSrc],
+  );
+
   return (
     <Stack gap={4} style={{ height: "100%", overflow: "auto", padding: 4 }}>
       <Group gap={6}>
@@ -58,7 +69,17 @@ export function CustomApiWidget(props: CustomApiConfig) {
           {error}
         </Text>
       )}
-      {!loading && !error && <ApiDisplay display={display} data={pickPath(data, props.path)} config={props} />}
+      {!loading && !error && display === "jsx" && parsed && parsed.errors.length > 0 && (
+        <Alert color="red">
+          <Text size="xs">模板错误（D35 校验拒绝）：{parsed.errors.join("；")}</Text>
+        </Alert>
+      )}
+      {!loading && !error && display === "jsx" && parsed?.tree && (
+        <JsxTemplateView tree={parsed.tree} data={data} />
+      )}
+      {!loading && !error && display !== "jsx" && (
+        <ApiDisplay display={display} data={pickPath(data, props.path)} config={props} />
+      )}
       {detailOpen && (
         <Modal opened onClose={() => setDetailOpen(false)} title="详情 · 完整响应（FR-I4）" size="lg">
           <JsonInput value={JSON.stringify(data, null, 2)} readOnly autosize minRows={6} maxRows={20} size="xs" />

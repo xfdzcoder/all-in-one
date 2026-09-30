@@ -45,6 +45,18 @@ export function ConfigForm({
       {schema.map((f) => {
         const v = values[f.key];
         switch (f.type) {
+          case "textarea":
+            return (
+              <Textarea
+                key={f.key}
+                label={f.label}
+                size="xs"
+                minRows={4}
+                placeholder={f.placeholder}
+                value={typeof v === "string" ? v : ""}
+                onChange={(e) => onChange(f.key, e.currentTarget.value)}
+              />
+            );
           case "boolean":
             return (
               <Checkbox

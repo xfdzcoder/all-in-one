@@ -52,3 +52,13 @@ export {
   PLUGIN_ENTRY_PATTERN,
   SEMVER_PATTERN,
 } from "./plugin.ts";
+
+export {
+  type CompiledExpr,
+  type ParseOptions,
+  type ParseResult,
+  type TemplateNode,
+  type TemplateValue,
+  TEMPLATE_MAX_BYTES,
+  parseJsxTemplate,
+} from "./jsx-template.ts";

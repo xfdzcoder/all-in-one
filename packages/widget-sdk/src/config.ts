@@ -6,6 +6,8 @@
 
 export type ConfigFieldType =
   | "text"
+  /** 多行文本（如受限 JSX 模板源码；不作 JSON 校验）。 */
+  | "textarea"
   | "number"
   | "boolean"
   | "select"
