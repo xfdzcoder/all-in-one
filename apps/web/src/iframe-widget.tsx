@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader, Text } from "@mantine/core";
+import { Loader, Stack, Text } from "@mantine/core";
 
 import { useEmbedCheck } from "./data-hooks";
 import { WbAlert } from "./ui";
@@ -52,7 +52,12 @@ export function IframeWidget({ url, sandbox }: IframeConfig) {
         <div className="wb-frame">
           {!loaded && !blocked && (
             <div className="wb-frame__loader">
-              <Loader size="sm" />
+              <Stack gap="xs" align="center">
+                <Loader size="sm" />
+                <Text size="xs" c="dimmed" className="wb-loading">
+                  加载中…
+                </Text>
+              </Stack>
             </div>
           )}
           <iframe

@@ -13,6 +13,7 @@ import type { PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api, type PluginRow } from "./api";
 import { ConfirmAction } from "./confirm";
+import { WbAlert } from "./ui";
 import { queryClient, usePlugins } from "./data-hooks";
 
 /**
@@ -151,9 +152,13 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
           </Button>
         </Group>
         {message && (
-          <Text size="xs" c={message.kind === "ok" ? "green" : "red"}>
+          <WbAlert
+            tone={message.kind === "ok" ? "success" : "error"}
+            size="sm"
+            onClose={() => setMessage(null)}
+          >
             {message.text}
-          </Text>
+          </WbAlert>
         )}
         <List size="xs" spacing="xs">
           {plugins.length === 0 && (

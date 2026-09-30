@@ -99,7 +99,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           }}
           style={{ width: 110 }}
         />
-        <Button size="compact-xs" variant="default" onClick={() => void createBoardAndSelect()}>
+        <Button size="compact-xs" variant="default" disabled={!newBoard.trim()} onClick={() => void createBoardAndSelect()}>
           新建看板
         </Button>
         <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
@@ -124,9 +124,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         </Text>
       )}
       {loading && (
-        <Text size="xs" c="dimmed">
-          加载中…
-        </Text>
+        <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
       )}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
@@ -240,6 +238,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                   <Button
                     size="compact-xs"
                     variant="subtle"
+                    disabled={!(cardDrafts[col.id] ?? "").trim()}
                     onClick={() => {
                       const t = (cardDrafts[col.id] ?? "").trim();
                       if (t) {
@@ -272,6 +271,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               <Button
                 size="compact-xs"
                 variant="subtle"
+                disabled={!newColumn.trim()}
                 onClick={() => {
                   const t = newColumn.trim();
                   if (t) {

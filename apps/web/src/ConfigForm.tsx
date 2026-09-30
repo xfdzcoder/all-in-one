@@ -12,7 +12,10 @@ import {
   TextInput,
 } from "@mantine/core";
 
+import { useState } from "react";
+
 import { validateForm } from "./config-form-utils";
+import { WbAlert } from "./ui";
 
 /**
  * FR-W2：由 configSchema 驱动的配置表单（widget-agnostic）。
@@ -34,14 +37,25 @@ export function ConfigForm({
   /** FR-I2/I3：组件声明了刷新能力时，表单附带标准"刷新频率"字段（存 props.refreshSec）。 */
   refresh?: { minRefreshSec?: number; defaultRefreshSec?: number };
 }) {
+  // ISS-23 修复：校验失败内联提示（不再浏览器 alert）
+  const [formError, setFormError] = useState<string | null>(null);
   const submit = () => {
     const errors = validateForm(schema, values);
-    if (errors.length === 0) onSubmit(values);
-    else alert(errors.map((e) => e.message).join("\n"));
+    if (errors.length === 0) {
+      setFormError(null);
+      onSubmit(values);
+    } else {
+      setFormError(errors.map((e) => e.message).join("；"));
+    }
   };
 
   return (
     <Stack gap="xs">
+      {formError && (
+        <WbAlert tone="error" size="sm" onClose={() => setFormError(null)}>
+          {formError}
+        </WbAlert>
+      )}
       {schema.map((f) => {
         const v = values[f.key];
         switch (f.type) {

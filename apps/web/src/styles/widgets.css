@@ -515,3 +515,9 @@
   border-radius: var(--wb-radius-sm);
   background: var(--wb-color-surface-raised);
 }
+
+/* ── 加载态（ISS-12 统一）：全站同一表达「加载中…」+ 同款弱化样式 ── */
+.wb-loading {
+  color: var(--wb-color-text-muted);
+  font-size: var(--wb-text-xs);
+}

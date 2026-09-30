@@ -44,7 +44,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
           刷新
         </Button>
       </Group>
-      {loading && <Text size="xs" c="dimmed">探测中…</Text>}
+      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <Group gap="xs">
         {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean }) => (

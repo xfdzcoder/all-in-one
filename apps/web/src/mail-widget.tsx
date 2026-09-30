@@ -100,9 +100,7 @@ export function MailWidget({ limit = 20, refreshSec }: { limit?: number; refresh
       {!open && (
         <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
           {loading && (
-            <Text size="xs" c="dimmed">
-              加载中…
-            </Text>
+            <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
           )}
           {!loading && (agg?.items ?? []).length === 0 && (
             <Text size="xs" c="dimmed">

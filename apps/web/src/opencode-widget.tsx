@@ -60,9 +60,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
         </WbAlert>
       )}
       {loading && (
-        <Text size="xs" c="dimmed">
-          探测中…
-        </Text>
+        <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
       )}
 
       <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>

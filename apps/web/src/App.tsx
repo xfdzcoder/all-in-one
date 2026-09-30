@@ -19,6 +19,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
+import { WbAlert } from "./ui";
 import { LoginPage } from "./LoginPage";
 import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
@@ -59,10 +60,22 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   // FR-D2：Workspace 数据管理面（Todo / 信息源 / 标签）
   const [dataAdminOpen, setDataAdminOpen] = useState(false);
 
+  // ISS-1 修复：页面 CRUD 统一错误提示（失败不再静默）
+  const [pageError, setPageError] = useState<string | null>(null);
+
   const refresh = useCallback(async () => {
-    const rows = await api.listDashboards();
-    setDashboards(rows);
-    setActiveId((cur) => cur ?? rows[0]?.id ?? null);
+    try {
+      const rows = await api.listDashboards();
+      setDashboards(rows);
+      // ISS-3 修复：活动页持久化 —— 深链 ?page=<id> 优先，刷新停留在原页
+      const fromQuery = new URLSearchParams(window.location.search).get("page");
+      setActiveId(
+        (cur) => cur ?? (rows.some((r) => r.id === fromQuery) ? (fromQuery as string) : (rows[0]?.id ?? null)),
+      );
+      setPageError(null);
+    } catch (e) {
+      setPageError(e instanceof Error ? e.message : String(e));
+    }
   }, []);
 
   const handleLayoutSaved = useCallback((dashboardId: string, layoutJson: string) => {
@@ -79,31 +92,46 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const addDashboard = async () => {
     const title = newTitle.trim();
     if (!title) return;
-    const created = await api.createDashboard(title);
-    setNewTitle("");
-    await refresh();
-    // UX：新建后直接切到新页面（J4 流程也依赖这一点）
-    setActiveId(created.id);
+    try {
+      const created = await api.createDashboard(title);
+      setNewTitle("");
+      setPageError(null);
+      await refresh();
+      // UX：新建后直接切到新页面（J4 流程也依赖这一点）
+      setActiveId(created.id);
+    } catch (e) {
+      setPageError(`新建页面失败：${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   const removeActive = async () => {
     if (!active) return;
-    await api.deleteDashboard(active.id);
-    setActiveId(null);
-    await refresh();
+    try {
+      await api.deleteDashboard(active.id);
+      setActiveId(null);
+      setPageError(null);
+      await refresh();
+    } catch (e) {
+      setPageError(`删除页面失败：${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   // FR-P1/P9：页面设置（名称/图标/背景色）
   const savePageSettings = async () => {
     const title = settingsTitle.trim();
     if (!active || !title) return;
-    await api.patchDashboard(active.id, {
-      title,
-      icon: settingsIcon.trim() || null,
-      background: settingsBackground.trim() || null,
-    });
-    setSettingsOpen(false);
-    await refresh();
+    try {
+      await api.patchDashboard(active.id, {
+        title,
+        icon: settingsIcon.trim() || null,
+        background: settingsBackground.trim() || null,
+      });
+      setSettingsOpen(false);
+      setPageError(null);
+      await refresh();
+    } catch (e) {
+      setPageError(`保存页面设置失败：${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   // FR-P1：页面排序（现状 sortOrder 多为 0 —— 移动后按新序统一编号）
@@ -114,10 +142,15 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
     const target = idx + delta;
     if (idx < 0 || target < 0 || target >= order.length) return;
     order.splice(target, 0, ...order.splice(idx, 1));
-    await Promise.all(
-      order.map((d, i) => (d.sortOrder !== i ? api.patchDashboard(d.id, { sortOrder: i }) : null)),
-    );
-    await refresh();
+    try {
+      await Promise.all(
+        order.map((d, i) => (d.sortOrder !== i ? api.patchDashboard(d.id, { sortOrder: i }) : null)),
+      );
+      setPageError(null);
+      await refresh();
+    } catch (e) {
+      setPageError(`页面排序失败：${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   if (!dashboards) {
@@ -173,9 +206,18 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
       <AppShell.Main style={{ background: active?.background ?? "transparent", minHeight: "100vh" }}>
         <Tabs
           value={activeId}
-          onChange={(v) => setActiveId(v)}
+          onChange={(v) => {
+            setActiveId(v);
+            // ISS-3：活动页进 URL（replaceState 不产生历史项）
+            if (v) window.history.replaceState(null, "", `?page=${v}`);
+          }}
           keepMounted={false}
         >
+          {pageError && (
+            <WbAlert tone="error" size="sm" onClose={() => setPageError(null)}>
+              {pageError}
+            </WbAlert>
+          )}
           <Group mb="sm" gap="xs" wrap="nowrap">
             <Tabs.List className="wb-tabs">
               {dashboards.map((d) => (
@@ -191,7 +233,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
               onChange={(e) => setNewTitle(e.currentTarget.value)}
               style={{ width: 140 }}
             />
-            <Button size="xs" onClick={() => void addDashboard()}>
+            <Button size="xs" disabled={!newTitle.trim()} onClick={() => void addDashboard()}>
               新建页面
             </Button>
             <Button
@@ -250,7 +292,7 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                     placeholder="如 #102030（留空 = 默认底色）"
                   />
                   <Group gap="xs">
-                    <Button size="xs" onClick={() => void savePageSettings()}>
+                    <Button size="xs" disabled={!settingsTitle.trim()} onClick={() => void savePageSettings()}>
                       保存
                     </Button>
                     <Button size="xs" variant="default" onClick={() => setSettingsOpen(false)}>

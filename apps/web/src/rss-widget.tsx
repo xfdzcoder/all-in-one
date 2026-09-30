@@ -46,7 +46,7 @@ export function RssWidget({
         </Badge>
       </Group>
 
-      {loading && <Text size="xs" c="dimmed">加载中…</Text>}
+      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {(data?.errors?.length ?? 0) > 0 && (
         <WbAlert tone="warning" size="sm">

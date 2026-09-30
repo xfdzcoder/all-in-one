@@ -65,7 +65,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
           刷新
         </Button>
       </Group>
-      {loading && <Text size="xs" c="dimmed">加载中…</Text>}
+      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {!loading && !error && display === "jsx" && parsed && parsed.errors.length > 0 && (
         <WbAlert tone="error" size="sm">模板错误（D35 校验拒绝）：{parsed.errors.join("；")}</WbAlert>

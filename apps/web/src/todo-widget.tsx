@@ -99,7 +99,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           </Button>
         </div>
       )}
-      {loading && <Text size="xs" c="dimmed">加载中…</Text>}
+      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <List listStyleType="none" style={{ flex: 1, overflow: "auto" }}>
         {items.map((t) => (
