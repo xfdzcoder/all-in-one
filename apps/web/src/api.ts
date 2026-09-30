@@ -67,6 +67,8 @@ export type FeedAgg = {
   items: FeedItem[];
   unread: number;
   sourceCount: number;
+  /** Q29c/二.1：拉取失败但用本地快照兜底的源。 */
+  staleSources?: string[];
   errors: Array<{ title: string; error: string }>;
 };
 

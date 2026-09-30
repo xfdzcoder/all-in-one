@@ -200,7 +200,7 @@ try {
   );
   await sleep(500);
 
-  // ④ RSS 组件筛选：按标签选源（先给源 A 打标 —— 走 API 精确播种）
+  // ④ RSS 组件筛选（Q29c/二.3：筛选并入配置 —— 配置表单 multiselect 选标签）
   const linked = await page.evaluate(async ({ s1, tName }) => {
     const tags = await (await fetch("/api/tags")).json();
     const tag = tags.find((t) => t.name === tName); // 精确名 —— 历史轮次会留下同前缀旧标签
@@ -214,24 +214,66 @@ try {
   }, { s1: seeded.s1, tName: tagName });
   ok(linked, "TAG link source A to tag (API seeding)");
   await sleep(600);
-  const rssBtns = await page.evaluate(() =>
-    [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "筛选").length,
-  );
-  ok(rssBtns >= 1, "TAG rss widget has filter button", String(rssBtns));
-  await page.evaluate(() => {
-    const btns = [...document.querySelectorAll("button")].filter((b) => b.textContent.trim() === "筛选");
-    btns[btns.length - 1]?.click();
-  });
+  ok("TAG enter edit for config filter", await clickBtn("编辑布局"));
   await sleep(400);
-  await page.evaluate((n) => {
-    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
-    const root = roots[roots.length - 1];
-    const cb = [...(root?.querySelectorAll(".mantine-Checkbox-root") ?? [])].find((c) =>
-      c.textContent.includes(n),
-    );
-    cb?.querySelector("input")?.click();
-  }, tagName);
-  await sleep(1200);
+  ok(
+    "TAG open rss config",
+    await page.evaluate(() => {
+      const title = [...document.querySelectorAll(".wb-widget *")].find(
+        (n) => n.children.length === 0 && n.textContent.trim() === "信息流",
+      );
+      const chrome = title?.closest(".wb-chrome");
+      const btn = [...(chrome?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "配置");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(400);
+  ok(
+    "TAG open tag multiselect in config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+        (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+      );
+      const root = roots[roots.length - 1];
+      const wrapper = [...(root?.querySelectorAll(".mantine-InputWrapper-root") ?? [])].find((w) =>
+        w.querySelector("label")?.textContent.includes("按标签筛选"),
+      );
+      wrapper?.querySelector("input")?.click();
+      return Boolean(wrapper);
+    }),
+  );
+  await sleep(400);
+  ok(
+    "TAG pick tag in config filter",
+    await page.evaluate((n) => {
+      const opt = [...document.querySelectorAll("[data-combobox-option]")].find(
+        (e) => e.offsetParent !== null && e.textContent.includes(n),
+      );
+      opt?.click();
+      return Boolean(opt);
+    }, tagName),
+  );
+  await sleep(300);
+  await page.keyboard.press("Escape"); // 收起下拉（保留已选项）
+  await sleep(200);
+  ok(
+    "TAG save rss config",
+    await page.evaluate(() => {
+      const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
+        (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
+      );
+      const root = roots[roots.length - 1];
+      const btn = [...(root?.querySelectorAll("button") ?? [])].find(
+        (b) => b.textContent.trim() === "保存配置" && b.offsetParent !== null,
+      );
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  ok("TAG exit edit", await clickBtn("完成编辑"));
+  await sleep(600);
   const rssFiltered = await page.evaluate(
     ({ a, b }) => ({
       a: document.body.textContent.includes(`${a}-item-1`),
@@ -240,14 +282,6 @@ try {
     { a: srcA, b: srcB },
   );
   ok(rssFiltered.a && !rssFiltered.b, "TAG rss filtered by source tag", JSON.stringify(rssFiltered));
-  await clickBtn("清除筛选", true);
-  await sleep(400);
-  await page.evaluate(() => {
-    const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
-    const root = roots[roots.length - 1];
-    root?.querySelector(".mantine-Modal-close")?.click();
-  });
-  await sleep(600);
 
   // ⑤ 数据源管理：删除标签确认标题情境化（D34）+ 数据仍在（FR-D4）
   ok(await clickBtn("数据源管理"), "TAG reopen data admin page");

@@ -1,11 +1,8 @@
-import { useState } from "react";
-import { Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group, Text } from "@mantine/core";
 
 import type { FeedItem } from "./api";
 import { useFeeds, useFeedMutations } from "./data-hooks";
-import { HtmlSandbox } from "./html-sandbox";
-import { TagFilter } from "./tag-filter";
-import { RelativeTime, WbAlert } from "./ui";
+import { WbAlert } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -27,7 +24,6 @@ export function RssWidget({
 }: RssConfig & { refreshSec?: number }) {
   const { data, loading, error, refresh } = useFeeds(limit, refreshSec, filter, tagIds);
   const { markRead } = useFeedMutations();
-  const [detail, setDetail] = useState<FeedItem | null>(null);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -37,7 +33,6 @@ export function RssWidget({
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           信息流
         </Text>
-        <TagFilter value={tagIds} targetLabel="订阅源条目" />
         <Button size="compact-xs" variant="subtle" onClick={refresh}>
           刷新
         </Button>
@@ -48,6 +43,11 @@ export function RssWidget({
 
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
+      {(data?.staleSources?.length ?? 0) > 0 && (
+        <WbAlert tone="info" size="sm">
+          {(data?.staleSources ?? []).length} 个源暂不可用，显示上次拉取的缓存条目
+        </WbAlert>
+      )}
       {(data?.errors?.length ?? 0) > 0 && (
         // ISS-16：逐源明细（源名 + 原因），排障不再只看到数字
         <WbAlert tone="warning" size="sm">
@@ -73,15 +73,15 @@ export function RssWidget({
               role="button"
               tabIndex={0}
               onClick={() => {
-                // FR-I4：点开详情（弹层）；跳转原文在详情内（S6）
+                // Q29c/二.2：点击 = 新标签打开原文 + 标已读（无详情弹层）
                 if (!it.read) markRead.mutate(it.itemKey);
-                setDetail(it);
+                if (it.link) window.open(it.link, "_blank", "noopener");
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   if (!it.read) markRead.mutate(it.itemKey);
-                  setDetail(it);
+                  if (it.link) window.open(it.link, "_blank", "noopener");
                 }
               }}
             >
@@ -95,37 +95,6 @@ export function RssWidget({
       ))}
       {items.length === 0 && !loading && <Text size="xs" c="dimmed">暂无条目</Text>}
 
-      {detail && (
-        <Modal opened onClose={() => setDetail(null)} title="文章详情" size="lg">
-          <Stack gap="xs">
-            <Text size="sm" fw={600}>
-              {detail.title}
-            </Text>
-            <Text size="xs" c="dimmed">
-              {detail.sourceTitle} · <RelativeTime value={detail.date} />
-            </Text>
-            {/<[a-z/]/i.test(detail.summary) ? (
-              <HtmlSandbox html={detail.summary} title={`rss-${detail.itemKey.slice(0, 8)}`} />
-            ) : (
-              <Text size="xs" style={{ whiteSpace: "pre-wrap" }}>
-                {detail.summary}
-              </Text>
-            )}
-            {detail.link && (
-              <Button
-                size="xs"
-                variant="light"
-                component="a"
-                href={detail.link}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                阅读原文
-              </Button>
-            )}
-          </Stack>
-        </Modal>
-      )}
     </div>
   );
 }

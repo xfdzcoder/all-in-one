@@ -138,36 +138,48 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(800);
 
-  // ① 信息流详情（弹层 + 摘要沙箱 + 原文链接）
+  // ① 信息流行点击 = 新标签打开原文 + 标已读（Q29c/二.2：无详情弹层）
+  await page.evaluate(() => {
+    // 拦截 window.open 记录目标（无头环境不真开标签）；记录标已读请求
+    (window).__opened = null;
+    window.__readPosts = [];
+    window.open = (u) => {
+      (window).__opened = u;
+      return null;
+    };
+    const of = window.fetch;
+    window.fetch = (input, init) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/api/feeds/read")) {
+        try {
+          window.__readPosts.push(JSON.parse(init?.body ?? "{}"));
+        } catch {
+          /* noop */
+        }
+      }
+      return of(input, init);
+    };
+  });
+  const beforeUnread = await page.evaluate(() => {
+    const badge = [...document.querySelectorAll(".wb-widget .mantine-Badge-root")].find((b) => b.textContent.includes("未读"));
+    return badge?.textContent ?? "";
+  });
   ok(
-    "I4 rss item opens detail modal",
+    "I4 rss item click opens original in new tab",
     await page.evaluate((t) => {
       const el = [...document.querySelectorAll(".grid-stack-item *")].find(
         (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),
       );
       if (!el) return false;
       el.click();
-      return true;
+      return (window).__opened === "https://example.com/i4-article";
     }, `I4 条目-${uniq}`),
   );
   await sleep(800);
-  const bodyAfterRss = await page.evaluate(() => document.body.textContent ?? "");
-  ok("I4 rss detail shows title/source", bodyAfterRss.includes("文章详情") && bodyAfterRss.includes("源A"));
-  const rssLink = await page.evaluate(
-    () => [...document.querySelectorAll("a")].find((a) => a.textContent.includes("阅读原文"))?.getAttribute("href") ?? null,
-  );
-  ok("I4 rss detail keeps 原文 link", rssLink === "https://example.com/i4-article", String(rssLink));
-  const rssFrame = page.frames().find((f) => f.url().startsWith("about:srcdoc"));
-  const rssFrameState = await rssFrame?.evaluate(() => ({
-    pwned: typeof window.__PWNED,
-    text: document.body.textContent ?? "",
-  }));
   ok(
-    "I4 rss summary rendered in sandbox (scripts blocked)",
-    rssFrameState?.pwned === "undefined" && (rssFrameState?.text ?? "").includes(`富文本摘要-${uniq}`),
-    JSON.stringify(rssFrameState)?.slice(0, 100),
+    "I4 rss item marked read on open",
+    await page.evaluate((k) => (window.__readPosts ?? []).some((p) => p.itemKey === k), `k-${uniq}`),
   );
-  ok("I4 close rss detail", await clickBtn("×", true) || (await page.keyboard.press("Escape"), true));
   await sleep(400);
 
   // ② Todo 详情

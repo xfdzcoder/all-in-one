@@ -12,6 +12,8 @@ export type ConfigFieldType =
   | "boolean"
   | "select"
   | "json"
+  /** 多选（Q29c）：值 = string[]；dynamic 指定选项源（如 "tags"）。 */
+  | "multiselect"
   /** 敏感字段：值不入 widget 配置，仅存 Credential Store 引用（SEC3）。 */
   | "secret";
 

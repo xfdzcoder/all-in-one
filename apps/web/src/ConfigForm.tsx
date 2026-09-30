@@ -3,6 +3,7 @@ import type { ConfigSchema, ConfigValues, SecretRef } from "@all-in-one/widget-s
 import {
   Button,
   Checkbox,
+  MultiSelect,
   Group,
   NumberInput,
   Select,
@@ -91,6 +92,20 @@ export function ConfigForm({
                 size="xs"
                 value={typeof v === "number" ? v : ""}
                 onChange={(nv) => onChange(f.key, typeof nv === "number" ? nv : undefined)}
+              />
+            );
+          case "multiselect":
+            return (
+              <MultiSelect
+                key={f.key}
+                label={f.label}
+                size="xs"
+                data={f.dynamic ? dynamicOptions[f.dynamic] ?? [] : []}
+                value={Array.isArray(v) ? (v as string[]) : []}
+                onChange={(nv) => onChange(f.key, nv)}
+                placeholder={f.placeholder}
+                description={f.help}
+                clearable
               />
             );
           case "select": {

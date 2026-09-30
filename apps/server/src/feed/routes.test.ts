@@ -229,4 +229,56 @@ describe("rss 条目数语义（Q22a：展示条数 = 过滤后切片；数值�
     expect(got.unread).toBe(unreadBefore - 1);
     expect(got.unread).toBeGreaterThan(got.items.length - 1);
   });
+
+  it("Q29c: successful fetch snapshots items; failure falls back to snapshot", async () => {
+    let fail = false;
+    const flaky = createServer((req, res) => {
+      if (fail) {
+        res.writeHead(500).end();
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/xml" });
+      res.end(
+        '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title><item><title>flaky-1</title><link>http://f/1</link><guid>f-1</guid><pubDate>Mon, 01 Jan 2024 10:00:00 GMT</pubDate></item></channel></rss>',
+      );
+    });
+    await new Promise<void>((r) => flaky.listen(0, "127.0.0.1", r));
+    const fport = (flaky.address() as { port: number }).port;
+    await app.inject({
+      method: "POST",
+      url: "/api/feeds",
+      cookies: { sid },
+      payload: { title: "flaky", url: `http://127.0.0.1:${fport}/f.xml` },
+    });
+    const ok1 = await app.inject({
+      method: "POST",
+      url: "/api/widgets/data",
+      cookies: { sid },
+      payload: { type: "rss", config: { limit: 50 }, force: true },
+    });
+    const items1 = ok1.json().data.items as Array<{ sourceTitle: string }>;
+    expect(items1.some((i) => i.sourceTitle === "flaky")).toBe(true);
+
+    fail = true;
+    // 最小刷新间隔限流 5s —— 等过窗口再强刷（否则回落旧缓存）
+    await new Promise((r) => setTimeout(r, 5100));
+    const ok2 = await app.inject({
+      method: "POST",
+      url: "/api/widgets/data",
+      cookies: { sid },
+      payload: { type: "rss", config: { limit: 50 }, force: true },
+    });
+    const data2 = ok2.json().data as {
+      items: Array<{ sourceTitle: string; title: string; stale?: boolean }>;
+      staleSources: string[];
+      errors: Array<{ title: string }>;
+    };
+    const flakyItems = data2.items.filter((i) => i.sourceTitle === "flaky");
+    expect(flakyItems.length).toBe(1);
+    expect(flakyItems[0].title).toBe("flaky-1");
+    expect(flakyItems[0].stale).toBe(true);
+    expect(data2.staleSources).toContain("flaky");
+    expect(data2.errors.some((e) => e.title === "flaky")).toBe(false);
+    flaky.close();
+  }, 15000);
 });

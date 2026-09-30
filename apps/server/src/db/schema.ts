@@ -131,6 +131,9 @@ export const feedSource = sqliteTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     url: text("url").notNull(),
+    /** Q29c/二.1：拉取成功条目的本地快照（失败时兜底展示，无 TTL）。 */
+    snapshotJson: text("snapshot_json"),
+    snapshotAt: integer("snapshot_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (t) => [index("feed_source_user_id_idx").on(t.userId)],

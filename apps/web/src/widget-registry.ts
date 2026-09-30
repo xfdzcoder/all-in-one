@@ -139,6 +139,7 @@ export const rssManifest: WidgetManifest = {
       { value: "all", label: "全部" },
       { value: "unread", label: "仅未读" },
     ] },
+    { key: "tagIds", label: "按标签筛选", type: "multiselect", dynamic: "tags", help: "选中 = 只显示含任一所选标签的订阅源条目；留空 = 全部（Q29c：筛选并入配置）" },
   ],
   capabilities: {
     data: { source: "workspace", resource: "rss" },

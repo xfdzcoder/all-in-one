@@ -105,6 +105,8 @@ export const rssConnector: WidgetConnector = {
 
     const entries: Array<Record<string, unknown>> = [];
     const errors: Array<{ title: string; error: string }> = [];
+    // Q29c/二.1：已拉取条目落库快照；失败时兜底展示上次快照（无 TTL，暂不提供清理配置）
+    const staleSources: string[] = [];
     await Promise.all(
       sources.map(async (s) => {
         try {
@@ -112,7 +114,21 @@ export const rssConnector: WidgetConnector = {
           if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
           const parsed = parseEntries(res.text, s.url);
           for (const e of parsed) entries.push({ ...e, sourceTitle: s.title });
+          await ctx.db
+            .update(feedSource)
+            .set({ snapshotJson: JSON.stringify(parsed), snapshotAt: new Date() })
+            .where(eq(feedSource.id, s.id));
         } catch (err) {
+          if (s.snapshotJson) {
+            try {
+              const cached = JSON.parse(s.snapshotJson) as Array<Record<string, unknown>>;
+              for (const e of cached) entries.push({ ...e, sourceTitle: s.title, stale: true });
+              staleSources.push(s.title);
+              return;
+            } catch {
+              /* 落回错误态 */
+            }
+          }
           errors.push({ title: s.title, error: err instanceof Error ? err.message : "fetch failed" });
         }
       }),
@@ -141,6 +157,7 @@ export const rssConnector: WidgetConnector = {
       unread: all.filter((i) => !i.read).length,
       sourceCount: sources.length,
       errors,
+      staleSources,
     };
   },
 };
