@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 67 轮 · Q31 ✅ 监控源连接详情空白修复；余 Q32–Q39） |
+| 最近更新 | 2026-10-01（第 68 轮 · Q32 ✅ 编辑态内容可见禁交互；余 Q33–Q39） |
 
 ## 迭代队列
 
@@ -199,3 +199,4 @@
 | 65 | 2026-10-01 | **Q29f 收口（用户反馈⑩ 6 大块全部完成）**：交互文档同步——todo.md（三档筛选/归档/无标签/名称可选已有或新建）、rss.md（缓存提示条/直开原文/筛选入配置）、mail.md（accountIds 多选）、kanban.md（禁删列/整列点按/列宽等分）、02-workspace/03-edit-mode（编辑页面/内联设置/添加组件 Portal/编辑态隐藏组件按钮）、按钮总索引；台账入账 **ISS-27（数据连接黑屏，逻辑 P1，已修）/ ISS-28（邮箱巨钮，样式 P1，已修）**。Q29 六块全绿收口 | 全量 26 脚本 429 项 ✅；Playwright 5/5 ✅；verify-dark 3/3 ✅ | `c131928` / `b2d663d` / `9971f95` / `596c5c7` |
 | 66 | 2026-10-01 | **用户反馈⑪入队 Q30–Q39 + Q30 看板页布局（一.1）**：① 队列：Glances 监控源详情空白（Q31）、编辑态内容可见禁交互（Q32 推翻隐藏方案）、配置下拉为空（Q33）、未读徽标隐藏（Q34）、列宽无上限等分（Q35）、监控源选择化（Q36）、监控卡片样式（Q37）、图标库（Q38）、新数据源五接入（Q39）。② Q30：看板管理顶行重排——左侧 `Select w=200`（缩短）+「＋ 新建看板」紧邻（x=324=116+200+8 实测）；右侧「看板名称」`w=170` +「删除看板」同行靠右（名称输入 key=activeBoardId 切板重挂防旧值；原「看板名称」分节并入顶行）；`wb-admin__addbtn` 类废弃改 `wb-admin__bar-right`（mail 面板同步） | verify-kan 45/45 ✅；verify-mail 28/28 ✅；布局几何实测（下拉/新建/名称/删除坐标断言）✅；typecheck ✅ | 待提交 |
 | 67 | 2026-10-01 | **Q31 监控源连接空白修复（一.2）**：复现（puppeteer 走真实 Glances 地址建连接）→ `TypeError: reading 'url'` → 行渲染崩 → 空白页。根因：**POST 响应带解析后 `config`，GET 列表只回原始行（configJson 字符串）**，前端契约 `DataSourceRow.config: Record` 两侧不一致。修复：GET 行补 `config: parseConfig(configJson)`（与 POST/前端契约对齐）+ 契约测试「GET 行携带解析后 config」+ 前端防御（`r.config?.url` / `useResolvedSourceConfig` 缺省回落）。复现回归：列表显 URL、编辑回填 名称/地址/认证方式 齐全；真连 https://glances.xfdzcoder.space 验证 | server Vitest 153/153（+1）✅；verify-mon 15/15 ✅；复现脚本转正断言 ✅；typecheck ✅ | 待提交 |
+| 68 | 2026-10-01 | **Q32 编辑态内容可见禁交互（二.1）**：用户否决 Q29d 的「编辑态隐藏组件自身按钮」（`visibility:hidden` 连 role=button 的条目行一并隐藏 → 「隐藏后无法辨认哪个是哪个」）——**撤除隐藏规则**，内容完整可见；「禁止点击、禁止修改」由既有 D38 承担（`inert` + `pointer-events:none`，脱离 Tab 序）。与外框「配置/移除」的重叠只处理「未读」徽标（Q34 专责），按钮保持可见。verify-p8 补第 9 项断言（编辑态输入框/按钮可见且零 visibility:hidden）防回退；03-edit-mode.md 同步 | verify-p8 9/9 ✅（+1）；verify-kan 45/45、verify-j4 17/17、verify-m1 42/42、verify-dark 3/3 AA ✅；Playwright 5/5 ✅；typecheck ✅ | 待提交 |

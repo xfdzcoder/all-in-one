@@ -116,6 +116,24 @@ try {
   // ② 编辑模式：内容惰性 —— 勾选不生效
   ok("P8 enter edit", await clickBtn("编辑页面"));
   await sleep(400);
+  // Q32：编辑态内容保持可见（撤销按钮隐藏方案）—— 可辨认，但交互仍被 inert 禁用
+  const contentVisible = await page.evaluate(() => {
+    const input = [...document.querySelectorAll("input")].find((i) => i.placeholder === "新任务…");
+    const btn = [...document.querySelectorAll(".wb-chrome__content--inert button")].find((b) => b.offsetParent !== null || getComputedStyle(b).visibility !== "hidden");
+    const btnHidden = [...document.querySelectorAll(".wb-chrome__content--inert button")].filter(
+      (b) => getComputedStyle(b).visibility === "hidden",
+    ).length;
+    return {
+      inputVisible: Boolean(input) && input.offsetParent !== null,
+      anyButtonVisible: Boolean(btn),
+      hiddenButtons: btnHidden,
+    };
+  });
+  ok(
+    "P8 edit mode: content stays visible (no hiding)",
+    contentVisible.inputVisible && contentVisible.anyButtonVisible && contentVisible.hiddenButtons === 0,
+    JSON.stringify(contentVisible),
+  );
   const afterEditClick = await toggleTask(taskTitle);
   await sleep(600);
   const editChecked = await taskChecked(taskTitle);
