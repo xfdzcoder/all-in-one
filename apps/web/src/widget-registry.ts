@@ -30,6 +30,7 @@ export const todoManifest: WidgetManifest = {
       label: "清单",
       type: "select",
       default: "inbox",
+      help: "任务分组：本组件只显示该清单的任务，新任务也加进此清单",
       options: [
         { value: "inbox", label: "收件箱" },
         { value: "work", label: "工作" },
@@ -41,9 +42,10 @@ export const todoManifest: WidgetManifest = {
       label: "显示",
       type: "select",
       default: "open",
+      help: "是否包含已完成的任务",
       options: [
-        { value: "open", label: "未完成" },
-        { value: "all", label: "全部" },
+        { value: "open", label: "仅未完成" },
+        { value: "all", label: "含已完成" },
       ],
     },
   ],

@@ -81,7 +81,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                   onChange={(e) => setNewTodo(e.currentTarget.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newTodo.trim()) {
-                      todoMut.create.mutate(newTodo.trim());
+                      todoMut.create.mutate({ title: newTodo.trim() });
                       setNewTodo("");
                     }
                   }}
@@ -91,7 +91,7 @@ export function DataAdmin({ opened, onClose }: { opened: boolean; onClose: () =>
                   size="xs"
                   disabled={!newTodo.trim()}
                   onClick={() => {
-                    todoMut.create.mutate(newTodo.trim());
+                    todoMut.create.mutate({ title: newTodo.trim() });
                     setNewTodo("");
                   }}
                 >

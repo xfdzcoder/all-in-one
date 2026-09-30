@@ -61,7 +61,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           onChange={(e) => setDraft(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && draft.trim()) {
-              create.mutate(draft.trim());
+              create.mutate({ title: draft.trim(), list });
               setDraft("");
             }
           }}
@@ -71,7 +71,7 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           size="xs"
           disabled={!draft.trim()}
           onClick={() => {
-            create.mutate(draft.trim());
+            create.mutate({ title: draft.trim(), list });
             setDraft("");
           }}
         >

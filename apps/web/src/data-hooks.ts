@@ -132,7 +132,8 @@ export function useTodoMutations() {
   const qc = useQueryClient();
   const invalidate = () => void qc.invalidateQueries({ queryKey: ["todos"] });
   const create = useMutation({
-    mutationFn: (title: string) => api.createTodo(title),
+    // #6 修复：携带清单（组件配置的 list）—— 否则永远进收件箱，配置清单的组件看不到新任务
+    mutationFn: (v: { title: string; list?: string }) => api.createTodo(v.title, v.list),
     onSuccess: invalidate,
   });
   const toggle = useMutation({

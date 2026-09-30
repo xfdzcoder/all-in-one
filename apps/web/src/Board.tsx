@@ -66,7 +66,7 @@ function BoardToolbar({
   /** 启用中的插件 manifest（选择器清单动态合并，J8）。 */
   pluginManifests: WidgetManifest[];
 }) {
-  const { addWidget } = useGridStack();
+  const { grid, addWidget } = useGridStack();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // ids must be unique across sessions — persisted layouts may already contain
@@ -89,10 +89,16 @@ function BoardToolbar({
               const props = await propsWithSecretRefs(manifest.configSchema, values, (name, secret) =>
                 api.createCredential(name, secret),
               );
+              // #5 修复：空画布首个组件落左上角 (0,0)；否则接在现有最低元素下方
+              //（原 y:100 硬编码导致空页首组件跑到很下方）
+              let y = 0;
+              for (const n of grid?.engine.nodes ?? []) {
+                y = Math.max(y, (n.y ?? 0) + (n.h ?? 0));
+              }
               addWidget({
                 id: nextId("w"),
                 x: 0,
-                y: 100,
+                y,
                 w: manifest.defaultSize.w,
                 h: manifest.defaultSize.h,
                 component: manifest.type,
