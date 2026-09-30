@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-09-30（第 32 轮 · Q10 ✅ 受限 JSX 模板（D35）——**功能队列全部清空**，仅剩 Q19 视觉优化） |
+| 最近更新 | 2026-09-30（第 33 轮 · Q19a ✅ 全组件视觉审计（P0×4/P1×5/P2×8）；下一项 Q19b 令牌 + 容器） |
 
 ## 迭代队列
 
@@ -41,7 +41,11 @@
 - [x] Q-G3 · Gmail 部署文档 + 验收记录（Google Cloud OAuth 配置步骤、GMAIL_* 环境变量、Testing 模式 token 7 天过期等注意项、手工旅程记录）**✅ 2026-09-30**
 - [x] Q20 · 用户反馈①：深色模式根治（Mantine dark scheme + 灰阶标定 + verify-dark AA 快检 3/3）**✅ 2026-09-30**
 - [x] Q21 · 用户反馈②：编辑态组件内容惰性（**D38**：inert + FR-P8 语义；verify-p8 8/8）**✅ 2026-09-30**
-- [ ] Q19 · 用户反馈③：视觉设计优化（主题 token 统一、间距/字号节奏、卡片与页签样式、空态设计）——后置
+- [ ] Q19 · 用户反馈③：视觉设计优化（**拆分为 Q19b–Q19d**，审计见 [design-audit/00-visual-audit.md](design-audit/00-visual-audit.md)）
+  - [x] Q19a · 全页面/全组件视觉走查 + 基线截图（23 张）+ 诊断报告（P0×4 / P1×5 / P2×8）**✅ 2026-09-30**
+  - [ ] Q19b · 令牌 + 容器（主题色阶/间距/字阶、WidgetCard 统一容器、移动端单列全宽、JSX 属性白名单补排版）
+  - [ ] Q19c · 组件样式统一（按钮四档、错误态规范、表单控件收纳、stat 预设重设计、iframe 面板）
+  - [ ] Q19d · 文案与细节（登录提示、清单名映射、相对时间、页签收纳、hover/焦点态、弹窗细节）
 - [x] Q12 · 部署回归：Docker 单镜像构建 + 容器冒烟 + deploy 文档同步（新增依赖/插件目录/内网出站语义）**✅ 2026-09-29**
 - [x] Q13 · FR-P1 完整化：页面重命名 + 排序（上移/下移 + sortOrder 重编号）——FR 审计发现的【必须】缺口**✅ 2026-09-29**
 - [ ] Q14 · FR-I2/I3 收口【必须】（**拆分为 Q14a–Q14b**）
@@ -90,6 +94,7 @@
 | 30 | 2026-09-30 | **Q-G1/Q-G2 Gmail 打通（D37）**：`mail/gmail.ts` OAuth 授权流（authorize URL（gmail.readonly/离线访问/CSRF state）→ code-token 交换 → access_token 缓存刷新）+ 拉取映射（messages.list → 逐封 metadata 头；正文 format=raw + mailparser MIME；SEEN 只读不回写）；schema `mail_account.kind`（imap/gmail，迁移 0008）+ uid 放宽数字/字符串双形态；服务端 kind 感知客户端工厂（gmail 借凭证位存 refresh_token，client_id/secret 走部署环境变量）；回调端点建账号+凭证、极简 HTML 结果、state 防伪（10 分钟 TTL）；web「绑定 Gmail 账号（OAuth）」入口 | server 133/133（新增 5 项：授权参数/令牌交换/缓存/列表序与头/MIME 正文）✅；verify-gmail 14/14（连跑两轮：完整绑定旅程 —— 授权 URL 参数、回调建账号（refresh_token 仅凭证引用）、令牌交换可见、非法 state 拒绝、清理）✅；全量 24 脚本 400 项 ✅；Playwright 5/5 ✅ | `fa01344` |
 | 31 | 2026-09-30 | **Q-G3 Gmail 文档收口**：deploy.md「接入 Gmail（可选，D37）」——Google Cloud 五步（启用 Gmail API / 同意屏幕测试用户 / Web OAuth 客户端与逐字符一致的回调 URI / 环境变量 / 绑定旅程）、compose 透传 GMAIL_CLIENT_ID/SECRET；运营注意项：Testing 模式 refresh_token 7 天过期（或"发布上线"）、redirect_uri_mismatch 排查。验收记录 = verify-gmail.mjs 14 项（mock Google 完整绑定旅程）+ 五步即真实 Google 手工旅程记录 | compose config 校验 ✅；Vitest 133/133 ✅ | `271979d` |
 | 32 | 2026-09-30 | **Q10 受限 JSX 模板（D35）**：widget-sdk `jsx-template.ts`（acorn+acorn-jsx）解析 → **节点树 + 安全求值闭包**（永不 eval 字符串）：组件白名单（与渲染映射同源）、表达式允许名单制（data + String/Number/Boolean/Math/JSON/Array/Object 安全方法）、危险标识符/危险属性名（constructor/__proto__/bind…）拒绝 + 源码级二道闸（eval/Function/import/require/globalThis/window/document/fetch）、href 仅 https/相对/#、64KB 上限、单根+尾随垃圾拒绝、条件渲染限三元与 &&；新增 `textarea` 字段类型。web `jsx-template.tsx` 树 → 14 个白名单 Mantine 组件渲染；custom-api 三层展示（预设 → 受限 JSX → raw），模板错误显式横幅 | widget-sdk 21/21（含 9 项逃逸面回归）✅；**全量测试 154 项** ✅；verify-jsx 9/9（正常模板绑定/安全方法/三元/组件/href + 恶意模板拒绝且不执行）✅；全量 25 脚本 409 项 ✅；Playwright 5/5 ✅ | `54b18aa` |
+| 33 | 2026-09-30 | **Q19a 全页面/全组件视觉审计**：`capture-design.mjs` 可复现截图巡览（夹具喂数据、按 gs-id 锚定命名；23 张基线入库 `docs/design-audit/baseline/`）；`00-visual-audit.md` 逐组件诊断（对照 Material/HIG/Radix/8pt）——**P0×4**（组件无卡片容器、375px 双列挤压、选择器排版破损、JSX 属性白名单缺 Title.order——审计样例当场被拒）、**P1×5**（按钮层级混乱、表单控件滥用、错误态三套样式、文案泄 D17 术语/裸键名 inbox、页签 40+ 换 4 行）、**P2×8**（8pt 间距/字阶/表面明度层级/stat 预设重设计/占位卡/iframe 面板/弹窗细节/hover 焦点态）；修复计划映射 Q19b–Q19d，验收 = 重采对比 + verify-dark AA + 全量回归 | Vitest 133/133（无产品代码变更）✅ | `88b9f1e` |
 
 ## 待用户确认
 
