@@ -41,6 +41,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const [editing, setEditing] = useState<KanbanCardRow | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   /** 组件内选择看板 = 配置变更：写回节点 props（宿主随后重渲染/持久化）。 */
   const selectBoard = (id: string) => {
@@ -105,9 +106,10 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           刷新
         </Button>
         {archivedCount > 0 && (
-          <Text size="xs" c="dimmed">
+          // ISS-13 修复：计数可点 —— 打开归档列表（恢复/删除），打通归档恢复路径
+          <Button size="compact-xs" variant="subtle" onClick={() => setArchiveOpen(true)}>
             已归档 {archivedCount}
-          </Text>
+          </Button>
         )}
       </Group>
 
@@ -283,6 +285,49 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
             </Group>
           </div>
         </Group>
+      )}
+
+      {archiveOpen && (
+        <Modal opened onClose={() => setArchiveOpen(false)} title="已归档卡片" size="sm">
+          <Stack gap="xs">
+            {(tree?.cards ?? [])
+              .filter((c) => c.archived)
+              .map((card) => (
+                <Group key={card.id} gap="xs" wrap="nowrap">
+                  <div className="wb-grow">
+                    <Text size="xs" fw={600} truncate>
+                      {card.title}
+                    </Text>
+                    {card.body && (
+                      <Text size="xs" c="dimmed" truncate>
+                        {card.body}
+                      </Text>
+                    )}
+                  </div>
+                  <Button
+                    size="compact-xs"
+                    variant="default"
+                    onClick={() => void m.patchCard(card.id, { archived: false })}
+                  >
+                    恢复
+                  </Button>
+                  <ConfirmAction
+                    label="删除"
+                    size="compact-xs"
+                    variant="subtle"
+                    title="删除卡片？"
+                    message={`确认删除卡片「${card.title}」？（不可恢复）`}
+                    onConfirm={() => void m.deleteCard(card.id)}
+                  />
+                </Group>
+              ))}
+            {(tree?.cards ?? []).filter((c) => c.archived).length === 0 && (
+              <Text size="xs" c="dimmed">
+                暂无归档卡片
+              </Text>
+            )}
+          </Stack>
+        </Modal>
       )}
 
       <Modal opened={editing !== null} onClose={() => setEditing(null)} title="卡片">

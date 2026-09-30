@@ -66,7 +66,7 @@ function BoardToolbar({
   /** 启用中的插件 manifest（选择器清单动态合并，J8）。 */
   pluginManifests: WidgetManifest[];
 }) {
-  const { grid, addWidget, removeWidget } = useGridStack();
+  const { addWidget } = useGridStack();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // ids must be unique across sessions — persisted layouts may already contain
@@ -79,18 +79,6 @@ function BoardToolbar({
         <>
           <Button size="xs" variant="light" onClick={() => setPickerOpen(true)}>
             添加组件
-          </Button>
-          <Button
-            size="xs"
-            variant="light"
-            color="red"
-            onClick={() => {
-              const items = grid?.getGridItems() ?? [];
-              const last = items[items.length - 1];
-              if (last) removeWidget(last);
-            }}
-          >
-            删除最后
           </Button>
           <WidgetPicker
             opened={pickerOpen}
@@ -213,6 +201,10 @@ export function Board({
   }));
 
   // Flush pending layout to server (debounced auto-save, FR-P4).
+  // ISS-4 修复：失败按退避（5s→10s→30s 封顶）**真·自动重试**（原文案承诺"稍后自动重试"），
+  // 成功或有新变更时取消重试计时器。
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelay = useRef(5_000);
   const flush = useCallback(async () => {
     const json = pendingJson.current;
     if (json === null) return;
@@ -221,12 +213,20 @@ export function Board({
       await api.saveLayout(dashboardId, json);
       setDirty(false);
       setSaveError(null);
+      retryDelay.current = 5_000;
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current);
+        retryTimer.current = null;
+      }
       onLayoutSaved(dashboardId, json);
     } catch {
       setSaveError("布局保存失败，稍后自动重试");
       setDirty(true);
-      // keep pending for next change to retry
+      // keep pending + 调度退避重试
       pendingJson.current = json;
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => void flushRef.current(), retryDelay.current);
+      retryDelay.current = Math.min(retryDelay.current * 2, 30_000);
     }
   }, [dashboardId, onLayoutSaved]);
 
@@ -255,6 +255,7 @@ export function Board({
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
       void flushRef.current();
     };
   }, []);

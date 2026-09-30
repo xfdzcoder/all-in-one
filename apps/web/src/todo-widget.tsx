@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@mantine/core";
 
 import type { TodoItem } from "./api";
@@ -36,8 +36,17 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
   const { create, toggle, remove } = useTodoMutations();
   const [draft, setDraft] = useDraft();
   const [detail, setDetail] = useState<TodoItem | null>(null);
+  // ISS-14 修复：勾完即消失的过滤下提供「撤销」——文案只报计数不带标题（契约：完成后标题不可再见）
+  const [undo, setUndo] = useState<{ id: string } | null>(null);
 
   const items = (data ?? []).filter((t) => (filter === "open" ? !t.done : true));
+
+  // 撤销条 6 秒后自动消失
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), 6000);
+    return () => clearTimeout(timer);
+  }, [undo]);
 
   return (
     <div className="wb-widget">
@@ -75,6 +84,21 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
           添加
         </Button>
       </Group>
+      {undo && (
+        <div className="wb-undo">
+          <Text size="xs">已完成 1 项任务</Text>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            onClick={() => {
+              if (undo) toggle.mutate({ id: undo.id, done: false });
+              setUndo(null);
+            }}
+          >
+            撤销
+          </Button>
+        </div>
+      )}
       {loading && <Text size="xs" c="dimmed">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <List listStyleType="none" style={{ flex: 1, overflow: "auto" }}>
@@ -83,7 +107,12 @@ export function TodoWidget({ list = "inbox", filter = "open", tagIds, refreshSec
             <Group gap="xs" wrap="nowrap">
               <Checkbox
                 checked={t.done}
-                onChange={(e) => toggle.mutate({ id: t.id, done: e.currentTarget.checked })}
+                onChange={(e) => {
+                  const done = e.currentTarget.checked;
+                  toggle.mutate({ id: t.id, done });
+                  if (done) setUndo({ id: t.id });
+                  else setUndo((u) => (u?.id === t.id ? null : u));
+                }}
                 aria-label={`toggle ${t.title}`}
               />
               <Text

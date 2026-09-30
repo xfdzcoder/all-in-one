@@ -450,3 +450,68 @@
 .wb-metric--tile {
   height: 100%;
 }
+
+/* ── 组件选择器卡片（ISS-22 P0 修复）：内容流式布局，高度自适应 ── */
+.wb-picker-card {
+  display: block;
+  width: 100%;
+  padding: var(--wb-space-2) var(--wb-space-3);
+  text-align: left;
+  background: var(--wb-color-surface-raised);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  transition: background var(--wb-transition), border-color var(--wb-transition);
+}
+
+.wb-picker-card:hover {
+  background: var(--wb-color-surface-hover);
+  border-color: var(--wb-color-border-strong);
+}
+
+.wb-picker-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  margin-bottom: var(--wb-space-1);
+}
+
+.wb-picker-card__desc {
+  white-space: normal;
+  line-height: var(--wb-leading);
+}
+
+/* ── 组件外框（宿主）：编辑态动作区（配置/移除）── */
+.wb-chrome {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wb-chrome__content {
+  height: 100%;
+}
+
+.wb-chrome__content--inert {
+  pointer-events: none;
+}
+
+.wb-chrome__actions {
+  position: absolute;
+  top: var(--wb-space-1);
+  right: var(--wb-space-1);
+  z-index: 5;
+  display: flex;
+  gap: var(--wb-space-1);
+}
+
+/* ── 撤销条（ISS-14）：完成任务后的短暂可撤销提示 ── */
+.wb-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-1) var(--wb-space-2);
+  border: 1px solid var(--wb-color-border-strong);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-raised);
+}

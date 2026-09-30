@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge, Button, Group, Modal, SimpleGrid, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group, Modal, SimpleGrid, Stack, Text, UnstyledButton } from "@mantine/core";
 import type { ConfigValues, WidgetManifest } from "@all-in-one/widget-sdk";
 
 import { builtinManifests } from "./widget-registry";
@@ -46,28 +46,22 @@ export function WidgetPicker({
       {!selected && (
         <SimpleGrid cols={2} spacing="xs">
           {[...builtinManifests, ...extraManifests].map((m) => (
-            <Button
-              key={m.type}
-              variant="light"
-              onClick={() => pick(m)}
-              styles={{ inner: { justifyContent: "flex-start" } }}
-            >
-              <Stack gap={2} align="flex-start">
-                <Group gap={6}>
-                  <Text size="sm" fw={600}>
-                    {m.name}
-                  </Text>
-                  <Badge size="xs" variant="outline">
-                    {m.category}
-                  </Badge>
-                </Group>
-                {m.description && (
-                  <Text size="xs" c="dimmed" style={{ whiteSpace: "normal", textAlign: "left" }}>
-                    {m.description}
-                  </Text>
-                )}
-              </Stack>
-            </Button>
+            // ISS-22（P0 修复）：固定高度 Button 塞多行会叠字 —— 改语义卡容器（.wb-picker-card）
+            <UnstyledButton key={m.type} className="wb-picker-card" onClick={() => pick(m)}>
+              <div className="wb-picker-card__head">
+                <Text size="sm" fw={600}>
+                  {m.name}
+                </Text>
+                <Badge size="xs" variant="outline">
+                  {m.category}
+                </Badge>
+              </div>
+              {m.description && (
+                <Text size="xs" c="dimmed" className="wb-picker-card__desc">
+                  {m.description}
+                </Text>
+              )}
+            </UnstyledButton>
           ))}
         </SimpleGrid>
       )}

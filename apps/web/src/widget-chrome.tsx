@@ -1,41 +1,55 @@
 import { useContext } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { Button } from "@mantine/core";
-import { useGridStackItem } from "gridstack/dist/react";
+import { useGridStack, useGridStackItem } from "gridstack/dist/react";
 
 import { WidgetEditContext } from "./widget-edit-context";
 
 /**
  * 编辑态组件外框（FR-W4 生命周期"配置变更"收口）：
- * 任意组件（含零代码组件）在编辑模式获得「配置」入口，点击后由宿主打开该实例
- * 的 configSchema 配置表单；浏览模式 / 移动端不渲染（FR-P7/P8、D10）。
- * 外框是宿主能力，组件实现无需感知（"新增组件不改核心"）。
+ * 任意组件（含零代码组件）在编辑模式获得「配置」/「移除」入口，浏览模式 / 移动端不渲染
+ * （FR-P7/P8、D10）。外框是宿主能力，组件实现无需感知（"新增组件不改核心"）。
+ * 「移除」为 ISS-6 修复：点谁移除谁（替代语义错位的"删除最后"）；布局编辑内移除
+ * 按 D31 豁免确认（不动业务数据）。
  */
 
 export function WidgetChrome({ children }: { children: ReactNode }) {
   const { editMode, onConfigure } = useContext(WidgetEditContext);
-  const { id } = useGridStackItem();
+  const { id, node } = useGridStackItem();
+  const { grid, removeWidget } = useGridStack();
 
   return (
-    <div style={{ position: "relative", height: "100%", overflow: "hidden" }}>
+    <div className="wb-chrome">
       {/* 编辑态组件内容整体惰性（inert + pointer-events）：拖动 = 调整布局，
-          禁止误操作卡片（FR-P8 编辑/浏览分离）；「配置」入口在外层保持可用 */}
+          禁止误操作卡片（FR-P8 编辑/浏览分离）；「配置/移除」入口在外层保持可用 */}
       <div
-        style={{ height: "100%", pointerEvents: editMode ? "none" : "auto" }}
+        className={`wb-chrome__content${editMode ? " wb-chrome__content--inert" : ""}`}
         inert={editMode || undefined}
       >
         {children}
       </div>
       {editMode && (
-        <Button
-          size="compact-xs"
-          variant="light"
-          color="gray"
-          onClick={() => onConfigure(String(id))}
-          style={{ position: "absolute", top: 4, right: 4, zIndex: 5 }}
-        >
-          配置
-        </Button>
+        <div className="wb-chrome__actions">
+          <Button
+            size="compact-xs"
+            variant="light"
+            color="gray"
+            onClick={() => onConfigure(String(id))}
+          >
+            配置
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            color="red"
+            onClick={() => {
+              const el = node?.el;
+              if (el && grid) removeWidget(el);
+            }}
+          >
+            移除
+          </Button>
+        </div>
       )}
     </div>
   );
