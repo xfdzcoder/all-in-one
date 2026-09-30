@@ -749,3 +749,51 @@
   border-top: var(--wb-border);
   padding-top: var(--wb-space-2);
 }
+
+/* ── 数据源管理 · 看板式列排布（Q28b）：列并排横排、列内卡片纵排 ── */
+.wb-admin__board {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--wb-space-3);
+  overflow-x: auto;
+  padding-bottom: var(--wb-space-2);
+}
+
+.wb-admin__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-2);
+  width: 260px;
+  flex-shrink: 0;
+  padding: var(--wb-space-2);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface);
+}
+
+.wb-admin__col--ghost {
+  border-style: dashed;
+  background: transparent;
+}
+
+.wb-admin__colhead {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+}
+
+.wb-admin__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+  padding: var(--wb-space-2);
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface-raised);
+}
+
+.wb-admin__cardmeta {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+}

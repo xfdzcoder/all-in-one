@@ -429,9 +429,84 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                   </Group>
                 </div>
 
-                <div className="wb-admin__section">
-                  <Text size="xs" c="dimmed">添加列</Text>
-                  <Group gap="xs" wrap="nowrap">
+                {/* Q28b：真·看板式列排布（列并排横排、列内卡片纵排） */}
+                <div className="wb-admin__board">
+                  {(tree.tree?.columns ?? [])
+                    .filter((c) => !q || c.title.includes(q))
+                    .map((col) => (
+                      <div key={col.id} className="wb-admin__col" data-admin-col={col.title}>
+                        <div className="wb-admin__colhead">
+                          <TextInput
+                            size="xs"
+                            defaultValue={col.title}
+                            className="wb-grow"
+                            aria-label={`列名 ${col.title}`}
+                            onBlur={(e) => {
+                              const v = e.currentTarget.value.trim();
+                              if (v && v !== col.title) void m.renameColumn(col.id, v);
+                            }}
+                          />
+                          <ConfirmAction
+                            label="×"
+                            size="compact-xs"
+                            variant="subtle"
+                            title="删除列？"
+                            message={`删除列「${col.title}」将一并删除其中卡片（不可恢复）。确认删除？`}
+                            onConfirm={() => void m.deleteColumn(col.id)}
+                          />
+                        </div>
+                        {(tree.tree?.cards ?? [])
+                          .filter((c) => c.columnId === col.id && (!q || c.title.includes(q)))
+                          .map((card) => (
+                            <div key={card.id} className="wb-admin__card" data-admin-card={card.title}>
+                              <TextInput
+                                size="xs"
+                                defaultValue={card.title}
+                                aria-label={`卡片标题 ${card.title}`}
+                                onBlur={(e) => {
+                                  const v = e.currentTarget.value.trim();
+                                  if (v && v !== card.title) void m.patchCard(card.id, { title: v });
+                                }}
+                              />
+                              <div className="wb-admin__cardmeta">
+                                {card.archived && (
+                                  <Badge size="xs" variant="outline">
+                                    已归档
+                                  </Badge>
+                                )}
+                                <Button
+                                  size="compact-xs"
+                                  variant="subtle"
+                                  onClick={() => void m.patchCard(card.id, { archived: !card.archived })}
+                                >
+                                  {card.archived ? "恢复" : "归档"}
+                                </Button>
+                                <ConfirmAction
+                                  label="删除"
+                                  size="compact-xs"
+                                  variant="subtle"
+                                  title="删除卡片？"
+                                  message={`确认删除卡片「${card.title}」？（不可恢复）`}
+                                  onConfirm={() => void m.deleteCard(card.id)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          className="wb-ghost-add"
+                          onClick={() => void m.createCard(col.id, "新卡片")}
+                        >
+                          ＋ 卡片
+                        </Button>
+                      </div>
+                    ))}
+                  {/* 末列：添加列（管理页 = 加列唯一入口） */}
+                  <div className="wb-admin__col wb-admin__col--ghost">
+                    <Text size="xs" c="dimmed">
+                      添加列
+                    </Text>
                     <TextInput
                       size="xs"
                       placeholder="列名"
@@ -443,7 +518,6 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                           setNewColumn("");
                         }
                       }}
-                      className="wb-grow"
                     />
                     <Button
                       size="xs"
@@ -457,76 +531,11 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     >
                       添加列
                     </Button>
-                  </Group>
+                  </div>
                 </div>
-
-                {(tree.tree?.columns ?? [])
-                  .filter((c) => !q || c.title.includes(q))
-                  .map((col) => (
-                    <div key={col.id} className="wb-admin__group" data-admin-col={col.title}>
-                      <Group gap="xs" wrap="nowrap">
-                        <TextInput
-                          size="xs"
-                          defaultValue={col.title}
-                          className="wb-grow"
-                          aria-label={`列名 ${col.title}`}
-                          onBlur={(e) => {
-                            const v = e.currentTarget.value.trim();
-                            if (v && v !== col.title) void m.renameColumn(col.id, v);
-                          }}
-                        />
-                        <Button
-                          size="compact-xs"
-                          variant="subtle"
-                          onClick={() => void m.createCard(col.id, "新卡片")}
-                        >
-                          ＋ 卡片
-                        </Button>
-                        <ConfirmAction
-                          label="×"
-                          size="compact-xs"
-                          variant="subtle"
-                          title="删除列？"
-                          message={`删除列「${col.title}」将一并删除其中卡片（不可恢复）。确认删除？`}
-                          onConfirm={() => void m.deleteColumn(col.id)}
-                        />
-                      </Group>
-                      {(tree.tree?.cards ?? [])
-                        .filter((c) => c.columnId === col.id && (!q || c.title.includes(q)))
-                        .map((card) => (
-                          <div key={card.id} className="wb-admin__row" data-admin-card={card.title}>
-                            <TextInput
-                              size="xs"
-                              defaultValue={card.title}
-                              className="wb-grow"
-                              onBlur={(e) => {
-                                const v = e.currentTarget.value.trim();
-                                if (v && v !== card.title) void m.patchCard(card.id, { title: v });
-                              }}
-                            />
-                            {card.archived && <Badge size="xs" variant="outline">已归档</Badge>}
-                            <Button
-                              size="compact-xs"
-                              variant="subtle"
-                              onClick={() => void m.patchCard(card.id, { archived: !card.archived })}
-                            >
-                              {card.archived ? "恢复" : "归档"}
-                            </Button>
-                            <ConfirmAction
-                              label="删除"
-                              size="compact-xs"
-                              variant="subtle"
-                              title="删除卡片？"
-                              message={`确认删除卡片「${card.title}」？（不可恢复）`}
-                              onConfirm={() => void m.deleteCard(card.id)}
-                            />
-                          </div>
-                        ))}
-                    </div>
-                  ))}
                 {(tree.tree?.columns ?? []).length === 0 && (
                   <Text size="xs" c="dimmed">
-                    暂无列 —— 在组件里「＋ 添加列」，或于此管理卡片
+                    暂无列 —— 在右侧「添加列」开始规划
                   </Text>
                 )}
               </>
