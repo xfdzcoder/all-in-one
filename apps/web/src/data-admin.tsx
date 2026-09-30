@@ -748,7 +748,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                           {r.name}
                         </Text>
                         <Text size="xs" c="dimmed" className="wb-grow" truncate>
-                          {String(r.config.url ?? "")}
+                          {String((r.config as Record<string, unknown> | undefined)?.url ?? "")}
                         </Text>
                         <Button
                           size="compact-xs"
@@ -759,7 +759,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                             setDsName(r.name);
                             setDsConfig(
                               Object.fromEntries(
-                                Object.entries(r.config ?? {})
+                                Object.entries((r.config as Record<string, unknown> | undefined) ?? {})
                                   .filter(([, v]) => typeof v === "string")
                                   .map(([k, v]) => [k, String(v)]),
                               ),

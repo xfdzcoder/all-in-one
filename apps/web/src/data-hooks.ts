@@ -636,9 +636,10 @@ export function useResolvedSourceConfig<T extends Record<string, unknown>>(
   const source = (sources.data ?? []).find((r) => r.id === sourceId);
   return useMemo(() => {
     if (!source) return config;
+    const srcConfig = source.config ?? {};
     const from = pick
-      ? Object.fromEntries(Object.entries(source.config).filter(([k]) => pick.includes(k)))
-      : source.config;
+      ? Object.fromEntries(Object.entries(srcConfig).filter(([k]) => pick.includes(k)))
+      : srcConfig;
     return { ...config, ...from } as T;
   }, [config, source, pick]);
 }

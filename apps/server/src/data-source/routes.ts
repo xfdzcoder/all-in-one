@@ -36,6 +36,14 @@ const patchBody = z
 const idParams = z.object({ id: z.string().min(1).max(64) });
 
 /** config 键白名单校验（未知键拒绝 —— 防配置污染）。 */
+function parseConfig(configJson: string): Record<string, unknown> {
+  try {
+    return JSON.parse(configJson) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 function configOk(kind: DataSourceKind, config: Record<string, unknown>): string | null {
   const allowed = DATA_SOURCE_CONFIG_KEYS[kind];
   for (const k of Object.keys(config)) {
@@ -45,18 +53,20 @@ function configOk(kind: DataSourceKind, config: Record<string, unknown>): string
 }
 
 export function registerDataSourceRoutes(app: FastifyInstance): void {
-  // GET /api/data-sources?kind= —— 命名连接列表（config 原样返回，secret 均为引用）
+  // GET /api/data-sources?kind= —— 命名连接列表（config 解析后原样返回，secret 均为引用）
+  // Q31：行须带解析后的 config 对象 —— 只回 configJson 字符串会让前端 r.config.url 崩（监控源详情空白）
   app.get("/api/data-sources", { preHandler: authGuard }, async (req) => {
     const q = (typeof req.query === "object" && req.query) ? (req.query as Record<string, unknown>) : {};
     const kind = q.kind != null ? String(q.kind) : undefined;
     const where = kind
       ? and(eq(dataSource.userId, req.user!.id), eq(dataSource.kind, kind))
       : eq(dataSource.userId, req.user!.id);
-    return app.db
+    const rows = await app.db
       .select()
       .from(dataSource)
       .where(where)
       .orderBy(asc(dataSource.kind), asc(dataSource.name));
+    return rows.map((r) => ({ ...r, config: parseConfig(r.configJson) }));
   });
 
   // POST /api/data-sources —— 创建（同 kind 同名 409）

@@ -114,4 +114,19 @@ describe("data sources API（D42 命名连接）", () => {
     expect(kinds.map((k) => k.kind).sort()).toEqual(["http", "monitor", "opencode"]);
     expect(kinds.find((k) => k.kind === "monitor")?.configKeys).toContain("password");
   });
+
+  it("Q31: GET 列表行携带解析后的 config 对象（前端契约）", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/data-sources",
+      cookies: { sid },
+      payload: { kind: "monitor", name: `q31-${Date.now()}`, config: { url: "http://127.0.0.1:61208" } },
+    });
+    const res = await app.inject({ method: "GET", url: "/api/data-sources?kind=monitor", cookies: { sid } });
+    const rows = res.json() as Array<{ name: string; config?: unknown; configJson?: string }>;
+    expect(rows.length).toBeGreaterThan(0);
+    const row = rows.find((r) => r.name.startsWith("q31-"))!;
+    expect(typeof row.config).toBe("object");
+    expect((row.config as Record<string, unknown>).url).toBe("http://127.0.0.1:61208");
+  });
 });
