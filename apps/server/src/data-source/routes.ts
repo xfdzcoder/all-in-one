@@ -12,7 +12,7 @@ export type DataSourceKind = (typeof DATA_SOURCE_KINDS)[number];
 
 /** 各类连接的 config 允许键（secret 字段与表单同名，值为凭证库 SecretRef，SEC3）。 */
 export const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> = {
-  monitor: ["url", "authMode", "username", "password"],
+  monitor: ["url", "authMode", "username", "password", "apiToken"], // password=旧键（Q36 起新表单用 apiToken）
   opencode: ["url", "apiToken"],
   http: ["url", "authHeader", "apiToken"],
 };

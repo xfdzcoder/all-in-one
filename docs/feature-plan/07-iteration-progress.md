@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
 | 循环状态 | **运行中**（用户拍板 D35–D37 后恢复；STOP 文件已移除） |
-| 最近更新 | 2026-10-01（第 71 轮 · Q35 ✅ 看板列宽恒等分；余 Q36–Q39） |
+| 最近更新 | 2026-10-01（第 72 轮 · Q36 ✅ 监控组件选择化；余 Q37–Q39） |
 
 ## 迭代队列
 
@@ -203,3 +203,4 @@
 | 69 | 2026-10-01 | **Q33 邮箱配置下拉为空修复（二.2）**：复现定位——mail 组件 `accountIds` 多选 `dynamic:"mail-accounts"`，但 `useDynamicOptionsMap` 的返回表**无此键** → `?? []` 恒空（看板/标签等键正常，故仅邮箱空）。溯源：**Q29e 的 hooks 补丁被守卫误判跳过**（`if '"mail-accounts"' not in s` 命中了 `useMailAccounts` 的 `queryKey: ["mail-accounts"]` 子串 → 未替换却 assert 通过）——Q29e 记录中「多选入配置」实际缺选项源，本轮补正。修复：`mail-accounts: mailAccounts.accounts.map(...)` 入表；verify-mail 新增 4 项（进编辑→开配置→打开多选→断言账号出现在选项 + 关弹窗回归——配置弹窗无「取消」钮，走 Modal-close）。**教训**：字符串存在性守卫须锚定赋值形态（`"mail-accounts":`），裸子串会命中 queryKey | verify-mail 34/34（+4）✅；verify-tag 16/16、verify-kan 45/45、verify-gmail 15/15 ✅；typecheck ✅ | 待提交 |
 | 70 | 2026-10-01 | **Q34 未读徽标编辑态隐藏（二.3）**：信息流头部「未读 N」徽标在编辑态与外框「配置/移除」（右上角悬浮 z-5）重叠被遮挡——按用户口径**只隐藏徽标**（Q32 保持按钮可见不变）：rss-widget 消费 `WidgetEditContext.editMode` 条件渲染。verify-i4 补双断言（编辑态无可见「未读」徽标 / 退出后恢复），rss.md 同步 | verify-i4 20/20（+2）✅；verify-fr3 29/29、verify-p8 9/9、verify-dark 3/3 AA ✅；typecheck ✅ | 待提交 |
 | 71 | 2026-10-01 | **Q35 看板列宽恒等分（二.4）**：用户否决 Q29e 的「min-width 132 / max-width 320 + 等分」——max 宽会把宽卡上的列截断（留白不等分）、min 宽在多列时溢出不等分；改**纯 `flex: 1 1 0`（min-width:0）**，列宽恒 = (卡片宽 − 列间距×(n−1))/n。verify-kan 补等分断言（读 computed columnGap 算期望值，逐列 ±2px）——实测 436=436=expected ✓ | verify-kan 46/46（+1）✅；verify-drag 3/3、verify-dark 3/3 ✅；typecheck ✅ | 待提交 |
+| 72 | 2026-10-01 | **Q36 监控组件配置=只选监控源（二.5）**：① `monitorManifest.configSchema` 收敛为 **`sourceId` 单选**（「监控源」，dynamic data-source:monitor）——url/authMode/username/apiToken 内联字段从表单移除（**旧组件的内联 props 仍兼容生效**，`useResolvedSourceConfig` 回落）；② 组件空态「暂无监控源 —— 请到数据源管理·数据连接添加 + 去添加监控源（wb:navigate tab=sources）」，判定改按解析后 url；③ **修真缺陷：连接表单键错配**——DS_FIELDS.monitor 存 `password`，连接器只读 `apiToken` → 带认证的监控连接从未生效；改 `apiToken`（连接器兼容旧 `password` 键、白名单双键）+ authMode 补 **bearer**。verify-mon 重构：API 建连接（凭证库引用 SEC3）→ picker 断言表单无「监控源地址」+ 下拉选源（17/17，+2） | verify-mon 17/17 ✅；server Vitest 153/153 ✅；verify-opc 15/15、verify-j5 10/10、verify-dark 3/3 ✅ | 待提交 |

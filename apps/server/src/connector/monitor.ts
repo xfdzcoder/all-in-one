@@ -109,7 +109,8 @@ export function normalizeGlances(parts: {
 function authHeaders(config: Record<string, unknown>): Record<string, string> {
   const headers: Record<string, string> = {};
   const mode = typeof config.authMode === "string" ? config.authMode : "none";
-  const token = typeof config.apiToken === "string" ? config.apiToken : "";
+  // Q36：兼容旧连接的 password 键（新键 apiToken 与组件/表单一致）
+  const token = typeof config.apiToken === "string" ? config.apiToken : typeof config.password === "string" ? config.password : "";
   const username = typeof config.username === "string" ? config.username : "";
   if (mode === "bearer" && token) headers.Authorization = `Bearer ${token}`;
   else if (mode === "basic" && token) {

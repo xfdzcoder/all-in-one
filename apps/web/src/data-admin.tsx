@@ -114,9 +114,10 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const DS_FIELDS: Record<string, Array<{ key: string; label: string; type: "text" | "select" | "secret"; options?: Array<{ value: string; label: string }> }>> = {
     monitor: [
       { key: "url", label: "监控源地址", type: "text" },
-      { key: "authMode", label: "认证方式", type: "select", options: [{ value: "none", label: "无认证" }, { value: "basic", label: "Basic" }] },
+      { key: "authMode", label: "认证方式", type: "select", options: [{ value: "none", label: "无认证" }, { value: "basic", label: "Basic" }, { value: "bearer", label: "Bearer" }] },
       { key: "username", label: "用户名", type: "text" },
-      { key: "password", label: "口令", type: "secret" },
+      // Q36：键与连接器/组件对齐（apiToken）——旧 password 行仍被连接器兼容
+      { key: "apiToken", label: "口令 / 令牌", type: "secret" },
     ],
     opencode: [
       { key: "url", label: "服务地址", type: "text" },

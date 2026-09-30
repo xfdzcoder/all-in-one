@@ -57,7 +57,8 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const { data, loading, error, refresh } = useMonitorData(resolved);
   const [detailOpen, setDetailOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const url = config.url;
+  // Q36：按解析后配置判定空态（sourceId 命中连接 / 旧内联均算已配置）
+  const url = (resolved as { url?: string }).url;
 
   return (
     <div className="wb-widget">
@@ -86,9 +87,19 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
       </Group>
 
       {!url && (
-        <Text size="xs" c="dimmed">
-          配置监控源地址（如 Glances）后显示指标
-        </Text>
+        // Q36：无监控源 → 引导去数据源管理配置（组件表单只做选择）
+        <div className="wb-widget__hint">
+          <Text size="xs" c="dimmed">
+            暂无监控源 —— 请到「数据源管理 · 数据连接」添加
+          </Text>
+          <Button
+            size="compact-xs"
+            variant="default"
+            onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "sources" } }))}
+          >
+            去添加监控源
+          </Button>
+        </div>
       )}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {data && !data.probe?.ok && (

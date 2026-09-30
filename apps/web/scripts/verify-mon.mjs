@@ -103,17 +103,46 @@ const selectOption = async (label, optionText) => {
   }, optionText);
 };
 
-const addMonitorWidget = async (url, auth) => {
+const createMonitorSource = (name, url, auth) =>
+  page.evaluate(
+    async ({ name, url, auth }) => {
+      let apiToken;
+      if (auth) {
+        // SEC3：令牌入凭证库，连接仅存引用
+        const cred = await (
+          await fetch("/api/credentials", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: `${name}-cred`, kind: "http-header", secret: "s3cret" }),
+          })
+        ).json();
+        apiToken = { credentialRef: cred.id };
+      }
+      const res = await fetch("/api/data-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "monitor",
+          name,
+          config: auth ? { url, authMode: "basic", username: "glances", apiToken } : { url },
+        }),
+      });
+      return res.ok;
+    },
+    { name, url, auth },
+  );
+
+// Q36：添加组件 = 只选监控源（连接信息不在组件表单重填）
+const addMonitorWidget = async (sourceName) => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
   if (!(await clickBtn("服务器监控"))) return false;
   await sleep(400);
-  if (!(await setField("监控源地址", url))) return false;
-  if (auth) {
-    if (!(await selectOption("认证方式", "Basic"))) return false;
-    if (!(await setField("用户名（Basic）", "glances"))) return false;
-    if (!(await setField("口令 / 令牌", "s3cret"))) return false;
-  }
+  const selectOnly = await page.evaluate(
+    () => ![...document.querySelectorAll(".mantine-Modal-root label")].some((l) => l.textContent.includes("监控源地址")),
+  );
+  if (!selectOnly) return false;
+  if (!(await selectOption("监控源", sourceName))) return false;
   await sleep(200);
   return clickBtn("确认添加", true);
 };
@@ -156,10 +185,16 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
+  // 前置：监控源连接（数据源管理 · 数据连接 —— 组件只做选择，Q36）
+  const srcBasic = `mon-basic-${Date.now().toString(36).slice(-4)}`;
+  const srcWeird = `mon-plain-${Date.now().toString(36).slice(-4)}`;
+  ok("MON create source with basic auth (credential-backed)", await createMonitorSource(srcBasic, glancesUrl, true));
+  ok("MON create plain source for incompatible case", await createMonitorSource(srcWeird, weirdUrl, false));
+
   // ①② 指标渲染 + Basic 认证注入
   ok("MON enter edit", await clickBtn("编辑页面"));
   await sleep(300);
-  ok("MON add monitor widget", await addMonitorWidget(glancesUrl, true));
+  ok("MON add monitor widget (select-only form)", await addMonitorWidget(srcBasic));
   await sleep(2500);
   const body = await page.evaluate(() => document.body.textContent ?? "");
   ok("MON version badge (probe)", body.includes("v4.9.0"), body.slice(-120));
@@ -190,7 +225,7 @@ try {
   // ⑤ 非 Glances 源 → 显式探测失败
   ok("MON enter edit again", await clickBtn("编辑页面"));
   await sleep(300);
-  ok("MON add widget against weird source", await addMonitorWidget(weirdUrl, false));
+  ok("MON add widget against weird source", await addMonitorWidget(srcWeird));
   await sleep(2500);
   const body3 = await page.evaluate(() => document.body.textContent ?? "");
   ok("MON incompatible source surfaced", body3.includes("无法读取监控源") && body3.includes("探测失败"), body3.slice(-160));

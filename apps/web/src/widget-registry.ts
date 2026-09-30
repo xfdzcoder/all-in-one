@@ -236,21 +236,8 @@ export const monitorManifest: WidgetManifest = {
   defaultSize: { w: 6, h: 4 },
   minSize: { w: 3, h: 2 },
   configSchema: [
-    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:monitor", help: "在「数据源管理 · 数据连接」维护；留空 = 使用下方内联配置" },
-    { key: "url", label: "监控源地址", type: "text", placeholder: "http://127.0.0.1:61208" },
-    {
-      key: "authMode",
-      label: "认证方式",
-      type: "select",
-      default: "none",
-      options: [
-        { value: "none", label: "无认证" },
-        { value: "basic", label: "Basic（用户名+口令）" },
-        { value: "bearer", label: "Bearer（令牌）" },
-      ],
-    },
-    { key: "username", label: "用户名（Basic）", type: "text" },
-    { key: "apiToken", label: "口令 / 令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
+    // Q36（二.5）：只需选择已配置的监控源 —— 连接信息在「数据源管理 · 数据连接」维护，不在组件表单重填
+    { key: "sourceId", label: "监控源", type: "select", dynamic: "data-source:monitor", help: "在「数据源管理 · 数据连接」维护；旧组件的内联配置仍生效（兼容）" },
   ],
   capabilities: {
     data: { source: "http-connector" },
