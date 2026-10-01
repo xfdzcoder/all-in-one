@@ -27,6 +27,17 @@ export {
 } from "./data.ts";
 
 export {
+  type ServiceList,
+  type ServiceListItem,
+  type ServiceMetric,
+  type ServiceOverview,
+  type ServiceSample,
+  type ServiceStatus,
+  emptyOverview,
+  validateServiceOverview,
+} from "./service-overview.ts";
+
+export {
   type ActionCapability,
   type ActionDispatcher,
 } from "./action.ts";

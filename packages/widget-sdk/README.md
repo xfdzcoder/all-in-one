@@ -79,6 +79,19 @@ export const builtinManifests  = […, myManifest];
   **手动**——组件头部「刷新」按钮强制回源（数据通道 `force` 穿透服务端 TTL 缓存）；
   SSE 不可用时宿主另有断线轮询兜底（FR-I6）。
 
+## 服务概览数据形状（D48，结构化卡片 + 迷你图表）
+
+`service-overview` 类组件的数据通道返回 `ServiceOverview`（`service-overview.ts`），
+按「用户问题 → 指标」推导（见 `docs/feature-plan/08-widget-quality.md`）：
+
+- `probe`：探活/版本/错误；`metrics`：**主指标（`emphasis` ≤1）+ 次指标（2–4）**，数值带单位语义；
+- `statuses`：状态徽标；`lists`：分组清单（异常置顶 / 最近 / 正在发生）；
+- `sample`：**本次采样点**（`series: Record<string, number>`）——客户端按轮询累积为迷你趋势，
+  速率类用累计量差分（服务端不存历史、不改 schema）；
+- `notes`：**诚实降级说明（"原因 + 怎么修"）**——取不到的指标在此说明，禁止写"该服务未提供"甩锅。
+
+适配器输出必须过 `validateServiceOverview`（契约测试覆盖每条降级分支）。
+
 ## 动作（FR-I5）
 
 `ActionDispatcher`（`dispatch(action, params)`）→ 服务端统一执行，
