@@ -41,6 +41,11 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
+// Q69：诊断要打到**前端控制台**（用户明确要求）—— 抓 error 级日志供断言
+const consoleErrors = [];
+page.on("console", (msg) => {
+  if (msg.type() === "error") consoleErrors.push(msg.text());
+});
 
 const clickBtn = (label, exact = false) =>
   page.evaluate(
@@ -195,10 +200,25 @@ try {
   ok("LIVE portainer container counts match", pt.includes("23/25"), pt.slice(0, 160));
   ok("LIVE portainer status list rendered", pt.includes("异常容器") || pt.includes("容器状态"), pt.slice(0, 120));
 
-  // Q48 Mihomo：出口选择 + 活动连接 + 策略组清单（真机有 ♻️ 自动选择 组）
+  // Q48 Mihomo：出口选择 + 活动连接 + 节点延迟清单（真机有 ♻️ 自动选择 组）
   const cl = await waitForCard(names.mihomo);
   ok("LIVE mihomo picks + connections rendered", cl.includes("出口选择") && cl.includes("活动连接") && cl.includes("自动选择"), cl.slice(0, 160));
-  ok("LIVE mihomo memory metric or honest note", cl.includes("内存"), cl.slice(-120));
+  // Q69：累计流量**拆成两块**（与「活动连接」构成一行三个）；「策略组选择」清单移出概览卡
+  ok(
+    "LIVE mihomo traffic split into two blocks (Q69)",
+    cl.includes("累计下行") && cl.includes("累计上行") && !cl.includes("累计流量"),
+    cl.slice(0, 200),
+  );
+  ok("LIVE mihomo no 策略组选择 list in overview (Q69)", !cl.includes("策略组选择"), cl.slice(0, 200));
+  // Q69：/memory 失败不再渲染进卡片，改走 diagnostics → 前端 console.error。
+  // 两条路径都算过：① /memory 成功 → 卡上有「内存」指标且无失败文案；② 失败 → 卡上无失败文案且控制台有诊断。
+  const memRendered = cl.includes("内存") && !cl.includes("内存获取失败");
+  const memDiagnosed = consoleErrors.some((t) => t.includes("[service-overview]"));
+  ok(
+    "LIVE mihomo memory failure kept off-card, logged to console (Q69)",
+    !cl.includes("内存获取失败") && (memRendered || memDiagnosed),
+    JSON.stringify({ cardTail: cl.slice(-140), memRendered, memDiagnosed, consoleErrors: consoleErrors.slice(0, 2) }),
+  );
 
   // Q50 Immich 照片墙（D50 只读深度）：真机缩略图网格（服务端代取 data URI）
   await clickBtn("编辑页面");

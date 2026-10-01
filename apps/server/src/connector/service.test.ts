@@ -115,7 +115,7 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     expect(m.lists?.[0].title).toBe("容器状态");
   });
 
-  it("normalizeMihomo：策略组选择 + 连接/累计流量 + sample 采样点（速率由前端差分）", () => {
+  it("normalizeMihomo：出口选择 + 累计流量**拆两块** + 节点延迟（Q69；策略组选择清单已移出）", () => {
     const m = normalizeMihomo({
       version: { meta: true, version: "v1.19.31" },
       proxies: {
@@ -132,15 +132,35 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     });
     expect(m.metrics.find((x) => x.emphasis)).toMatchObject({ label: "出口选择", value: "DIRECT" });
     expect(m.metrics.find((x) => x.label === "活动连接")?.value).toBe("2");
+    // Q69：累计流量拆成两个独立块（metacubexd Overview 亦分 Upload/Download Total）
+    expect(m.metrics.find((x) => x.label === "累计下行")?.value).toBe("31.5 GB");
+    expect(m.metrics.find((x) => x.label === "累计上行")?.value).toBe("12.9 GB");
     expect(m.sample?.series.connections).toBe(2);
     expect(m.sample?.series.downTotal).toBeCloseTo(31.5 * 2 ** 30);
-    expect(m.lists?.find((l) => l.title === "策略组选择")?.items).toContainEqual({
-      title: "♻️ 自动选择",
-      detail: "→ 香港WAP-优化",
-      tone: "info",
-    });
+    // Q69：「策略组选择」清单不再进概览卡（职责归 Mihomo 节点面板组件）
+    expect(m.lists?.find((l) => l.title === "策略组选择")).toBeUndefined();
     expect(m.lists?.find((l) => l.title === "节点延迟")?.items[0]).toMatchObject({ detail: "120 ms", tone: "ok" });
-    expect(m.notes?.[0]).toContain("内存获取失败");
+    // Q69：/memory 失败**不进 notes**（不渲染进卡片），走 diagnostics → 前端 console.error
+    expect((m.notes ?? []).some((n) => n.includes("内存"))).toBe(false);
+    expect(m.diagnostics?.[0]).toContain("内存获取失败");
+  });
+
+  it("normalizeMihomo 降级：/connections 失败 → 累计流量两块不渲染 + note 带原因与怎么修", () => {
+    const m = normalizeMihomo({
+      version: "v1.19.31",
+      proxies: { proxies: { GLOBAL: { now: "DIRECT", all: ["DIRECT"], history: [{ delay: 88 }] } } },
+      errors: [{ what: "连接", err: new Error("Unexpected token '<'") }],
+    });
+    expect(m.metrics.find((x) => x.label === "累计下行")).toBeUndefined();
+    expect(m.metrics.find((x) => x.label === "累计上行")).toBeUndefined();
+    expect(m.metrics.find((x) => x.label === "活动连接")).toBeUndefined();
+    // 08 §5：原因 + 怎么修（不得甩锅「该服务未提供」）
+    expect(m.notes?.[0]).toContain("连接获取失败");
+    expect(m.notes?.[0]).toContain("external-controller");
+    expect(m.notes?.[0]).not.toContain("该服务未提供");
+    // 其余块仍在 —— 单接口失败不整卡空白
+    expect(m.metrics.find((x) => x.emphasis)?.value).toBe("DIRECT");
+    expect(m.lists?.[0].title).toBe("节点延迟");
   });
 
   it("所有适配器输出过契约校验（validateServiceOverview）", async () => {
@@ -150,6 +170,12 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
       normalizeNavidrome({ ping: { "subsonic-response": { version: "1" } } }),
       normalizePortainer({ status: {}, endpoints: [] }),
       normalizeMihomo({ version: "v1", errors: [{ what: "内存", err: new Error("x") }] }),
+      // Q69：带 diagnostics 的输出同样必须过契约
+      normalizeMihomo({
+        version: "v1",
+        connections: { downloadTotal: 1, uploadTotal: 2, connections: [] },
+        errors: [{ what: "内存", err: new Error("aborted") }, { what: "连接", err: new Error("boom") }],
+      }),
     ]) {
       expect(validateServiceOverview(o)).toEqual([]);
     }

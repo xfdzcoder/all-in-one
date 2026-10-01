@@ -133,31 +133,54 @@
   border: var(--wb-border);
   border-radius: var(--wb-radius-sm);
   padding: var(--wb-space-2) var(--wb-space-3);
+  /* Q69：容器查询上下文 —— 值字号随**本块**宽度缩放（与卡内列数无关），卡片小则字小 */
+  container-type: inline-size;
 }
 
 .wb-metric__label {
   font-size: var(--wb-text-xs);
   color: var(--wb-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Q69：字号随容器缩放，但**有最大字体**（用户明确要求）与可读下限。
+ * 13cqw：块宽约 246px 时触及上限；块窄到 138px 时落到下限。值恒单行 + 省略号，不再换行撑高。 */
 .wb-metric__value {
-  font-size: var(--wb-text-xl);
+  font-size: clamp(var(--wb-text-md), 13cqw, var(--wb-text-xl));
   font-weight: var(--wb-weight-semibold);
   color: var(--wb-color-text);
   line-height: 1.2;
   letter-spacing: var(--wb-tracking-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* D52 批3：主指标展示级数字排版 */
+/* D52 批3：主指标展示级数字排版（Q69：随容器缩放 + 最大字体封顶于 --wb-text-display） */
 .wb-metric__value--display {
-  font-size: var(--wb-text-display);
+  font-size: clamp(var(--wb-text-lg), 13cqw, var(--wb-text-display));
   font-weight: var(--wb-weight-bold);
   line-height: 1.1;
+}
+
+/* Q69：主指标块设**最小高度**（用户反馈：卡片小时「出口选择」展示不全）——
+ * 标签 + 展示级数字 + hint 三行的自然高度，卡片再小也不塌陷；超长节点名单行省略。 */
+.wb-metric--primary {
+  border-color: var(--wb-color-border-strong);
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .wb-metric__hint {
   font-size: var(--wb-text-xs);
   color: var(--wb-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── 文本语义（与 --wb-color-text-* 对应） ─────────────────── */
@@ -741,8 +764,10 @@
   gap: var(--wb-space-1);
 }
 
-.wb-metric--primary {
-  border-color: var(--wb-color-border-strong);
+/* Q69：固定三列 —— 「活动连接 / 累计下行 / 累计上行」正好一行三个（用户要求）。
+ * minmax(0,1fr) 允许列宽收缩到 0，故窄卡不会溢出；文本靠 .wb-metric__value 单行省略兜底。 */
+.wb-metric-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .wb-svc-list,

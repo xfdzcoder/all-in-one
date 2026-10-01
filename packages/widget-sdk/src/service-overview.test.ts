@@ -62,6 +62,26 @@ describe("validateServiceOverview (D48)", () => {
     expect(errs).toContain("notes[1] 必须是非空字符串");
   });
 
+  // Q69：diagnostics —— 只进开发者控制台、不渲染进 UI 的诊断通道
+  it("accepts diagnostics and validates its shape", () => {
+    expect(
+      validateServiceOverview({
+        probe: { ok: true, source: "mihomo" },
+        metrics: [],
+        diagnostics: ["内存获取失败（This operation was aborted）—— 若经反代部署，/memory 可能被缓冲或超时"],
+      }),
+    ).toEqual([]);
+    const errs = validateServiceOverview({
+      probe: { ok: true, source: "mihomo" },
+      metrics: [],
+      diagnostics: ["ok", ""],
+    });
+    expect(errs).toContain("diagnostics[1] 必须是非空字符串");
+    expect(validateServiceOverview({ probe: { ok: true, source: "x" }, metrics: [], diagnostics: "nope" })).toContain(
+      "diagnostics 必须是数组",
+    );
+  });
+
   it("emptyOverview keeps honest degradation (note = cause)", () => {
     const e = emptyOverview("portainer", "连接超时（8s）");
     expect(validateServiceOverview(e)).toEqual([]);

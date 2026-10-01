@@ -240,6 +240,48 @@ try {
   ok("SVC immich v3 routes + per-user list", body.includes("3.2.2") && body.includes("照片") && body.includes("12") && body.includes("mock-user"), body.slice(-140));
   ok("SVC immich Q49 new-count + recent uploads", body.includes("近 7 天新增") && body.includes("最近上传") && body.includes("shot.jpg"), body.slice(-140));
 
+  // Q69（项 4）：指标字号随卡片缩小而缩小，但**有最大字体**（用户明确要求）。
+  // 用两个不同宽度的探针容器直接验证 CSS 契约 `clamp(min, 13cqw, max)`，与具体服务无关。
+  const typo = await page.evaluate(() => {
+    const mk = (w) => {
+      const host = document.createElement("div");
+      host.style.cssText = `position:absolute;left:-9999px;top:0;width:${w}px`;
+      host.innerHTML =
+        '<div class="wb-metric"><div class="wb-metric__label">照片</div><div class="wb-metric__value wb-metric__value--display">16,309</div></div>';
+      document.body.appendChild(host);
+      const m = host.querySelector(".wb-metric");
+      const v = host.querySelector(".wb-metric__value");
+      const out = {
+        width: w,
+        containerType: getComputedStyle(m).containerType,
+        font: parseFloat(getComputedStyle(v).fontSize),
+      };
+      host.remove();
+      return out;
+    };
+    return {
+      wide: mk(420),
+      narrow: mk(120),
+      max: parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--wb-text-display")),
+    };
+  });
+  ok(
+    "Q69 metric font scales with card, capped at max (项 4)",
+    typo.wide.font <= typo.max + 0.5 && typo.narrow.font < typo.wide.font,
+    JSON.stringify(typo),
+  );
+  ok("Q69 .wb-metric is a size container", typo.wide.containerType === "inline-size", typo.wide.containerType);
+  const primaryMinH = await page.evaluate(() => {
+    const el = document.querySelector(".wb-metric--primary");
+    return el ? parseFloat(getComputedStyle(el).minHeight) : -1;
+  });
+  ok("Q69 primary metric has min-height (项 3 出口选择不被裁切)", primaryMinH >= 60, `minHeight=${primaryMinH}`);
+  const gridCols = await page.evaluate(() => {
+    const el = document.querySelector(".wb-metric-grid--3");
+    return el ? getComputedStyle(el).gridTemplateColumns.split(" ").length : 0;
+  });
+  ok("Q69 secondary metric grid is 3 columns (一行三个)", gridCols === 3, `cols=${gridCols}`);
+
   // Q50 Immich 照片墙（FR-X3 只读深度 D50）：缩略图服务端代取 → data URI 网格
   ok("SVC add immich gallery", await addOverview(`svc-immich-${uniq}`, "Immich 照片墙"));
   await sleep(2500);

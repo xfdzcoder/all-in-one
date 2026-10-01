@@ -329,11 +329,6 @@ export function normalizeMihomo(parts: {
   if (px) {
     const groups = Object.entries(px).filter(([, v]) => Array.isArray(v.all) && v.now);
     const globalNow = str(px.GLOBAL?.now);
-    const picks: ServiceListItem[] = groups.slice(0, 6).map(([name, v]) => ({
-      title: name,
-      detail: `→ ${str(v.now)}`,
-      tone: "info" as const,
-    }));
     out.metrics.push({
       label: "出口选择",
       value: globalNow ?? (groups[0] ? str(groups[0][1].now) ?? "—" : "—"),
@@ -341,8 +336,9 @@ export function normalizeMihomo(parts: {
       hint: `${groups.length} 个策略组`,
     });
     out.metrics.push({ label: "节点/策略", value: String(Object.keys(px).length) });
-    out.lists = [{ title: "策略组选择", items: picks }];
 
+    // Q69：「策略组选择」清单不再进概览卡 —— metacubexd Overview 也不放（策略组在 Proxies 页），
+    // 该职责归「Mihomo 节点面板」组件；这里只保留「节点延迟」清单。
     // 最近延迟（history 尾点）
     const delays: ServiceListItem[] = groups
       .map(([name, v]): ServiceListItem | null => {
@@ -354,7 +350,7 @@ export function normalizeMihomo(parts: {
           : null;
       })
       .filter((x): x is ServiceListItem => x !== null);
-    if (delays.length > 0) out.lists.push({ title: "节点延迟", items: delays });
+    if (delays.length > 0) out.lists = [{ title: "节点延迟", items: delays }];
   }
 
   const conn = (parts.connections ?? {}) as Record<string, unknown>;
@@ -372,9 +368,10 @@ export function normalizeMihomo(parts: {
       },
     };
   }
-  if (downTotal !== undefined && upTotal !== undefined) {
-    out.metrics.push({ label: "累计流量", value: `↓ ${gb(downTotal)} · ↑ ${gb(upTotal)}` });
-  }
+  // Q69：累计流量拆成**两个独立块**（metacubexd Overview 亦分 Upload/Download Total），
+  // 与「活动连接」同排构成「一行三个」。
+  if (downTotal !== undefined) out.metrics.push({ label: "累计下行", value: gb(downTotal) });
+  if (upTotal !== undefined) out.metrics.push({ label: "累计上行", value: gb(upTotal) });
 
   const rules = ((parts.rules ?? {}) as Record<string, unknown>).providers as
     | Record<string, Record<string, unknown>>
@@ -394,14 +391,17 @@ export function normalizeMihomo(parts: {
   if (memInuse !== undefined) out.metrics.push({ label: "内存", value: `${(memInuse / 2 ** 20).toFixed(0)} MB` });
 
   for (const e of parts.errors ?? []) {
-    (out.notes ??= []).push(
-      degradeNote(
-        e.what,
-        e.err,
-        "API Key 缺权限 —— 检查 external-controller 密钥（mihomo external-controller 配置）",
-        "若经反代部署，/memory 可能被缓冲或超时 —— 可直连 external-controller 或忽略该项",
-      ),
+    const msg = degradeNote(
+      e.what,
+      e.err,
+      "API Key 缺权限 —— 检查 external-controller 密钥（mihomo external-controller 配置）",
+      "若经反代部署，/memory 可能被缓冲或超时 —— 可直连 external-controller 或忽略该项",
     );
+    // Q69：`/memory` 失败**不进卡片**（用户明确不需要；经反代部署时它常被缓冲/挂起，
+    // 实测 `This operation was aborted`，卡片上纯属噪音）。改走 diagnostics → 前端 console.error。
+    // TODO(Q69 后续清理)：开发期保留该诊断通道便于排查；稳定后移除 diagnostics 字段与前端打印。
+    if (e.what === "内存") (out.diagnostics ??= []).push(msg);
+    else (out.notes ??= []).push(msg);
   }
   return out;
 }

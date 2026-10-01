@@ -67,6 +67,12 @@ export interface ServiceOverview {
    * 取不到的指标必须在此说明，禁止在指标位写"该服务未提供"甩锅文案。
    */
   notes?: string[];
+  /**
+   * 仅开发者可见的诊断信息（**不渲染进 UI**）。
+   * 用途：用户明确不需要在卡片上看到、但排查时仍需知道的失败（如 mihomo `/memory`
+   * 在反代下被缓冲/挂起）。组件负责 `console.error` 输出。
+   */
+  diagnostics?: string[];
 }
 
 /** 契约校验：返回错误清单（空 = 合法）。用于适配器契约测试与插件数据边界。 */
@@ -118,6 +124,12 @@ export function validateServiceOverview(v: unknown): string[] {
     if (!Array.isArray(o.notes)) errs.push("notes 必须是数组");
     else for (const [i, n] of o.notes.entries()) {
       if (typeof n !== "string" || !n) errs.push(`notes[${i}] 必须是非空字符串`);
+    }
+  }
+  if (o.diagnostics !== undefined) {
+    if (!Array.isArray(o.diagnostics)) errs.push("diagnostics 必须是数组");
+    else for (const [i, n] of o.diagnostics.entries()) {
+      if (typeof n !== "string" || !n) errs.push(`diagnostics[${i}] 必须是非空字符串`);
     }
   }
   return errs;
