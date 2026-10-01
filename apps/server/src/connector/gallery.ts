@@ -118,7 +118,7 @@ export const immichGalleryConnector: WidgetConnector = {
       const id = str(a.id);
       if (!id) continue;
       try {
-        const res = await outboundRequest(`${base}/api/assets/${id}/thumbnail?size=thumb`, {
+        const res = await outboundRequest(`${base}/api/assets/${id}/thumbnail?size=thumbnail`, {
           headers: apiKey,
           timeoutMs: TIMEOUT_MS,
           maxBytes: THUMB_MAX_BYTES,
