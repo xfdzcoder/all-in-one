@@ -620,6 +620,50 @@
   }
 }
 
+/* ── D52 批5 · 微交互（统一过渡/入场动效；尊重 reduced-motion） ── */
+.mantine-Button-root,
+.mantine-ActionIcon-root {
+  transition:
+    transform var(--wb-motion-fast) var(--wb-ease-out),
+    background-color var(--wb-motion-fast) var(--wb-ease-out),
+    border-color var(--wb-motion-fast) var(--wb-ease-out),
+    box-shadow var(--wb-motion-fast) var(--wb-ease-out),
+    filter var(--wb-motion-fast) var(--wb-ease-out);
+}
+
+.mantine-Button-root:hover,
+.mantine-ActionIcon-root:hover {
+  border-color: var(--wb-color-border-strong);
+}
+
+/* 数字/内容入场：轻上浮渐现（组件重挂载即重放） */
+.wb-metric__value,
+.wb-svc-list,
+.wb-svc-trend,
+.wb-gallery {
+  animation: wb-rise var(--wb-motion-slow) var(--wb-ease-out) both;
+}
+
+@keyframes wb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ── D52 批2 · 组件质感（Mantine 桥接；双类选择器压过运行时注入，不用 !important） ── */
 .mantine-Button-filled.mantine-Button-root {
   background-image: linear-gradient(180deg, var(--wb-color-accent-hover), var(--wb-color-accent));
