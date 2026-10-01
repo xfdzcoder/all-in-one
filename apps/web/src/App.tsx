@@ -402,7 +402,8 @@ function Workbench({
               <div className="wb-pagerow">
                 <TextInput
                   size="xs"
-                  placeholder="页面名称"
+                  label="页面名称"
+                  placeholder="如：首页"
                   defaultValue={active?.title ?? ""}
                   aria-label="页面名称"
                   onBlur={(e) => {
@@ -412,7 +413,8 @@ function Workbench({
                 />
                 <TextInput
                   size="xs"
-                  placeholder="图标（emoji）"
+                  label="页面图标"
+                  placeholder="emoji，如 🏠"
                   defaultValue={active?.icon ?? ""}
                   aria-label="页面图标"
                   onBlur={(e) => {
@@ -422,7 +424,8 @@ function Workbench({
                 />
                 <TextInput
                   size="xs"
-                  placeholder="背景色（如 #102030）"
+                  label="背景色"
+                  placeholder="如 #102030，留空＝默认"
                   defaultValue={active?.background ?? ""}
                   aria-label="页面背景色"
                   onBlur={(e) => {
