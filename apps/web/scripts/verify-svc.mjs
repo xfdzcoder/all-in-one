@@ -82,7 +82,27 @@ const mock = createServer((req, res) => {
   if (url.startsWith("/rest/getScanStatus"))
     return res.end(json({ "subsonic-response": { scanStatus: { scanning: false, count: 100, lastScan: "2026-09-25T03:04:48Z" } } }));
   if (url.startsWith("/rest/getArtists"))
-    return res.end(json({ "subsonic-response": { artists: { index: [{ artist: [{ name: "甲", albumCount: 6 }, { name: "乙", albumCount: 4 }] }] } } }));
+    return res.end(
+      json({
+        "subsonic-response": {
+          artists: { index: [{ artist: [{ id: "art-1", name: "甲", albumCount: 6 }, { id: "art-2", name: "乙", albumCount: 4 }] }] },
+        },
+      }),
+    );
+  // Q81：艺人筛选走 `getArtist.view?id=` → `artist.album[]`（Q94/反馈③ 实测口径）
+  if (url.startsWith("/rest/getArtist.view")) {
+    const id = new URL(url, "http://mock").searchParams.get("id");
+    const albums =
+      id === "art-1"
+        ? [
+            { id: "na-1", name: "甲的专辑一", artist: "甲", coverArt: "na-1" },
+            { id: "na-2", name: "甲的专辑二", artist: "甲", coverArt: "na-2" },
+          ]
+        : id === "art-2"
+          ? [{ id: "nb-1", name: "乙的专辑一", artist: "乙", coverArt: "nb-1" }]
+          : [];
+    return res.end(json({ "subsonic-response": { artist: { id, name: id ?? "", album: albums } } }));
+  }
   if (url.startsWith("/rest/getAlbumList2"))
     return res.end(json({ "subsonic-response": { albumList2: { album: [{ id: "al-1", name: "新专辑", artist: "某人", coverArt: "al-1" }] } } }));
   if (url.startsWith("/rest/getNowPlaying")) return res.end(json({ "subsonic-response": { nowPlaying: {} } }));
@@ -107,17 +127,43 @@ const mock = createServer((req, res) => {
   if (url.startsWith("/api/search/metadata")) {
     // Q89（项 2）：横/竖/方/超宽混合比例共 14 张 + 1 个视频（Q88/项 3 应被滤掉）
     // —— 数量要够撑出**多行**，否则验不到「行内等高」与「末行不拉伸」
-    const items = [{ id: "t2", originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" }];
-    for (let i = 0; i < 14; i += 1) {
-      items.push({
-        id: `t${i}`,
-        // 第一张保持 `shot.jpg` 且时间最新 —— 另有旧断言（Q49「最近上传」）依赖它出现在最近列表里
-        originalFileName: i === 0 ? "shot.jpg" : `shot${i}.jpg`,
-        type: "IMAGE",
-        createdAt: i === 0 ? "2026-09-26T02:27:59Z" : `2026-09-26T02:27:${String(i).padStart(2, "0")}Z`,
-      });
-    }
-    return res.end(json({ assets: { total: items.length, count: items.length, nextPage: "2", items } }));
+    const defaultItems = () => {
+      const items = [{ id: "t2", originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" }];
+      for (let i = 0; i < 14; i += 1) {
+        items.push({
+          id: `t${i}`,
+          // 第一张保持 `shot.jpg` 且时间最新 —— 另有旧断言（Q49「最近上传」）依赖它出现在最近列表里
+          originalFileName: i === 0 ? "shot.jpg" : `shot${i}.jpg`,
+          type: "IMAGE",
+          createdAt: i === 0 ? "2026-09-26T02:27:59Z" : `2026-09-26T02:27:${String(i).padStart(2, "0")}Z`,
+        });
+      }
+      return items;
+    };
+    // Q81：**相册筛选生效**的端到端夹具 —— 按 body.albumIds 回该相册的专属条目
+    // （alb-A 3 张 / alb-B 2 张；缩略图形状也专属，见 thumbnail 分支），未筛选才回默认清单。
+    // 单页就回完（< IMMICH_PAGE_SIZE）⇒ 连接器立即停页，不会重复累页。
+    let raw = "";
+    req.on("data", (c) => {
+      raw += c;
+    });
+    req.on("end", () => {
+      let albumIds = [];
+      try {
+        albumIds = JSON.parse(raw || "{}").albumIds ?? [];
+      } catch {
+        /* 非 JSON 也按未筛选处理 */
+      }
+      const scoped = { "alb-A": ["a0", "a1", "a2"], "alb-B": ["b0", "b1"] };
+      const ids = scoped[albumIds[0]];
+      const items = ids
+        ? ids.map((id, i) => ({ id, originalFileName: `${id}.jpg`, type: "IMAGE", createdAt: `2026-10-01T00:00:0${i}Z` }))
+        : albumIds.length
+          ? []
+          : defaultItems();
+      res.end(json({ assets: { total: items.length, count: items.length, nextPage: "2", items } }));
+    });
+    return;
   }
   if (url.startsWith("/api/assets/") && url.includes("/thumbnail")) {
     res.setHeader("Content-Type", "image/jpeg");
@@ -131,8 +177,12 @@ const mock = createServer((req, res) => {
       [480, 640],
     ];
     const m = /\/api\/assets\/([^/]+)\//.exec(url);
-    const n = m ? Number(String(m[1]).replace(/^t/, "")) : 0;
-    const wh = Number.isFinite(n) ? shapes[n % shapes.length] : [400, 400];
+    const id = m ? String(m[1]) : "";
+    // Q81：相册夹具的缩略图有**专属形状**（alb-A 320×240 / alb-B 240×320），
+    // 与默认清单的 6 形状循环不重叠 —— 有没有泄漏未筛选项，看 naturalWidth/Height 即知
+    const byPrefix = { a: [320, 240], b: [240, 320] };
+    const n = Number(id.replace(/^t/, ""));
+    const wh = byPrefix[id.slice(0, 1)] ?? (Number.isFinite(n) ? shapes[n % shapes.length] : [400, 400]);
     return res.end(Buffer.from(miniJpeg(wh[0], wh[1])));
   }
   res.writeHead(404).end();
@@ -872,6 +922,81 @@ try {
     seen.albumId >= 1,
     JSON.stringify({ seen, seedRes }),
   );
+
+  // ── Q81：媒体墙筛选**真的生效**的端到端断言（Q72 收尾欠账）──
+  // 全链路：组件 props → queryKey → 请求体 albumIds/artistId → 连接器上游过滤 → 渲染。
+  // 夹具有「专属条目数 + 专属缩略图形状」（alb-A 3 张 320×240 / alb-B 2 张 240×320，
+  // 与默认清单 15 张的 6 形状循环不重叠）—— 泄漏未筛选项时 count 与 naturalWidth/Height
+  // 同时露馅；Navidrome 侧按专辑名 title 断言（getArtist.view 夹具见 mock）。
+  const setWidgetProps = async (component, patch) => {
+    await page.evaluate(
+      async ({ comp, p }) => {
+        const list = await (await fetch("/api/dashboards")).json();
+        const home = list.find((d) => d.title === "首页") ?? list[0];
+        const items = JSON.parse(home?.layoutJson ?? "[]");
+        const card = items.find((i) => i.component === comp);
+        if (!card) return;
+        card.props = { ...(card.props ?? {}), ...p };
+        await fetch(`/api/dashboards/${home.id}/layout`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
+        });
+      },
+      { comp: component, p: patch },
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector(".grid-stack", { timeout: 20000 });
+    await sleep(2500);
+  };
+  const readWall = (marker) =>
+    page.evaluate((m) => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes(m));
+      const cells = [...(item?.querySelectorAll(".wb-gallery__cell") ?? [])];
+      return {
+        count: cells.length,
+        // 夹具 JPEG 是「最小 SOF 头」——服务端能解析宽高（D60）但浏览器不完整解码
+        // （naturalWidth=0），故用**渲染格子的宽高比**当判据：宽 = 行高 × 原始比例
+        ratios: cells.map((c) => {
+          const r = c.getBoundingClientRect();
+          return r.height ? Number((r.width / r.height).toFixed(2)) : 0;
+        }),
+        titles: cells.map((c) => c.getAttribute("title") ?? "").sort(),
+      };
+    }, marker);
+
+  await setWidgetProps("immich-gallery", { albumId: "alb-A" });
+  const wallA = await readWall("照片墙");
+  ok(
+    "Q81 Immich 相册筛选生效：alb-A 只出 A 相册（3 张 · 4:3）",
+    wallA.count === 3 && wallA.ratios.every((r) => Math.abs(r - 1.33) <= 0.02),
+    JSON.stringify(wallA),
+  );
+  await setWidgetProps("immich-gallery", { albumId: "alb-B" });
+  const wallB = await readWall("照片墙");
+  ok(
+    "Q81 Immich 换相册即换内容：alb-B 只出 B 相册（2 张 · 3:4）",
+    wallB.count === 2 && wallB.ratios.every((r) => Math.abs(r - 0.75) <= 0.02),
+    JSON.stringify(wallB),
+  );
+  await setWidgetProps("navidrome-library", { artistId: "art-1" });
+  const wallN1 = await readWall("专辑墙");
+  ok(
+    "Q81 Navidrome 艺人筛选生效：art-1 只出甲的专辑",
+    wallN1.count === 2 && wallN1.titles.join("|") === "甲的专辑一 · 甲|甲的专辑二 · 甲",
+    JSON.stringify(wallN1),
+  );
+  await setWidgetProps("navidrome-library", { artistId: "art-2" });
+  const wallN2 = await readWall("专辑墙");
+  ok(
+    "Q81 Navidrome 换艺人即换内容：art-2 只出乙的专辑",
+    wallN2.count === 1 && wallN2.titles.join("|") === "乙的专辑一 · 乙",
+    JSON.stringify(wallN2),
+  );
+  // 还原筛选项 —— 后续用例不带着筛选跑（也少留改动在盘上）
+  await setWidgetProps("immich-gallery", { albumId: "" });
+  await setWidgetProps("navidrome-library", { artistId: "" });
+
   // ── Q91（项 8）：页面级网格粒度（列数 / 行高）──
   await page.evaluate(() =>
     [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "编辑页面")?.click(),
