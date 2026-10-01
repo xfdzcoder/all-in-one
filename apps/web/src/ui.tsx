@@ -1,5 +1,16 @@
 import type { ReactNode } from "react";
 
+/** 骨架屏（D52 批3）：替换"加载中…"文本 —— shimmer 占位条（宽度档位在 CSS 中按序定义）。 */
+export function WbLoading({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="wb-skeleton" role="status" aria-label="加载中">
+      {Array.from({ length: rows }, (_, i) => (
+        <span key={i} className="wb-skeleton__bar" />
+      ))}
+    </div>
+  );
+}
+
 /**
  * 统一提示条（Q19c / P1-3）：错误红、警告黄、信息青、成功绿。
  * 图标 + 色 + 文案 + 可关三件套；样式全部走 `.wb-alert*` 语义类（可被 /custom.css 覆盖）。

@@ -4,7 +4,7 @@ import { Badge, Button, Code, Group, Modal, Stack, Text } from "@mantine/core";
 import { usePortainerContainers, usePortainerLogs } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * Portainer 容器清单（FR-X3 只读深度，**D50**）：状态/端口/镜像，点行看日志尾部（只读）。
@@ -46,11 +46,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
           </Text>
         </div>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">
-          加载中…
-        </Text>
-      )}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
@@ -90,11 +86,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
 
       {logsFor && (
         <Modal opened onClose={() => setLogsFor(null)} title={`日志尾部 · ${logsFor.name}（只读）`} size="lg">
-          {logs.loading && (
-            <Text size="xs" c="dimmed" className="wb-loading">
-              加载中…
-            </Text>
-          )}
+          {logs.loading && <WbLoading rows={2} />}
           {logs.error && <WbAlert tone="error" size="sm">{logs.error}</WbAlert>}
           {logs.logs && (
             <Code block style={{ maxHeight: 320, overflow: "auto", whiteSpace: "pre-wrap" }}>

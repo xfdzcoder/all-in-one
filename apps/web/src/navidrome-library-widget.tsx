@@ -4,7 +4,7 @@ import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 import { useNavidromeControl, useNavidromeLibrary } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑网格 + 正在播放。
@@ -46,11 +46,7 @@ export function NavidromeLibraryWidget({
           </Text>
         </div>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">
-          加载中…
-        </Text>
-      )}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {sourceId && (

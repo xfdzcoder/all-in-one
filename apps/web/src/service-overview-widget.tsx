@@ -6,7 +6,7 @@ import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-on
 import { useServiceOverview } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 import { RelativeTime } from "./ui";
 
 /**
@@ -85,17 +85,9 @@ function fmtSeries(key: string, v: number): string {
 function MetricCard({ m, primary }: { m: ServiceMetric; primary?: boolean }) {
   return (
     <Card withBorder padding="xs" radius="sm" className={primary ? "wb-metric wb-metric--primary" : "wb-metric"}>
-      <Text size="xs" c="dimmed">
-        {m.label}
-      </Text>
-      <Text fw={700} size={primary ? "lg" : "sm"}>
-        {m.value}
-      </Text>
-      {m.hint && (
-        <Text size="xs" c="dimmed">
-          {m.hint}
-        </Text>
-      )}
+      <div className="wb-metric__label">{m.label}</div>
+      <div className={primary ? "wb-metric__value wb-metric__value--display" : "wb-metric__value"}>{m.value}</div>
+      {m.hint && <div className="wb-metric__hint">{m.hint}</div>}
     </Card>
   );
 }
@@ -205,11 +197,7 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
           无法读取服务：{ov.probe?.error ?? "未知原因"}
         </WbAlert>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">
-          加载中…
-        </Text>
-      )}
+      {loading && <WbLoading />}
       {ov?.probe?.ok && (
         <Stack gap={6} style={{ flex: 1, overflow: "auto" }}>
           {(ov.statuses ?? []).length > 0 && (

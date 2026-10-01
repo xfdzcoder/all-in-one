@@ -150,7 +150,7 @@
 - [x] Q59 · UI 现代化·视觉规范 v2 + **D52**：tokens 升级（OKLCH tinted dark 4 级表面 / 字阶+展示级数字 / 多层阴影 / 动效令牌）+ 品牌字体 vendor（Inter Variable，OFL）+ 双主题变量组 + 规范文档**✅ 2026-10-01**——tokens.css v2（玻璃/氛围/动效/阴影/字重令牌 + `[data-theme=light]` 变量组）+ @fontsource-variable/inter + `design-audit/03-style-v2.md`；**AA 修**：`.wb-admin-row` 裸 button 吃 UA 底色（Q52 遗留）补行样式、muted 提亮一档 → verify-dark 3/3
 - [x] Q60 · UI 现代化·批1 基础层：令牌全站生效 + 背景氛围（顶部光晕/微噪点）+ 滚动条/焦点环/选中色 + Mantine 主题同步**✅ 2026-10-01**——body 三色光晕氛围背景（tokenized）+ 定制滚动条/焦点环/选中色 + tabular-nums 基线 + Mantine 蓝阶对齐 accent 家族；verify-dark 3/3、m1 42/42（效果图 04-batch1）
 - [x] Q61 · UI 现代化·批2 组件层：卡片 hover 抬升/边框高光、按钮渐变+按压反馈、徽标/弹窗/表单质感**✅ 2026-10-01**——`.wb-widget` 玻璃材质（color-mix 令牌化透明度+backdrop-blur）+ hover 抬升/高亮；filled 按钮渐变+glow+按压 scale、Modal 玻璃、Badge pill（双类选择器压 Mantine 注入）；verify-dark 3/3、m1 42/42、p8 11/11（效果图 05-batch2）
-- [ ] Q62 · UI 现代化·批3 内容层：数据卡片数字排版（tabular-nums/大字重对比）、骨架屏替换"加载中…"、空态插图+引导
+- [x] Q62 · UI 现代化·批3 内容层：数据卡片数字排版（tabular-nums/大字重对比）、骨架屏替换"加载中…"、空态插图+引导**✅ 2026-10-01**——`WbLoading` shimmer 骨架（12 组件批量替换，codemod 断言命中）+ `.wb-metric__value--display` 展示级数字 + 空态 hint 视觉（accent 左标）；verify-dark 3/3、svc 27/27、m1 42/42（效果图 06-batch3）
 - [ ] Q63 · UI 现代化·批4 浅色主题：双主题变量完备 + verify-dark AA 双主题校验
 - [ ] Q64 · UI 现代化·批5 微交互+收尾：统一过渡/微动画/数字滚动 + design-audit 全站走查前后对照
 - [ ] Q65 · UI 现代化·按钮 icon 化（用户要求"文字按钮尽量用 icon 替换"）：UI 图标集选型（vendored SVG 或 @tabler/icons）+ tooltip/aria-label + 全站按钮替换（刷新/详情/配置/移除/管理等）+ **verify 脚本选择器同步（text→aria-label）**

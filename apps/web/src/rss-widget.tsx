@@ -2,7 +2,7 @@ import { Badge, Button, Group, Text } from "@mantine/core";
 
 import type { FeedItem } from "./api";
 import { useFeeds, useFeedMutations } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -43,7 +43,7 @@ export function RssWidget({
         </Group>
       </Group>
 
-      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {(data?.staleSources?.length ?? 0) > 0 && (
         <WbAlert tone="info" size="sm">

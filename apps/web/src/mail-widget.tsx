@@ -3,7 +3,7 @@ import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
 import { HtmlSandbox } from "./html-sandbox";
-import { RelativeTime, WbAlert } from "./ui";
+import { RelativeTime, WbAlert, WbLoading } from "./ui";
 import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
 
 /**
@@ -58,9 +58,7 @@ export function MailWidget({
 
       {!open && (
         <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
-          {loading && (
-            <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
-          )}
+          {loading && <WbLoading />}
           {!loading && (agg?.items ?? []).length === 0 && (
             <Text size="xs" c="dimmed">
               {accounts.length === 0 ? "先在「管理邮箱」添加邮箱账号" : "暂无邮件"}

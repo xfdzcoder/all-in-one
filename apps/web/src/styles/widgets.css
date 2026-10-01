@@ -73,6 +73,11 @@
 .wb-widget__hint {
   color: var(--wb-color-text-muted);
   font-size: var(--wb-text-sm);
+  /* D52 批3：空态引导视觉（accent 左标 + 微底） */
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border-left: 3px solid var(--wb-color-accent);
+  background: color-mix(in srgb, var(--wb-color-accent) 8%, transparent);
+  border-radius: var(--wb-radius-sm);
 }
 
 /* ── 通用卡片 / 列表行 / 药丸 / 指标 ───────────────────────── */
@@ -140,6 +145,14 @@
   font-weight: var(--wb-weight-semibold);
   color: var(--wb-color-text);
   line-height: 1.2;
+  letter-spacing: var(--wb-tracking-tight);
+}
+
+/* D52 批3：主指标展示级数字排版 */
+.wb-metric__value--display {
+  font-size: var(--wb-text-display);
+  font-weight: var(--wb-weight-bold);
+  line-height: 1.1;
 }
 
 .wb-metric__hint {
@@ -559,6 +572,52 @@
   position: absolute;
   right: 4px;
   bottom: 4px;
+}
+
+/* ── D52 批3 · 骨架屏（shimmer） ───────────────────────────── */
+.wb-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-1) 0;
+}
+
+.wb-skeleton__bar {
+  height: 12px;
+  border-radius: var(--wb-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--wb-color-surface-hover) 25%,
+    var(--wb-color-surface-raised) 50%,
+    var(--wb-color-surface-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: wb-shimmer 1.4s var(--wb-ease-out) infinite;
+}
+
+.wb-skeleton__bar:nth-child(1) {
+  width: 88%;
+}
+.wb-skeleton__bar:nth-child(2) {
+  width: 70%;
+}
+.wb-skeleton__bar:nth-child(3) {
+  width: 52%;
+}
+.wb-skeleton__bar:nth-child(n + 4) {
+  width: 40%;
+}
+
+@keyframes wb-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-skeleton__bar {
+    animation: none;
+  }
 }
 
 /* ── D52 批2 · 组件质感（Mantine 桥接；双类选择器压过运行时注入，不用 !important） ── */

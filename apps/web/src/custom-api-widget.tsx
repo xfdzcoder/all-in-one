@@ -3,7 +3,7 @@ import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@man
 import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
 /**
@@ -69,7 +69,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
           </Button>
         </Group>
       </Group>
-      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {!loading && !error && display === "jsx" && parsed && parsed.errors.length > 0 && (
         <WbAlert tone="error" size="sm">模板错误（D35 校验拒绝）：{parsed.errors.join("；")}</WbAlert>

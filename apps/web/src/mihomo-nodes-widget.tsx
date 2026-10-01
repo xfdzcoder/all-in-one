@@ -3,7 +3,7 @@ import { Badge, Button, Group, Stack, Text } from "@mantine/core";
 import { useMihomoNodes } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组选择 / 节点延迟 / 订阅源。
@@ -35,11 +35,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
           </Text>
         </div>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">
-          加载中…
-        </Text>
-      )}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {data && (

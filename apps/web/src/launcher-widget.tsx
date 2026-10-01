@@ -1,7 +1,7 @@
 import { Badge, Button, Group, Text } from "@mantine/core";
 
 import { useAppLauncher } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * 应用入口 + 服务状态组件（FR：图标网格、HTTP/TCP 存活探测、点击跳转）。
@@ -46,7 +46,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
           </Button>
         </Group>
       </Group>
-      {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <Group gap="xs">
         {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean; icon?: string }) => (

@@ -4,7 +4,7 @@ import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 import { useImmichGallery } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { RelativeTime, WbAlert } from "./ui";
+import { RelativeTime, WbAlert, WbLoading } from "./ui";
 
 /**
  * Immich 照片墙（FR-X3 只读深度，**D50**）：最近照片网格。
@@ -46,11 +46,7 @@ export function ImmichGalleryWidget({
           </Text>
         </div>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">
-          加载中…
-        </Text>
-      )}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {data && data.items.length === 0 && !error && (
         <Text size="xs" c="dimmed">

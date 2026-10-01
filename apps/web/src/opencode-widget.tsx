@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { useOpencodeData, useResolvedSourceConfig, type OpencodeSession } from "./data-hooks";
-import { RelativeTime, WbAlert } from "./ui";
+import { RelativeTime, WbAlert, WbLoading } from "./ui";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -63,9 +63,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
           无法读取 opencode API：{data.probe?.error ?? "未知原因"}（实验性接口，版本不兼容时会在此提示）
         </WbAlert>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
-      )}
+      {loading && <WbLoading />}
 
       <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
         {data?.probe?.ok && (data.sessions ?? []).length === 0 && (

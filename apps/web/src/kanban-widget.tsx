@@ -15,7 +15,7 @@ import type { KanbanCardRow } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
 import { WidgetEditContext } from "./widget-edit-context";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
 
 /**
  * Kanban 组件（二期 Q6b）：多项目看板、列与卡片、卡片操作（编辑/移动/归档/删除）。
@@ -124,9 +124,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           编辑模式：拖动 = 调整布局，卡片暂不可拖（完成后可拖动卡片，或用卡片内「移动到」）
         </Text>
       )}
-      {loading && (
-        <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>
-      )}
+      {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {boardId && (
