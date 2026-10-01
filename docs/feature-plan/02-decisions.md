@@ -485,3 +485,57 @@
   3. **验收**：`verify-svc.mjs` / `verify-live.mjs` 的写路径 mock 与断言移除，改为**反向断言**（"只读：无播放/暂停/切换入口"、"未命中任何写端点"），确保回归不会被静默重新引入。
 - **影响**：两个组件**不可逆地回到只读**；FR-X3 写操作范围收缩为仅 Portainer 重启。删除 3 个单测（navidrome 2 + mihomo 1），新增 4 条 UI 反向断言。`01-requirements.md` FR-X3 行改写、`06-roadmap.md` 同步。
 - **被否备选**：① 保留端点但前端隐藏按钮（服务端仍可被调用，不满足"移除写入操作"）；② 加开关按配置启用（用户未要求，属扩大需求范围）；③ 连 Portainer 重启一并移除（用户只点名两项，不擅自扩大）。
+
+---
+
+## D55 · 图表引擎选型：Apache ECharts（按需注册 + 自写 `useEcharts`）【2026-10-01 补记】
+
+> **补记说明**：本条与 D56/D57 的结论早已在迭代中落地（见 07 队列 Q75–Q78、批 E2），但当时漏写进本文件，属文档漂移。现按「不静默改写、保留历史」补齐，并注明补记时间。本次 15 项反馈修复（Q84–Q91）会先补上这个缺口。
+
+- **背景**：用户要求「通过 HTTP 或 WS 拿数据，经配置以某种图表类型展示，而不是我们提前预设」（参照 metacubexd overview 与 homarr）。需要一个可配置图表组件。
+- **决策**：**Apache ECharts**，`echarts/core` **按需注册**（只引实际用到的图表/组件，控制体积）+ **自写 `useEcharts` hook**，不引 `echarts-for-react` 这类封装层。
+- **被否备选**：① Recharts / Chart.js / uPlot / @mantine/charts —— 组件式 API，无法表达「用户配置图表类型」的开放配置面；② Highcharts —— **商业授权**，个人项目不接受；③ 搜索结果里的「Chart.ts / @chartts」—— 实测 npm 上 `@chartts/react` **404**，属虚假宣传，勿信。
+- **影响**：构建体积需在收口时复核（见刮骨疗毒清单「构建产物体积」）。
+
+## D56 · WS 数据源 v1：服务端 WS 客户端 + 经 `/api/events` SSE 转发【2026-10-01 补记】
+
+- **背景**：用户要求支持 WS 协议取数。但前端传输层已冻结为 HTTP + SSE。
+- **决策**：**服务端**起 WS 客户端连用户的 WS 源，收到消息后经**现有** `/api/events` SSE 推给前端。前端仍只有 HTTP + SSE，**不动 04-tech-stack 的前端传输层决策**。
+- **影响**：凭证与出站仍全走服务端 connector（SEC/SSRF 基线不变）。复用现有 SSE 通道意味着无需新增前端连接管理。
+
+## D57 · `ConfigField.dependsOn`：动态选项按字段依赖联动【2026-10-01 补记】
+
+- **背景**：媒体墙「只看某相册 / 某艺人」的选项**必须跟着「数据连接」走**（不同连接的相册/艺人不同），而原动态选项源是**全局静态**的。
+- **决策**：widget-sdk `ConfigField` 新增 `dependsOn?: string`，声明「我的 dynamic 选项以另一字段的当前值为参数」；`validateConfigSchema` 要求它必须指向同一 schema 里**已声明的其它**字段。宿主在被依赖字段变化时按 `${dynamic}:${depValue}` 重解选项。顺带修掉既有缺口：`select` 原本强制静态 `options`，现在允许 `dynamic` 顶替。
+- **影响**：插件契约（D7）可跨语言读取该字段；选项源走现成数据通道（`immich-albums` / `navidrome-artists` 连接器），**零新路由**，自动继承缓存/SSRF/凭证机制。
+- **踩坑留档**：Navidrome 0.58 **无 `getArtists2.view`（实测 404）**，只有 `getArtists.view`；且 Subsonic 有扁平 `artists.artist[]` 与分组 `artists.index[].artist[]` **两种响应形态**，只解析其一会静默拿到 0 项。
+
+## D58 · 网格粒度页面配置：`columns` / `cellHeight`（做实 FR-P9）
+
+- **背景**：用户反馈「现在的感觉有些宽了，希望行列可以更多一些，并暴露为页面的配置」。现状是 `Board.tsx` **硬编码** `column: 12` + 断点 `12/8/4/1`，`cellHeight: 80`，dashboard 表无对应字段。
+- **决策**：
+  1. dashboards 表新增 `columns`（默认 12）与 `cellHeight`（默认 80）两字段，**属页面级布局配置**（符合概念模型「Dashboard 只拥有布局」）。
+  2. 列数档位 **12 / 16 / 20 / 24 / 28 / 32**（步长 4）。**列数并非必须是 4 的倍数**（gridstack `column` 接受任意正整数）；取 4 的倍数是为了让响应式断点取半/取四分之一时都是整数。断点按 `N → N/2 → N/4 → 1` 推导。
+  3. 行高 `cellHeight` 可调 **40–200px**（默认 80）。行数不限、纵向滚动。
+  4. **切列数不走 `updateOptions()`**（AGENTS.md D12 已验证它会触发 `load(children)` 重置未保存布局）：改配后重挂载网格（`key` 含 columns），并在 JS 里把 `x/w` 按比例重算落盘；`cellHeight` 用 `grid.cellHeight()` 实时改。
+- **被否备选**：① 把列数塞进 `layoutJson` 的 meta 条目（污染裸 widget 数组，且语义上是页面级而非组件级）；② 直接调 `grid.column()` 而不重挂载（`columnOpts.breakpoints` 在 options 里，运行时无法同步，会与响应式打架）。
+- **影响**：需要 drizzle 迁移（D18：`drizzle-kit generate`，**勿手写 DDL**）；页面设置 UI 需新增入口（FR-P9 早已列「图标、背景、列密度」，本次做实）。既有布局切换到更大列数时按比例放大并做碰撞消解。
+
+## D59 · 卡片标题区可跳转：`homeUrl` 取绑定数据源的 `config.url`
+
+- **背景**：用户要求「点击卡片的 Title（**仅 Title 区域 logo+文本**，不是整个卡片），跳转到对应网站（如果可以跳转的话）」，并明确「Mihomo 可以不跳转，这个是纯 api」。
+- **决策**：
+  1. 抽共享 `WidgetTitle`（logo + 标题 + 右侧动作），**只有标题区**可点，`target="_blank" rel="noopener noreferrer"`。整卡**不**可点（避免与卡内交互冲突）。
+  2. 跳转地址 = 该组件绑定**数据源的 `config.url`**（Immich / Navidrome / Portainer / 监控均有）。无 URL（Mihomo 纯 API、信息流、ToDo、看板、邮件等）→ **不渲染成链接**，只显示标题。
+  3. 标题文案同批统一：服务器监控 → **数据源名称**；信息流 → **RSS**。
+- **影响**：无 DB 变更（URL 已在数据源 config 里）。需要处理「数据源未选/URL 缺失」的降级 —— 退回纯文本标题。
+
+## D60 · 媒体墙等高行等比布局：缩略图原始宽高从**字节头**解析
+
+- **背景**：用户反馈「卡片高度过高会把缩略图拉长，期望缩略图大小完全响应式且始终等比缩放；Immich 照片墙应保持原本宽高比，不必每个都一样宽，**保持每行的高度一致即可**」。现状是数据项**不含原始宽高**，前端只能 `object-fit: cover` 裁切 + `grid-auto-rows: 1fr` 拉满卡片。
+- **决策**：
+  1. **宽高来源**：服务端在抓缩略图字节时解析 **JPEG SOF / PNG IHDR** 得到实际尺寸，随 item 一起下发（`width`/`height`）。**不依赖** Immich `search/metadata` 是否返回 exif 宽高 —— 字节头解析对 Immich / Navidrome 两个来源通用，且拿到的就是实际渲染尺寸。
+  2. **布局**：等高行 justified —— flex 容器 `flex-wrap`，每项 `flex-basis: 行高×比例` + `flex-grow: 比例` + `aspect-ratio: 比例`。行内宽度正比于比例 ⇒ **行内等高、宽度按原比例**；末行用大 `flex-grow` 占位符防止拉伸。`object-fit` 从 `cover`（裁切）改 `fill`（框已等于图比例，无裁切无变形）。
+  3. `minCell` 配置**语义改为「目标行高」**，其余交给等比布局反推实际行高。
+  4. 无宽高（占位块/抓取失败）时退化为等宽格子，不破坏整行。
+- **影响**：媒体墙数据契约变化（widget-sdk `MediaWallItem` 增 `width`/`height`）；超出卡片高度仍纵向滚动（沿用项 6「超出滚动」）。随机模式（整卡一张图）不受影响。
