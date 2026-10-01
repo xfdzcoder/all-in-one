@@ -72,7 +72,6 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
         },
       },
       newest: { "subsonic-response": { albumList2: { album: [{ name: "CHIN UP!", artist: "陈奕迅" }] } } },
-      nowPlaying: { "subsonic-response": { nowPlaying: { entry: [{ title: "曲A", username: "xfdzcoder" }] } } },
     });
     expect(m.metrics.map((x) => [x.label, x.value])).toEqual([
       ["曲目", "1,376"],
@@ -82,7 +81,8 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     ]);
     expect(m.metrics[0].emphasis).toBe(true);
     expect(m.lists?.find((l) => l.title === "最近添加")?.items[0].title).toBe("CHIN UP!");
-    expect(m.lists?.find((l) => l.title === "正在播放")?.items[0]).toMatchObject({ title: "曲A" });
+    // Q94（反馈②）：「正在播放」已按用户要求移除 —— 服务概览不再有该清单（不再渲染「正在播放 / 暂无」）
+    expect(m.lists?.some((l) => l.title === "正在播放")).toBe(false);
     // Q84（项 7）：「库就绪」无信息量，用户要求去掉 —— 空闲时不再下发任何状态，只在扫描中时提示
     expect(m.statuses ?? []).toHaveLength(0);
   });

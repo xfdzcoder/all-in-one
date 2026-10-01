@@ -453,7 +453,8 @@ export function useImmichGallery(
   };
 }
 
-/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加 + 正在播放，封面服务端代取。
+/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加，封面服务端代取。
+ *  Q94（反馈②）：「正在播放」已按用户要求移除。
  *  `artistId`（Q87 项 4）= 「只看艺人」——同上，必须进 queryKey 与请求体。 */
 export function useNavidromeLibrary(
   sourceId?: string,
@@ -483,7 +484,6 @@ export function useNavidromeLibrary(
             width?: number;
             height?: number;
           }>;
-          nowPlaying: Array<{ title: string; artist?: string; username?: string }>;
           notes?: string[];
         }
       | undefined,

@@ -1,6 +1,6 @@
 import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Group, Text } from "@mantine/core";
+import { Group, Text } from "@mantine/core";
 
 import { useNavidromeLibrary, useSourceHomeUrl } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
@@ -11,7 +11,7 @@ import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
- * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑 + 正在播放。
+ * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑网格。
  * 封面由服务端代取为 data URI（Subsonic 认证不进前端 SEC3）。
  * **D54**：播放遥控（FR-X3e）已移除 —— 本组件回归纯只读，无任何写操作。
  */
@@ -65,21 +65,6 @@ export function NavidromeLibraryWidget({
       )}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
-
-      {(data?.nowPlaying ?? []).length > 0 && (
-        <div className="wb-svc-notes">
-          {(data?.nowPlaying ?? []).map((p, i) => (
-            <Text key={i} size="xs">
-              <Badge size="xs" color="green" variant="light" mr={6}>
-                正在播放
-              </Badge>
-              {p.title}
-              {p.artist ? ` · ${p.artist}` : ""}
-              {p.username ? `（${p.username}）` : ""}
-            </Text>
-          ))}
-        </div>
-      )}
 
       {data && data.albums.length === 0 && !error && (
         <Text size="xs" c="dimmed">

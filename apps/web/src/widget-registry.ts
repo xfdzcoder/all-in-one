@@ -312,11 +312,11 @@ export const immichGalleryManifest: WidgetManifest = {
   },
 };
 
-/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加 + 正在播放，封面服务端代取。 */
+/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加，封面服务端代取。Q94：已移除「正在播放」。 */
 export const navidromeLibraryManifest: WidgetManifest = {
   type: "navidrome-library",
   name: "Navidrome 专辑墙",
-  description: "最近添加专辑网格 + 正在播放（只读）：封面服务端代取",
+  description: "最近添加专辑网格（只读）：封面服务端代取",
   icon: "navidrome",
   category: "服务",
   defaultSize: { w: 6, h: 4 },

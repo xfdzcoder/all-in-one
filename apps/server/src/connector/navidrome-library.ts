@@ -6,9 +6,10 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
 import { imageSize } from "./image-size.ts";
 
 /**
- * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑 + 正在播放。
+ * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑（网格）。
  * - 封面**服务端代取**（`getCoverArt.view` 需 Subsonic 认证参数）→ data URI（SEC3）；
- * - 列表 `getAlbumList2?type=newest` + `getNowPlaying`（实测 0.58 可用）；
+ * - 列表 `getAlbumList2?type=newest`（或选了艺人时 `getArtist.view?id=`，见 Q94/反馈③）；
+ *   **Q94（反馈②）**：「正在播放」已按用户要求移除，不再请求 `getNowPlaying`。
  * - 只读边界（D50 / **D54**）：无播放控制/收藏等写操作 —— 播放遥控（FR-X3e）已于 D54 移除，组件纯只读。
  *
  * **Q70 真机实测（2026-10-01，Navidrome 0.58）**：
@@ -37,7 +38,7 @@ export interface NavidromePlayingItem {
 
 export interface NavidromeLibraryData {
   albums: NavidromeAlbumItem[];
-  nowPlaying: NavidromePlayingItem[];
+  /** Q94（反馈②）：「正在播放」已按用户要求移除（两处：服务概览 + 本专辑墙）。 */
   notes?: string[];
 }
 
@@ -57,12 +58,12 @@ function sr(x: unknown): Record<string, unknown> {
   return (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
 }
 
-/** 归一：getAlbumList2/getNowPlaying 条目 + 封面字节（可单测）。 */
+/** 归一：getAlbumList2 条目 + 封面字节（可单测）。
+ *  Q94（反馈②）：「正在播放」已移除，故不再接收/返回该部分。 */
 export function normalizeNavidromeLibrary(
   newest: unknown,
-  nowPlaying: unknown,
   covers: Map<string, Uint8Array>,
-): { albums: NavidromeAlbumItem[]; nowPlaying: NavidromePlayingItem[] } {
+): { albums: NavidromeAlbumItem[] } {
   const list: Array<Record<string, unknown>> = (() => {
     const a = (sr(newest).albumList2 as Record<string, unknown> | undefined)?.album;
     return Array.isArray(a) ? (a as Array<Record<string, unknown>>) : [];
@@ -83,15 +84,7 @@ export function normalizeNavidromeLibrary(
       ...(size ? { width: size.width, height: size.height } : {}),
     });
   }
-  const np = (sr(nowPlaying).nowPlaying as Record<string, unknown> | undefined)?.entry;
-  const nowPlayingList: NavidromePlayingItem[] = (Array.isArray(np) ? (np as Array<Record<string, unknown>>) : []).map(
-    (e) => ({
-      title: str(e.title) ?? "(未知曲目)",
-      artist: str(e.artist),
-      username: str(e.username),
-    }),
-  );
-  return { albums, nowPlaying: nowPlayingList };
+  return { albums };
 }
 
 /** Subsonic 认证（salt+md5，口令不入 URL 日志）。 */
@@ -190,17 +183,6 @@ export const navidromeLibraryConnector: WidgetConnector = {
       throw new Error(err instanceof Error ? err.message : "Navidrome 列表获取失败");
     }
 
-    let nowPlaying: unknown = {};
-    try {
-      const res = await outboundRequest(`${base}/rest/getNowPlaying.view?${auth}`, {
-        timeoutMs: TIMEOUT_MS,
-        maxBytes: 200_000,
-        allowPrivate: true,
-      });
-      if (res.status < 400) nowPlaying = JSON.parse(res.text);
-    } catch (err) {
-      notes.push(`正在播放获取失败：${err instanceof Error ? err.message : "未知错误"} —— 该项暂缺`);
-    }
 
     const list: Array<Record<string, unknown>> = (() => {
       const a = (sr(newest).albumList2 as Record<string, unknown> | undefined)?.album;
@@ -258,7 +240,7 @@ export const navidromeLibraryConnector: WidgetConnector = {
     }
 
     return {
-      ...normalizeNavidromeLibrary(newest, nowPlaying, covers),
+      ...normalizeNavidromeLibrary(newest, covers),
       ...(notes.length > 0 ? { notes } : {}),
     };
   },

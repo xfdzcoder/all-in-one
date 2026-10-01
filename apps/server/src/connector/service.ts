@@ -183,7 +183,6 @@ export function normalizeNavidrome(parts: {
   scanStatus?: unknown;
   artists?: unknown;
   newest?: unknown;
-  nowPlaying?: unknown;
   errors?: Array<{ what: string; err: unknown }>;
 }): ServiceOverview {
   const sr = (x: unknown): Record<string, unknown> =>
@@ -214,17 +213,8 @@ export function normalizeNavidrome(parts: {
     title: str(a.name) ?? "(未命名专辑)",
     detail: str(a.artist),
   }));
-  const nowPlaying = (sr(parts.nowPlaying).nowPlaying as Record<string, unknown> | undefined)?.entry;
-  const npList: Array<Record<string, unknown>> = Array.isArray(nowPlaying) ? nowPlaying : [];
-  const playing: ServiceListItem[] = npList.map((e) => ({
-    title: str(e.title) ?? "(未知曲目)",
-    detail: [str(e.artist), str(e.username) ? `${str(e.username)} 正在收听` : undefined].filter(Boolean).join(" · "),
-    tone: "info" as const,
-  }));
-  out.lists = [
-    ...(newestItems.length > 0 ? [{ title: "最近添加", items: newestItems }] : []),
-    { title: "正在播放", items: playing },
-  ];
+  // Q94（反馈②）：**去掉「正在播放」** —— 用户要求移除（绝大多数时间恒为「正在播放 / 暂无」，无信息量）
+  out.lists = [...(newestItems.length > 0 ? [{ title: "最近添加", items: newestItems }] : [])];
 
   if (scan) {
     const scanning = scan.scanning === true;
@@ -475,13 +465,13 @@ export const serviceOverviewConnector: WidgetConnector = {
       case "navidrome": {
         const auth = await subsonicAuth(config);
         const ping = await getJson(base, `/rest/ping.view?${auth}`, {});
-        const [scanStatus, artists, newest, nowPlaying] = await Promise.all([
+        const [scanStatus, artists, newest] = await Promise.all([
           best("扫描状态", () => getJson(base, `/rest/getScanStatus.view?${auth}`, {})),
           best("曲库统计", () => getJson(base, `/rest/getArtists.view?${auth}`, {}, MAX_BYTES_LARGE)),
           best("最近添加", () => getJson(base, `/rest/getAlbumList2?type=newest&size=4&${auth}`, {})),
-          best("正在播放", () => getJson(base, `/rest/getNowPlaying.view?${auth}`, {})),
         ]);
-        overview = normalizeNavidrome({ ping, scanStatus, artists, newest, nowPlaying, errors });
+        // Q94（反馈②）：「正在播放」已按用户要求移除（含 getNowPlaying 取数），不再请求该接口
+        overview = normalizeNavidrome({ ping, scanStatus, artists, newest, errors });
         break;
       }
       case "portainer": {

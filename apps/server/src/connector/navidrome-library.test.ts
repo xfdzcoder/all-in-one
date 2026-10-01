@@ -16,7 +16,7 @@ import { dataSource } from "../db/schema.ts";
 /** Q51 契约测试（Navidrome 专辑墙，FR-X3 只读深度 D50）。 */
 
 describe("normalizeNavidromeLibrary（D50）", () => {
-  it("专辑（**缺封面也进网格，cover 空 → 占位块，Q70**）+ 正在播放", () => {
+  it("专辑（**缺封面也进网格，cover 空 → 占位块，Q70**）", () => {
     const newest = {
       "subsonic-response": {
         albumList2: {
@@ -27,20 +27,18 @@ describe("normalizeNavidromeLibrary（D50）", () => {
         },
       },
     };
-    const np = {
-      "subsonic-response": { nowPlaying: { entry: [{ title: "曲A", artist: "甲", username: "u" }] } },
-    };
     const covers = new Map<string, Uint8Array>([["al-1", new Uint8Array([1, 2])]]);
-    const out = normalizeNavidromeLibrary(newest, np, covers);
+    const out = normalizeNavidromeLibrary(newest, covers);
     // Q70：两张都保留（原先 al-2 因缺封面被丢 → 网格缺格）
     expect(out.albums.map((a) => a.name)).toEqual(["CHIN UP!", "无封面"]);
     expect(out.albums[0].cover.startsWith("data:image/jpeg;base64,")).toBe(true);
     expect(out.albums[1].cover).toBe(""); // Q70：缺封面不丢项，组件渲染占位块
-    expect(out.nowPlaying).toEqual([{ title: "曲A", artist: "甲", username: "u" }]);
+    // Q94（反馈②）：「正在播放」已按用户要求移除 —— 返回体不再含该字段
+    expect("nowPlaying" in out).toBe(false);
   });
 
   it("空响应返回空数组", () => {
-    expect(normalizeNavidromeLibrary({}, {}, new Map())).toEqual({ albums: [], nowPlaying: [] });
+    expect(normalizeNavidromeLibrary({}, new Map())).toEqual({ albums: [] });
   });
 });
 
