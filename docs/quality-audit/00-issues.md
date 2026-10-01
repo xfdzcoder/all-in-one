@@ -64,13 +64,13 @@
 | SRV-05 ✅ | apps/server/src/data/cache.ts:31-35,54-68 + apps/server/src/connector/gallery.ts:197-238、connector/navidrome-l | 缓存按条目数封顶、不按字节封顶 → base64 缩略图常驻内存可达 GB 级。gallery/navidrome-library 的返回值是内联 base64 data URI（单缩略图上限 500KB/1MB，最多 120 项 → 单条数据 80MB 级，实测典型 ~5MB），DataCache | Q99 | 10 |
 | SRV-29 ✅ | apps/server/src/connector/gallery.ts:202-224、connector/navidrome-library.ts:220-249 | 缩略图/封面串行抓取，无并发上限也无总超时：for ... await 逐张抓，gallery 最多 120 张 × TIMEOUT_MS=8000，navidrome 最多 120 张 × 2 次（主取+回落）——上游普遍超时时单个 /api/widgets/data 请求最坏可挂 16～32 分 | Q99 | 10 |
 | WEB-1 | apps/web/src/mail-widget.tsx:31,67 | 邮箱多选过滤是客户端的：useMailMessages(undefined, limit) 先按全局取 20 封，再用 allowIds 过滤。选中 1 个账号时，20 封里可能只有几封属于它 → 列表近乎空白，用户以为「没邮件」（功能缺陷，limit 语义被过滤破坏） | Q99 | 11 |
-| WEB-10 | immich-gallery-widget.tsx:55-56；navidrome-library-widget.tsx:46-47 | 为解析一个相册/艺人名挂 useDynamicOptionsMap() —— 该 hook 内部触发 12+ 个查询（tags/todos/boards/mail/4 类连接/媒体选项，data-hooks.ts:845-872），每张画廊卡都订阅全部查询、任一失效即整卡重渲染（过度取数 + 无谓重 | Q99 | 11 |
-| WEB-3 | apps/web/src/portainer-containers-widget.tsx:68-102 + confirm.tsx:36 | 容器行是 <button>，内部又嵌 ConfirmAction 的 ActionIcon <button> —— 非法嵌套交互元素（React DOM 嵌套告警 / AT 行为未定义），且点击「重启」事件冒泡到行 onClick → 确认框与日志 Modal 同时弹出 | Q99 | 11 |
+| WEB-10 ✅ | immich-gallery-widget.tsx:55-56；navidrome-library-widget.tsx:46-47 | 为解析一个相册/艺人名挂 useDynamicOptionsMap() —— 该 hook 内部触发 12+ 个查询（tags/todos/boards/mail/4 类连接/媒体选项，data-hooks.ts:845-872），每张画廊卡都订阅全部查询、任一失效即整卡重渲染（过度取数 + 无谓重 | Q99 | 11 |
+| WEB-3 ✅ | apps/web/src/portainer-containers-widget.tsx:68-102 + confirm.tsx:36 | 容器行是 <button>，内部又嵌 ConfirmAction 的 ActionIcon <button> —— 非法嵌套交互元素（React DOM 嵌套告警 / AT 行为未定义），且点击「重启」事件冒泡到行 onClick → 确认框与日志 Modal 同时弹出 | Q99 | 11 |
 | WEB-4 | data-hooks.ts:222-224,251-253,357-359,392-394,624,734；kanban-widget.tsx:75；data-admin.tsx:505,522,533；mail-acc | 大量 void promise.then(...) 无 .catch()（手动刷新 force 回源、kanban 批量 patchCard、创建看板、删除账号、退出登录）→ 失败产生 unhandled rejection、UI 无任何反馈（对照 forceRefetch（data-hooks.t | Q99 | 11 |
 | WEB-6 | todo-widget.tsx:67,77,91,109,137；kanban-widget.tsx:57,306,320,421,431,444；rss-widget.tsx:78；tag-filter.tsx:54； | useMutation(...).mutate(...) 全部未接 onError/未读 mutation.error（只有 addSource/createTag 两处有）→ 勾选、增删卡、打标签等失败静默，界面看似成功 | Q99 | 11 |
 | WEB-7 | error-boundary.tsx + widget-chrome.tsx:63 | ErrorBoundary 只覆盖 gridstack 卡片内部（Q93）；App/Board 工具栏/配置 Modal（ConfigForm）/DataAdmin/PluginAdmin/LoginPage 均无边界 —— 任一处 render 抛错仍整页白屏且不可恢复（如 RelativeTim | Q99 | 11 |
 | WEB-8 | data-hooks.ts:14,66-73,425,470 | ⑤ 缩略图 base64 常驻 + churn：immich/navidrome 的 data URI 存进 react-query 缓存（queryClient 未配 gcTime，默认 5 分钟；挂载期无限驻留），且 SSE 兜底轮询 invalidateAllData 每 30s 失效 ["i | Q99 | 11 |
-| WEB-9 | ui.tsx:131-133 | RelativeTime 对 value 无防护：new Date(value).toISOString() 在非法时间（空串/脏数据）render 期抛 RangeError → 整卡崩溃（formatRelative 有防护，RelativeTime 却先算 abs） | Q99 | 11 |
+| WEB-9 ✅ | ui.tsx:131-133 | RelativeTime 对 value 无防护：new Date(value).toISOString() 在非法时间（空串/脏数据）render 期抛 RangeError → 整卡崩溃（formatRelative 有防护，RelativeTime 却先算 abs） | Q99 | 11 |
 
 ## P2 · 可维护性 / 重复 / 文案 / 文档（逐条见分域报告，按批清）
 

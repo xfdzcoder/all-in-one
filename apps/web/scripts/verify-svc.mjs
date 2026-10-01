@@ -467,7 +467,8 @@ await installLayoutGuard(page);
     "SVC portainer logs modal (read-only)",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
-      const row = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.includes("bad"));
+      // WEB-3 后行是 `div role=button`（原 <button> 内嵌按钮属非法嵌套）——锚点改语义类
+      const row = [...(item?.querySelectorAll(".wb-admin-row") ?? [])].find((b) => b.textContent.includes("bad"));
       row?.click();
       return Boolean(row);
     }),

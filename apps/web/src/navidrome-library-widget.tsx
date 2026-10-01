@@ -2,7 +2,7 @@ import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Group, Text } from "@mantine/core";
 
-import { useNavidromeLibrary, useSourceHomeUrl, useDynamicOptionsMap } from "./data-hooks";
+import { useMediaOptionLabel, useNavidromeLibrary, useSourceHomeUrl } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
@@ -43,8 +43,8 @@ export function NavidromeLibraryWidget({
   // Q86/D59：标题区跳转到该数据源站点
   const homeUrl = useSourceHomeUrl(sourceId);
   // Q94（反馈④）：标题带上**所选艺人名**（配置只存 id，这里解析成名称）
-  const dynOpts = useDynamicOptionsMap(sourceId, artistId ? "navidrome-artists" : undefined);
-  const artistLabel = (dynOpts[`navidrome-artists:${sourceId ?? ""}`] ?? []).find((o) => o.value === artistId)?.label;
+  // WEB-10：只订阅「艺人选项」一个查询（原先 useDynamicOptionsMap 会拉 12+ 个查询）
+  const artistLabel = useMediaOptionLabel(artistId ? "navidrome-artists" : undefined, sourceId, artistId);
 
   return (
     <div className="wb-widget">

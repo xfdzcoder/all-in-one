@@ -65,12 +65,21 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
 
       <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
         {containers.map((c) => (
-          <button
+          // WEB-3：行改成 `div role=button` —— 原来行是 <button>，内部又嵌 ConfirmAction 的
+          // <button>（非法嵌套交互元素）；且点「重启」会冒泡到行 onClick → 确认框与日志弹窗同时弹。
+          <div
             key={c.id}
-            type="button"
+            role="button"
+            tabIndex={0}
             className="wb-admin-row"
             title="点击查看日志尾部（只读）"
             onClick={() => setLogsFor({ id: c.id, name: c.name })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setLogsFor({ id: c.id, name: c.name });
+              }
+            }}
             style={{ textAlign: "left", cursor: "pointer" }}
           >
             <div className="wb-container-row">
@@ -90,16 +99,22 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
                 {c.ports ? ` · ${c.ports}` : ""}
               </Text>
               {allowSet.has(c.name) && (
-                <ConfirmAction
-                  label="重启"
-                  title={`重启容器「${c.name}」？`}
-                  message={`将重启容器「${c.name}」——容器内服务会短暂中断。确认执行？`}
-                  onConfirm={() => restart.send(c.id)}
-                  icon={<IconRotateClockwise size={14} />}
-                />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  role="presentation"
+                >
+                  <ConfirmAction
+                    label="重启"
+                    title={`重启容器「${c.name}」？`}
+                    message={`将重启容器「${c.name}」——容器内服务会短暂中断。确认执行？`}
+                    onConfirm={() => restart.send(c.id)}
+                    icon={<IconRotateClockwise size={14} />}
+                  />
+                </div>
               )}
             </div>
-          </button>
+          </div>
         ))}
         {containers.length === 0 && !loading && !error && sourceId && (
           <Text size="xs" c="dimmed">

@@ -129,11 +129,14 @@ export function formatRelative(value: string | number | Date): string {
 }
 
 export function RelativeTime({ value, prefix }: { value: string | number | Date; prefix?: string }) {
-  const abs = new Date(value).toISOString().slice(0, 16).replace("T", " ");
+  // WEB-9：非法时间（空串/脏数据）此前在 render 期 `toISOString()` 抛 RangeError → 整卡崩
+  // （formatRelative 早有防护，这里补同口径：非法回退「—」）
+  const t = new Date(value).getTime();
+  const abs = Number.isFinite(t) ? new Date(t).toISOString().slice(0, 16).replace("T", " ") : "";
   return (
-    <span title={abs}>
+    <span title={abs || undefined}>
       {prefix}
-      {formatRelative(value)}
+      {formatRelative(value) || "—"}
     </span>
   );
 }

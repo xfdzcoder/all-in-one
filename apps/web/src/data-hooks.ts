@@ -840,6 +840,28 @@ export function useDataSourceMutations() {
  * 动态选项源（Q26b/D42）。`scopeSourceId`（Q72/**D57**）= 当前表单选中的「数据连接」：
  * 相册/艺人清单随连接变化，故按 `依赖key:sourceId` 形式额外产出两个**带作用域**的选项源。
  */
+/** WEB-10（Q99b）：只为解析**一个**选项名时用的小 hook。
+ *  `useDynamicOptionsMap` 会订阅 tags/todos/boards/mail/4 类连接等 12+ 个查询 ——
+ *  每张画廊卡都全量订阅、任一失效即整卡重渲染。本 hook 只发所需的那一个作用域查询
+ *  （queryKey 与大 hook 同源 ⇒ 共享缓存，不重复请求）。 */
+export function useMediaOptionLabel(
+  scopeDynamic: string | undefined,
+  scopeSourceId: string | undefined,
+  value: string | undefined,
+): string | undefined {
+  const sid = typeof scopeSourceId === "string" ? scopeSourceId : "";
+  const scoped = useQuery({
+    queryKey: ["media-options", scopeDynamic ?? "", sid],
+    queryFn: () =>
+      api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
+        const items = (d as { items?: Array<{ value: string; label: string }> }).items;
+        return Array.isArray(items) ? items : [];
+      }),
+    enabled: Boolean(scopeDynamic && sid && value),
+  });
+  return scoped.data?.find((o) => o.value === value)?.label;
+}
+
 export function useDynamicOptionsMap(
   scopeSourceId?: string,
   scopeDynamic?: string,

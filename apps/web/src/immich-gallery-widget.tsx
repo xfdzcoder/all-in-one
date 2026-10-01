@@ -2,7 +2,7 @@ import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react
 import { useState } from "react";
 import { Badge, Group, Text } from "@mantine/core";
 
-import { useDataSources, useImmichGallery, useSourceHomeUrl, useDynamicOptionsMap } from "./data-hooks";
+import { useDataSources, useImmichGallery, useMediaOptionLabel, useSourceHomeUrl } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { WidgetTitle } from "./widget-title";
@@ -52,8 +52,8 @@ export function ImmichGalleryWidget({
   // Q86/D59：标题区跳转到 Immich 站点
   const homeUrl = useSourceHomeUrl(sourceId);
   // Q94（反馈④）：标题带上**所选相册名**（配置只存 id，这里解析成名称）
-  const dynOpts = useDynamicOptionsMap(sourceId, albumId ? "immich-albums" : undefined);
-  const albumLabel = (dynOpts[`immich-albums:${sourceId ?? ""}`] ?? []).find((o) => o.value === albumId)?.label;
+  // WEB-10：只订阅「相册选项」一个查询（原先 useDynamicOptionsMap 会拉 12+ 个查询）
+  const albumLabel = useMediaOptionLabel(albumId ? "immich-albums" : undefined, sourceId, albumId);
 
   return (
     <div className="wb-widget">
