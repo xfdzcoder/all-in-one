@@ -705,6 +705,26 @@ try {
   ok("Q84 status badge exists", sb.found === true, JSON.stringify(sb));
   ok("Q84 status badge is not bold (项 5)", Number(sb.fw) < 600, JSON.stringify(sb));
 
+  // Q93（项 3）：容器清单按表格分列 + 徽标文字不得溢出底色
+  // （原 `Group wrap="nowrap"` 会把徽标压窄而文字不缩 → 「RUNNING」字样溢出底色）
+  const crow = await page.evaluate(() => {
+    const row = document.querySelector(".wb-container-row");
+    if (!row) return null;
+    const badge = row.querySelector(".mantine-Badge-root");
+    const cells = [...row.children].map((c) => Math.round(c.getBoundingClientRect().left));
+    return {
+      isGrid: getComputedStyle(row).display === "grid",
+      badgeOverflow: badge ? badge.scrollWidth - badge.clientWidth : 0,
+      leftAligned: cells.every((l) => Number.isFinite(l)),
+      cols: getComputedStyle(row).gridTemplateColumns.split(" ").length,
+    };
+  });
+  ok(
+    "Q93 容器行分列左对齐 + 徽标文字不溢出底色 (项 3)",
+    Boolean(crow) && crow.isGrid && crow.cols >= 3 && crow.badgeOverflow <= 0,
+    JSON.stringify(crow),
+  );
+
   // Q84（项 7）：Navidrome 概览不再展示「库就绪」
   ok(
     "Q84 no 库就绪 badge (项 7)",

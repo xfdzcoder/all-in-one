@@ -123,6 +123,39 @@ a.wb-widget__title-link:focus-visible {
   word-break: break-word;
 }
 
+/* Q93（项 3）：拖拽/缩放时的**目标尺寸标注** —— gridstack 默认是极淡的 rgba(0,0,0,.1)，几乎看不出。
+   改用 accent 虚线框 + 淡底，让「落到哪一格、会有多大」一眼可辨。 */
+.grid-stack > .grid-stack-placeholder > .placeholder-content {
+  background: color-mix(in srgb, var(--wb-color-accent) 14%, transparent);
+  border: 1px dashed var(--wb-color-accent);
+  border-radius: var(--wb-radius-sm);
+  opacity: 1;
+}
+
+/* Q93（项 3）：容器清单按表格分列，各列左对齐（原 Group 流式排布会错位、不对齐） */
+.wb-container-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 2.2fr) auto;
+  align-items: center;
+  column-gap: var(--wb-space-3);
+  text-align: left;
+}
+.wb-container-row > * {
+  min-width: 0; /* 让文本列自己截断，而不是挤瘪徽标 */
+}
+/* Q93（项 3）：徽标**不参与压缩** —— 原来 Group 空间紧时把徽标压窄而文字不缩，
+   于是「RUNNING」字样溢出底色。 */
+.wb-container-row .mantine-Badge-root {
+  flex-shrink: 0;
+  white-space: nowrap;
+  justify-self: start;
+}
+@media (max-width: 640px) {
+  .wb-container-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
 .wb-widget__hint {
   color: var(--wb-color-text-muted);
   font-size: var(--wb-text-sm);

@@ -73,10 +73,11 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
             onClick={() => setLogsFor({ id: c.id, name: c.name })}
             style={{ textAlign: "left", cursor: "pointer" }}
           >
-            <Group gap={6} wrap="nowrap">
-              <Text size="xs" fw={c.abnormal ? 700 : 500} truncate style={{ minWidth: 100 }}>
+            <div className="wb-container-row">
+              <Text size="xs" fw={c.abnormal ? 700 : 500} truncate>
                 {c.name}
               </Text>
+              {/* Q93（项 3）：徽标不参与压缩 —— 空间紧时文字溢出底色的根因 */}
               <Badge
                 size="compact-xs"
                 variant="light"
@@ -84,7 +85,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
               >
                 {c.state}
               </Badge>
-              <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
+              <Text size="xs" c="dimmed" truncate>
                 {c.status}
                 {c.ports ? ` · ${c.ports}` : ""}
               </Text>
@@ -97,7 +98,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
                   icon={<IconRotateClockwise size={14} />}
                 />
               )}
-            </Group>
+            </div>
           </button>
         ))}
         {containers.length === 0 && !loading && !error && sourceId && (
