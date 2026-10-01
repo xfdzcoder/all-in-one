@@ -39,7 +39,7 @@ export const todoManifest: WidgetManifest = {
       creatable: true,
       required: true,
       placeholder: "选择已有或输入新名称",
-      help: "任务分组名（D43）：选已有 ToDo 或输入新名创建；全站不允许重名",
+      help: "任务分组名（D63）：选已有分组或输入新名创建（分组名在数据层唯一，已存在则复用）。同一分组可在任意页面放任意多个卡片，共享同一份数据",
     },
     {
       key: "filter",

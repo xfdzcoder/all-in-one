@@ -23,32 +23,17 @@ import { IconAction, WbAlert } from "./ui";
 const SAVE_DEBOUNCE_MS = 800;
 
 /**
- * 唯一字段校验（D43，通用）：manifest.uniqueField 声明的字段在同 type 实例间全站唯一。
- * 宿主零组件特判（J8）—— 新组件声明 uniqueField 即获得同款校验。
+ * Q93（项 2）/ **D63**：`uniqueField` 的语义是**数据实体唯一**，不是**展示位置唯一**。
+ *
+ * 早期实现（D43）把两者混为一谈：宿主扫**全部页面的布局**，只要已有同 type 组件用了同一个
+ * 值就拒绝添加 —— 于是「在多个页面放同一个 ToDo」被挡。而 ToDo 的设计本就是**多页面共享
+ * 同一份数据**，同一份数据理应在任意页面展示任意多次。
+ *
+ * 现在：**宿主不再做展示侧唯一性校验**（`uniqueFieldTaken` 已删除）。数据实体名的唯一性
+ * 由**数据层**保证（如 todo 分组名在分组表内唯一，已存在则复用），与组件放几个、放哪无关。
+ * `WidgetManifest.uniqueField` 保留为**语义声明**（告诉插件作者「这个字段引用的是一个数据
+ * 实体」），不再触发拒绝。
  */
-async function uniqueFieldTaken(
-  component: string,
-  field: string,
-  value: string,
-  excludeId?: string,
-): Promise<boolean> {
-  const rows = await api.listDashboards();
-  for (const d of rows) {
-    let layout: Array<{ id?: string; component?: string; props?: Record<string, unknown> }> = [];
-    try {
-      layout = JSON.parse(d.layoutJson ?? "[]") as typeof layout;
-    } catch {
-      /* noop */
-    }
-    for (const w of layout) {
-      if (w.component !== component || w.id === excludeId) continue;
-      const props = (w.props ?? {}) as Record<string, unknown>;
-      const n = String(props[field] ?? "");
-      if (n === value) return true;
-    }
-  }
-  return false;
-}
 
 /** 全部组件包上编辑态外框（配置入口），组件实现零改动（FR-W4 配置变更 / J8）。 */
 const chromeComponents: ComponentMap = Object.fromEntries(
@@ -149,14 +134,8 @@ function BoardToolbar({
             onClose={() => setPickerOpen(false)}
             extraManifests={pluginManifests}
             onAdd={async (manifest, values) => {
-              // D43：唯一字段校验（manifest 声明，宿主零组件特判）
-              if (manifest.uniqueField) {
-                const v = String((values as Record<string, unknown>)[manifest.uniqueField] ?? "").trim();
-                if (v && (await uniqueFieldTaken(manifest.type, manifest.uniqueField, v))) {
-                  alert(`「${v}」已被同类型组件使用（不允许重名）`);
-                  return;
-                }
-              }
+              // Q93（项 2）/ D63：**不再做展示侧唯一性校验** —— 同一份数据可在任意页面放任意多个。
+              // 数据实体名的唯一性由数据层保证（见本文件顶部说明）。
               // SEC3：secret 字段的明文先入凭证库，props 只保存引用
               const props = await propsWithSecretRefs(manifest.configSchema, values, (name, secret) =>
                 api.createCredential(name, secret),
@@ -331,7 +310,8 @@ export function Board({
     setDirty(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);
-  }, [flush]);
+    // gridColumns 进依赖以保持闭包正确；实际因 key 含 columns，重挂载前它不会变
+  }, [flush, gridColumns]);
 
   // Cleanup timer on unmount only (NOT on flush identity change — that would
   // prematurely flush mid-debounce after every parent re-render).
@@ -393,14 +373,7 @@ export function Board({
         const node = grid && configureId ? findNode(grid, configureId) : undefined;
         if (!grid || !node?.el || !configManifest) return;
         try {
-          // D43：唯一字段校验（manifest 声明；exclude 当前实例）
-          if (configManifest.uniqueField) {
-            const v = String((values as Record<string, unknown>)[configManifest.uniqueField] ?? "").trim();
-            if (v && (await uniqueFieldTaken(configManifest.type, configManifest.uniqueField, v, String(configureId ?? "")))) {
-              setConfigError(`「${v}」已被同类型组件使用（不允许重名）`);
-              return;
-            }
-          }
+          // Q93（项 2）/ D63：同上 —— 不做展示侧唯一性校验
           // SEC3：secret 字段明文入库凭证库，props 只保存引用；未改动的引用原样保留
           const props = await propsWithSecretRefs(
             configManifest.configSchema,

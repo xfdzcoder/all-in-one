@@ -918,6 +918,65 @@ try {
       body: JSON.stringify({ layoutJson: seed.snapshot }),
     });
   }, crashSeed);
+  // ── Q93（项 2）/ D63：同一份数据可任意次展示 —— 同名组件不得被拒 ──
+  // 旧守卫（D43）扫**全部页面布局**拒绝同 type 同值，把「数据唯一」错当成「展示唯一」，
+  // 直接挡掉「多个页面放同一个 ToDo」。旧实现拒绝时调 `alert(...)`，故以**零弹窗**为信号。
+  const alerts = [];
+  page.on("dialog", (d) => {
+    alerts.push(d.message());
+    void d.dismiss().catch(() => {});
+  });
+  const addTodo = async (name) => {
+    if (!(await clickBtn("添加组件"))) return "open-add";
+    await sleep(300);
+    const picked = await page.evaluate(() => {
+      const card = [...document.querySelectorAll(".wb-picker-card")].find((c) =>
+        c.textContent.trim().startsWith("个人 Todo"),
+      );
+      card?.click();
+      return Boolean(card);
+    });
+    if (!picked) {
+      await page.keyboard.press("Escape").catch(() => {});
+      await sleep(200);
+      return "pick";
+    }
+    await sleep(400);
+    if (!(await selectOption("名称", name))) {
+      await page.keyboard.press("Escape").catch(() => {});
+      await sleep(200);
+      return "select-name";
+    }
+    await sleep(200);
+    if (await clickBtn("确认添加", true)) return "ok";
+    await page.keyboard.press("Escape").catch(() => {});
+    await sleep(200);
+    return "confirm";
+  };
+  const todoSeed = await page.evaluate(async () => {
+    const list = await (await fetch("/api/dashboards")).json();
+    const d = list.find((x) => (x.layoutJson ?? "[]") !== "[]") ?? list[0];
+    return { id: d.id, snapshot: d.layoutJson };
+  });
+  // 上面的崩溃用例重载过页面 → 编辑态已退出，而「添加组件」只在编辑态的头部槽里
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "编辑页面")?.click(),
+  );
+  await sleep(500);
+  const t1 = await addTodo("inbox");
+  const t2 = await addTodo("inbox");
+  ok(
+    "Q93/D63 同名 ToDo 可重复添加（不拒绝；数据可任意次展示）(项 2)",
+    t1 === "ok" && t2 === "ok" && alerts.length === 0,
+    JSON.stringify({ t1, t2, alerts }),
+  );
+  await page.evaluate(async (seed) => {
+    await fetch(`/api/dashboards/${seed.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: seed.snapshot }),
+    });
+  }, todoSeed);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
