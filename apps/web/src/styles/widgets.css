@@ -862,9 +862,12 @@
   flex-shrink: 0;
 }
 
-/* 邮件行最小高度（#5）：信息两行 + 触控留白 */
+/* 邮件行最小高度（#5）：信息两行 + 触控留白；底色走令牌（D54 批A2 全局去灰：
+ * Mantine Card 深色默认吃 --mantine-color-dark-6 中性灰 #2e2e2e，此处显式压到
+ * slate 表面并保留 D39 可覆盖 —— hover 由 .wb-card--interactive 提供） */
 .wb-mail-row {
   min-height: 56px;
+  background: var(--wb-color-surface-raised);
 }
 
 /* 看板管理 · 列分组（Q26a） */
