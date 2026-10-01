@@ -22,17 +22,58 @@ const json = (obj) => JSON.stringify(obj);
 const mock = createServer((req, res) => {
   res.setHeader("Content-Type", "application/json");
   const url = req.url ?? "";
+  // mihomo
   if (url.startsWith("/version")) return res.end(json("v1.18.8"));
-  if (url.startsWith("/proxies")) return res.end(json({ proxies: { a: {}, b: {} } }));
+  if (url.startsWith("/proxies"))
+    return res.end(
+      json({
+        proxies: {
+          GLOBAL: { now: "DIRECT", all: ["DIRECT"], history: [] },
+          "♻️ 自动选择": { now: "香港WAP", all: ["a", "b"], history: [{ delay: 88 }] },
+          DIRECT: { history: [] },
+        },
+      }),
+    );
   if (url.startsWith("/memory")) return res.end(json({ inuse: 67108864 }));
+  if (url.startsWith("/connections"))
+    return res.end(json({ downloadTotal: 2 ** 30, uploadTotal: 2 ** 28, connections: [{}, {}, {}] }));
+  if (url.startsWith("/providers/rules")) return res.end(json({ providers: { custom: { ruleCount: 11 } } }));
+  if (url.startsWith("/providers/proxies")) return res.end(json({ providers: { airport: {} } }));
+  // portainer
   if (url.startsWith("/api/system/status")) return res.end(json({ Version: "2.21.4" }));
-  if (url.startsWith("/api/endpoints/1/docker")) return res.end(json([{ State: "running" }, { State: "exited" }]));
+  if (url.startsWith("/api/endpoints/1/docker/containers/json"))
+    return res.end(
+      json([
+        { Names: ["/good"], State: "running", Status: "Up 2 days" },
+        { Names: ["/bad"], State: "exited", Status: "Exited (1) 2 days ago" },
+      ]),
+    );
+  if (url.startsWith("/api/endpoints/1/docker/info"))
+    return res.end(json({ Images: 32, NVolumes: 5, NCPU: 8, MemTotal: 8 * 2 ** 30 }));
   if (url.startsWith("/api/endpoints")) return res.end(json([{ Id: 1 }, { Id: 2 }]));
+  // navidrome（实测形态：无 getStats → getScanStatus + getArtists）
   if (url.startsWith("/rest/ping")) return res.end(json({ "subsonic-response": { status: "ok", version: "0.53.3" } }));
-  if (url.startsWith("/rest/getStats")) return res.end(json({ "subsonic-response": { songs: 100, albums: 10, artists: 5 } }));
+  if (url.startsWith("/rest/getScanStatus"))
+    return res.end(json({ "subsonic-response": { scanStatus: { scanning: false, count: 100, lastScan: "2026-09-25T03:04:48Z" } } }));
+  if (url.startsWith("/rest/getArtists"))
+    return res.end(json({ "subsonic-response": { artists: { index: [{ artist: [{ name: "甲", albumCount: 6 }, { name: "乙", albumCount: 4 }] }] } } }));
+  if (url.startsWith("/rest/getAlbumList2"))
+    return res.end(json({ "subsonic-response": { albumList2: { album: [{ name: "新专辑", artist: "某人" }] } } }));
+  if (url.startsWith("/rest/getNowPlaying")) return res.end(json({ "subsonic-response": { nowPlaying: {} } }));
+  // immich（实测 v3 路由）
   if (url.startsWith("/api/server/ping")) return res.end(json({ res: "pong" }));
-  if (url.startsWith("/api/server-info/version")) return res.end(json({ version: "1.95.2" }));
-  if (url.startsWith("/api/statistics")) return res.end(json({ photos: 12, videos: 3 }));
+  if (url.startsWith("/api/server/version")) return res.end(json({ major: 3, minor: 2, patch: 2 }));
+  if (url.startsWith("/api/server/statistics"))
+    return res.end(
+      json({
+        photos: 12,
+        videos: 3,
+        usage: 2 ** 30,
+        usagePhotos: 2 ** 29,
+        usageVideos: 2 ** 29,
+        usageByUser: [{ userId: "u1", userName: "mock-user", photos: 12, videos: 3, usage: 2 ** 30 }],
+      }),
+    );
   res.writeHead(404).end();
 });
 await new Promise((r) => mock.listen(0, "127.0.0.1", r));
@@ -125,23 +166,23 @@ try {
   ok("SVC add mihomo overview", await addOverview(`svc-mihomo-${uniq}`));
   await sleep(2500);
   let body = await page.evaluate(() => document.body.textContent ?? "");
-  ok("SVC mihomo version + stats", body.includes("v1.18.8") && body.includes("代理") && body.includes("内存"), body.slice(-140));
+  ok("SVC mihomo version + structured metrics (D48)", body.includes("v1.18.8") && body.includes("出口选择") && body.includes("活动连接"), body.slice(-140));
 
   // portainer / navidrome / immich
   ok("SVC add portainer overview", await addOverview(`svc-portainer-${uniq}`));
   await sleep(2500);
   body = await page.evaluate(() => document.body.textContent ?? "");
-  ok("SVC portainer stats", body.includes("2.21.4") && body.includes("端点") && body.includes("2/2 运行中".replace("2/2", "1/2")), body.slice(-140));
+  ok("SVC portainer abnormal container surfaced first", body.includes("2.21.4") && body.includes("1/2") && body.includes("异常容器") && body.includes("bad"), body.slice(-140));
 
   ok("SVC add navidrome overview", await addOverview(`svc-navidrome-${uniq}`));
   await sleep(2500);
   body = await page.evaluate(() => document.body.textContent ?? "");
-  ok("SVC navidrome stats", body.includes("0.53.3") && body.includes("歌曲") && body.includes("100"), body.slice(-140));
+  ok("SVC navidrome library aggregation (no getStats)", body.includes("0.53.3") && body.includes("曲目") && body.includes("100") && body.includes("专辑") && body.includes("10"), body.slice(-140));
 
   ok("SVC add immich overview", await addOverview(`svc-immich-${uniq}`));
   await sleep(2500);
   body = await page.evaluate(() => document.body.textContent ?? "");
-  ok("SVC immich stats", body.includes("1.95.2") && body.includes("照片") && body.includes("12"), body.slice(-140));
+  ok("SVC immich v3 routes + per-user list", body.includes("3.2.2") && body.includes("照片") && body.includes("12") && body.includes("mock-user"), body.slice(-140));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));

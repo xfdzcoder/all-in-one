@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import { emptyOverview, validateServiceOverview } from "@all-in-one/widget-sdk";
-import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-one/widget-sdk";
+import type { ServiceListItem, ServiceOverview } from "@all-in-one/widget-sdk";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
@@ -300,12 +300,12 @@ export function normalizeMihomo(parts: {
 
     // 最近延迟（history 尾点）
     const delays: ServiceListItem[] = groups
-      .map(([name, v]) => {
+      .map(([name, v]): ServiceListItem | null => {
         const hist = Array.isArray(v.history) ? (v.history as Array<Record<string, unknown>>) : [];
         const last = hist[hist.length - 1];
         const delay = last ? num(last.delay) : undefined;
         return delay !== undefined
-          ? { title: name, detail: `${delay} ms`, tone: (delay < 300 ? "ok" : "warn") as "ok" | "warn" }
+          ? { title: name, detail: `${delay} ms`, tone: delay < 300 ? "ok" : "warn" }
           : null;
       })
       .filter((x): x is ServiceListItem => x !== null);
@@ -398,7 +398,8 @@ export const serviceOverviewConnector: WidgetConnector = {
     };
 
     let overview: ServiceOverview;
-    switch (row.kind) {
+    try {
+      switch (row.kind) {
       case "immich": {
         const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
         // 探活必须成功（否则整体 probe 失败）；版本/统计多路由回落
@@ -456,6 +457,11 @@ export const serviceOverviewConnector: WidgetConnector = {
       }
       default:
         throw new Error(`不支持的连接类型：${row.kind}`);
+      }
+    } catch (err) {
+      // 探活失败（连不上/认证失败）→ probe 显式失败 + 诚实说明（不抛裸错）
+      const msg = err instanceof Error ? err.message : String(err);
+      return emptyOverview(row.kind, msg);
     }
 
     // 契约兜底：任何适配器输出都必须合法（含降级路径）

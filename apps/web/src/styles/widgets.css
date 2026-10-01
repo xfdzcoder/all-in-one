@@ -512,6 +512,31 @@
   visibility: hidden;
 }
 
+/* ── 服务概览（D48 结构化卡片 + 迷你趋势）── */
+.wb-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: var(--wb-space-1);
+}
+
+.wb-metric--primary {
+  border-color: var(--wb-color-border-strong);
+}
+
+.wb-svc-list,
+.wb-svc-trend,
+.wb-svc-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+}
+
+.wb-sparkline {
+  color: var(--wb-color-accent, #4a6fa5);
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── 撤销条（ISS-14）：完成任务后的短暂可撤销提示 ── */
 .wb-undo {
   display: flex;
