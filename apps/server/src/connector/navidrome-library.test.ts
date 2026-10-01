@@ -40,6 +40,18 @@ describe("normalizeNavidromeLibrary（D50）", () => {
   it("空响应返回空数组", () => {
     expect(normalizeNavidromeLibrary({}, new Map())).toEqual({ albums: [] });
   });
+
+  it("Q94（反馈③）：`getArtist.view` 的 `artist.album[]` 形状同样解析", () => {
+    // Navidrome 未实现 getAlbumList2?type=byArtist → 选中艺人改走 getArtist.view
+    const resp = {
+      "subsonic-response": {
+        status: "ok",
+        artist: { id: "ar-good", name: "乃木坂46", album: [{ id: "al-g1", name: "透明な色", artist: "乃木坂46", coverArt: "al-g1" }] },
+      },
+    };
+    const out = normalizeNavidromeLibrary(resp, new Map());
+    expect(out.albums.map((a) => a.name)).toEqual(["透明な色"]);
+  });
 });
 
 describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", () => {
@@ -82,6 +94,24 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
       if (url.startsWith("/rest/getNowPlaying")) {
         res.setHeader("Content-Type", "application/json");
         return res.end(JSON.stringify({ "subsonic-response": { nowPlaying: {} } }));
+      }
+      // Q94（反馈③）：Navidrome 未实现 getAlbumList2?type=byArtist → 选中艺人时改走 getArtist.view。
+      // ar-good 返回该艺人的专辑；ar-bad 模拟 Subsonic 业务失败（HTTP 200 + status:failed）。
+      if (url.startsWith("/rest/getArtist.view")) {
+        res.setHeader("Content-Type", "application/json");
+        if (url.includes("id=ar-bad")) {
+          return res.end(
+            JSON.stringify({ "subsonic-response": { status: "failed", error: { code: 70, message: "artist not found" } } }),
+          );
+        }
+        return res.end(
+          JSON.stringify({
+            "subsonic-response": {
+              status: "ok",
+              artist: { id: "ar-good", name: "乃木坂46", album: [{ id: "al-g1", name: "透明な色", artist: "乃木坂46", coverArt: "al-g1" }] },
+            },
+          }),
+        );
       }
       if (url.startsWith("/rest/getCoverArt")) {
         coverUrls.push(url.split("&").find((p) => p.startsWith("size=")) ?? "(no-size)");
@@ -161,5 +191,43 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
     await expect(
       navidromeLibraryConnector.fetch({ type: "navidrome-library", config: { sourceId: wrongKind } }, ctx),
     ).rejects.toThrow("专辑墙需要 Navidrome 连接");
+  });
+
+  it("Q94（反馈③）：选中艺人走 getArtist.view 且**取得到专辑**；Subsonic 业务失败必须抛错而非静默 0", async () => {
+    const [user] = await db.select().from((await import("../db/schema.ts")).user).limit(1);
+    // ① 正常：artistId=ar-good → 该艺人的专辑
+    const goodId = crypto.randomUUID();
+    await db.insert(dataSource).values({
+      id: goodId,
+      userId: user.id,
+      kind: "navidrome",
+      name: "mock-nd-good",
+      configJson: JSON.stringify({ url: base, username: "u", password: { credentialRef: "cred:none" } }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const okData = (await navidromeLibraryConnector.fetch(
+      { type: "navidrome-library", config: { sourceId: goodId, limit: 10, artistId: "ar-good" } },
+      ctx,
+    )) as { albums: Array<{ name: string }> };
+    expect(okData.albums.map((a) => a.name)).toEqual(["透明な色"]);
+
+    // ② Subsonic `status:"failed"`（HTTP 200）必须**抛错** —— 原实现会静默返回 0 张（D47 违规）
+    const badId = crypto.randomUUID();
+    await db.insert(dataSource).values({
+      id: badId,
+      userId: user.id,
+      kind: "navidrome",
+      name: "mock-nd-bad",
+      configJson: JSON.stringify({ url: base, username: "u", password: { credentialRef: "cred:none" } }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await expect(
+      navidromeLibraryConnector.fetch(
+        { type: "navidrome-library", config: { sourceId: badId, limit: 10, artistId: "ar-bad" } },
+        ctx,
+      ),
+    ).rejects.toThrow(/artist not found/);
   });
 });

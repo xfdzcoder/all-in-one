@@ -58,16 +58,24 @@ function sr(x: unknown): Record<string, unknown> {
   return (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
 }
 
+/** 从 Subsonic 响应取专辑列表：`albumList2.album`（getAlbumList2）或 `artist.album`（getArtist）。
+ *  **Q94（反馈③）**：Navidrome 未实现 `getAlbumList2?type=byArtist`，选中艺人时改走 `getArtist.view`，
+ *  两种形状都要认（否则静默取到 0 项）。 */
+function extractAlbumList(resp: unknown): Array<Record<string, unknown>> {
+  const r = sr(resp);
+  const fromList = (r.albumList2 as Record<string, unknown> | undefined)?.album;
+  if (Array.isArray(fromList)) return fromList as Array<Record<string, unknown>>;
+  const fromArtist = (r.artist as Record<string, unknown> | undefined)?.album;
+  return Array.isArray(fromArtist) ? (fromArtist as Array<Record<string, unknown>>) : [];
+}
+
 /** 归一：getAlbumList2 条目 + 封面字节（可单测）。
  *  Q94（反馈②）：「正在播放」已移除，故不再接收/返回该部分。 */
 export function normalizeNavidromeLibrary(
   newest: unknown,
   covers: Map<string, Uint8Array>,
 ): { albums: NavidromeAlbumItem[] } {
-  const list: Array<Record<string, unknown>> = (() => {
-    const a = (sr(newest).albumList2 as Record<string, unknown> | undefined)?.album;
-    return Array.isArray(a) ? (a as Array<Record<string, unknown>>) : [];
-  })();
+  const list: Array<Record<string, unknown>> = extractAlbumList(newest);
   const albums: NavidromeAlbumItem[] = [];
   for (const a of list) {
     const id = str(a.id) ?? str(a.coverArt);
@@ -163,14 +171,17 @@ export const navidromeLibraryConnector: WidgetConnector = {
     const auth = await subsonicAuth(config);
     // Q88（项 10）：不再封顶 24（原先选 30/50 也只给 24）
     const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 120);
-    // Q72：只看某个艺人（配置项 artistId → getAlbumList2 的 type=byArtist&artist=<ID3 艺人 id>）
+    // Q72/Q94（反馈③）：只看某个艺人。
+    // ⚠️ **Navidrome 未实现 `getAlbumList2?type=byArtist`** —— 实测（2026-10-02，0.58）
+    // 返回 HTTP 200 + `{"code":0,"message":"type 'byArtist' not implemented"}`，于是静默取到 0 张。
+    // 改用 `getArtist.view?id=<artistId>` → `artist.album[]`（实测可用，字段同 `albumList2.album`）。
     const artistId = str(query.config.artistId);
     const notes: string[] = [];
 
     let newest: unknown;
     try {
       const listPath = artistId
-        ? `getAlbumList2?type=byArtist&artist=${encodeURIComponent(artistId)}&size=${limit}&${auth}`
+        ? `getArtist.view?id=${encodeURIComponent(artistId)}&${auth}`
         : `getAlbumList2?type=newest&size=${limit}&${auth}`;
       const res = await outboundRequest(`${base}/rest/${listPath}`, {
         timeoutMs: TIMEOUT_MS,
@@ -178,16 +189,23 @@ export const navidromeLibraryConnector: WidgetConnector = {
         allowPrivate: true,
       });
       if (res.status >= 400) throw new Error(`subsonic API HTTP ${res.status}`);
-      newest = JSON.parse(res.text);
+      const parsed = JSON.parse(res.text) as Record<string, unknown>;
+      // Q94（反馈③）：**必须检查 Subsonic 的业务状态**。HTTP 200 不代表成功 ——
+      // `status: "failed"` 时若照常解析会静默拿到 0 项（D47 违规：把 API 报错伪装成「没有数据」）。
+      const body = ((parsed ?? {})["subsonic-response"] ?? {}) as Record<string, unknown>;
+      if (body.status === "failed") {
+        const e = (body.error ?? {}) as { code?: number; message?: string };
+        throw new Error(
+          `Subsonic 报错（code ${e.code ?? "?"}）：${e.message ?? "未知"} —— 检查 Navidrome 版本是否支持该接口、或该艺人 id 是否有效`,
+        );
+      }
+      newest = parsed;
     } catch (err) {
       throw new Error(err instanceof Error ? err.message : "Navidrome 列表获取失败");
     }
 
 
-    const list: Array<Record<string, unknown>> = (() => {
-      const a = (sr(newest).albumList2 as Record<string, unknown> | undefined)?.album;
-      return Array.isArray(a) ? (a as Array<Record<string, unknown>>) : [];
-    })();
+    const list: Array<Record<string, unknown>> = extractAlbumList(newest);
     const covers = new Map<string, Uint8Array>();
     // Q70：失败按原因聚合（原先每项一条刷屏）+ 二级回落 size=300
     const wanted = list.slice(0, limit);
