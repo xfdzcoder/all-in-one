@@ -7,14 +7,16 @@
 | 项 | 值 |
 |---|---|
 | 模式 | 自主迭代 loop（D22；**D53 起 commit 后自动 `git push origin main`**） |
-| 循环状态 | **运行中**（新指令入队 Q66–Q78：Dashboard 反馈 11 项 + 图表选型；Q66 ✅ 批0 行为准则已生效） |
-| 最近更新 | 2026-10-01（第 101 轮 · Q66 ✅ —— **D53 提交即推送**落地，队列 Q67–Q78 待推进） |
+| 循环状态 | **运行中**（2026-10-02 换卷：**全库「刮骨疗毒」质量体检**（06 §3 #7）入队 Q95–Q97+；执行顺序 Q92 → Q81/Q83 → Q79 → Q95 体检 → Q96 lint → Q97+ 修复批次 → 批 G/H 压轴） |
+| 最近更新 | 2026-10-02（第 129 轮 · 附录换卷 + 体检卷入队） |
 
 ## 迭代队列
 
 > **维护约定**：完成勾选必须**断言 replace 命中**（历史上三次静默 no-op：Q29e hooks 守卫、monitor.md、Q30–Q39 队列勾选缩进不符）——编辑 07 后核对目标行确实变化。
 
 > 首轮（2026-09-29）由 loop 同步：先收口 05-mvp 未完成项（出口标准 J1–J8 记录），再按 [06-roadmap.md](06-roadmap.md) §1 二期候选 / §3 待定清单排入；完成项标记 `[x]`。大项在选中当轮再拆小步。
+
+> **当前执行顺序（2026-10-02 用户拍板，优先于物理排列）**：Q92 统一标题组件（刮骨疗毒前收掉）→ Q81 → Q83 → Q79 → Q95 体检 → Q96 lint 落地 → Q97+ 修复批次（P0→P1→P2）→ **最后**才是批 G/H（Q74–Q78：液态填充 / ECharts / WS，新功能不阻塞体检）。
 
 - [x] Q1 · 组件选择器 + configSchema 驱动添加表单（FR-W2 收口：manifest 清单驱动选择器，替换 Board 硬编码添加按钮；同步 verify-m1/j4/j5 与 Playwright J2b/J4 用例）**✅ 2026-09-29**
 - [x] Q2 · J6/J7 验收脚本化（verify-j6.mjs / verify-j7.mjs；复跑 verify-m1/j3/j4/j5）**✅ 2026-09-29**
@@ -188,6 +190,10 @@
 - [ ] Q76 · **批H2 自定义图表组件 v1**（**D47** + **D57**）：配置 = `chartType` + `xField/yFields/path/unit/stack/smooth/…` → 编译成 ECharts option（配置即 spec，非预设指标）；HTTP 数据源复用 `httpConnector`（零服务端改动）
 - [ ] Q77 · **批H3 WS 数据源**（**D56**）：服务端 WS 客户端连用户源 + 经现有 `/api/events` SSE 推送（前端仍只有 HTTP+SSE，不动 04-tech-stack 前端传输层决策）；SSRF/凭证解析沿用 `outboundRequest` 基线 + 连接生命周期管理
 - [ ] Q78 · **批H4** WS 接入图表组件 + 全量回归收口
+
+- [ ] Q95 · **全库「刮骨疗毒」质量体检（执行）**（[06-roadmap.md](06-roadmap.md) §3 #7）：6 分区逐行评估（apps/server / apps/web / widget-sdk+契约（含 OpenAPI↔`api.ts`）/ 测试+verify 脚本 / 依赖·安全·lint / 文档全库）→ 产出 `docs/quality-audit/`（00-summary + 分域报告 + P0/P1/P2 台账，对齐 design-audit/interaction 先例）；范围 = 代码质量/目录结构/测试覆盖/重复代码/异常处理/内存/逻辑错误/过时 API/过时文档 + 补充维度①–⑮（**⑭ data-URI mime 硬编码、⑮ minCell→rowHeight 直接入修复台账不重评**）
+- [ ] Q96 · **lint 工具落地**（体检「引入 lint 工具」交付物 + 维度①②）：强化 oxlint（correctness/suspicious/import/performance 开足 + 存量 warning 清零，真问题修复 / 有意行为定向豁免留注释）+ 引入 knip（死代码/未用导出/未用依赖）+ `pnpm audit` 供应链审计（含 `patches/gridstack@14.0.0.patch` 是否随版本过期）；**不引入 ESLint**
+- [ ] Q97+ · **体检修复批次**（Q95 报告出来后按批拆入队编号）：台账 P0→P1→P2 逐批修，每批单独 commit、门禁全绿即 push（D53）；含既知项 ⑭（data URI mime 按字节头给真实值）与 ⑮（`minCell`→`rowHeight` 一次性配置迁移）
 
 ## 历轮记录
 
