@@ -148,6 +148,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
     portainer: [
       { key: "url", label: "服务地址", type: "text" },
       { key: "apiToken", label: "访问令牌", type: "secret" },
+      { key: "restartAllow", label: "重启白名单（容器名逗号分隔，留空 = 禁止重启）", type: "text" },
     ],
     mihomo: [
       { key: "url", label: "服务地址", type: "text" },

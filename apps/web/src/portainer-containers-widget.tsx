@@ -1,10 +1,11 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh, IconRotateClockwise } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Code, Group, Modal, Stack, Text } from "@mantine/core";
 
-import { usePortainerContainers, usePortainerLogs } from "./data-hooks";
+import { usePortainerContainers, usePortainerLogs, usePortainerRestart } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
+import { ConfirmAction } from "./confirm";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
@@ -13,10 +14,19 @@ import { WbAlert, WbLoading, IconAction } from "./ui";
  */
 export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?: string; refreshSec?: number }) {
   const { data, loading, error, refresh } = usePortainerContainers(sourceId, refreshSec);
+  const restart = usePortainerRestart(sourceId);
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
   const logs = usePortainerLogs(logsFor ? sourceId : undefined, logsFor?.id);
+
+  // Q56/D51：重启白名单（连接配置 restartAllow；空 = 不显示重启入口，服务端同样拒绝）
+  const allowRaw = (row as { config?: Record<string, unknown> } | undefined)?.config?.restartAllow;
+  const allowSet = new Set(
+    (Array.isArray(allowRaw) ? allowRaw : typeof allowRaw === "string" ? allowRaw.split(/[,，]/) : [])
+      .map((x) => String(x).trim())
+      .filter(Boolean),
+  );
 
   const containers = data?.containers ?? [];
   const abnormal = containers.filter((c) => c.abnormal);
@@ -47,6 +57,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
       )}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
+      {restart.error && <WbAlert tone="error" size="sm">重启失败：{restart.error}</WbAlert>}
 
       <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
         {containers.map((c) => (
@@ -73,6 +84,15 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
                 {c.status}
                 {c.ports ? ` · ${c.ports}` : ""}
               </Text>
+              {allowSet.has(c.name) && (
+                <ConfirmAction
+                  label="重启"
+                  title={`重启容器「${c.name}」？`}
+                  message={`将重启容器「${c.name}」——容器内服务会短暂中断。确认执行？`}
+                  onConfirm={() => restart.send(c.id)}
+                  icon={<IconRotateClockwise size={14} />}
+                />
+              )}
             </Group>
           </button>
         ))}

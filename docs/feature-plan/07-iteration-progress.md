@@ -7,8 +7,8 @@
 | 项 | 值 |
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
-| 循环状态 | **暂停**（队列已清空 —— 用户反馈⑫+拍板项+UI 现代化（Q40–Q65）全部完成，写 STOP 待新指令；`/loop-resume` 恢复） |
-| 最近更新 | 2026-10-01（第 98 轮 · Q65 按钮 icon 化 ✅ —— UI 现代化 Q58–Q65 收官） |
+| 循环状态 | **运行中**（UI 现代化 Q58–Q65 收官；队列余 Q56/Q57 写操作两件） |
+| 最近更新 | 2026-10-01（第 98 轮 · Q65 ✅；修正状态行误写"队列已清空"——Q56/Q57 未完） |
 
 ## 迭代队列
 
@@ -143,7 +143,7 @@
 - [x] Q54 · 写操作类深度组件整理入「待用户确认」（Navidrome 播放遥控 / Portainer 容器启停 / Mihomo 换节点，含各自风险边界与确认机制建议），等用户逐项拍板**✅ 2026-10-01**——见「待用户确认」#5（含风险边界与建议确认机制）
 
 - [x] Q55 · FR-X3e Navidrome 播放遥控（写操作，**D51**）：play/pause/next/prev/stop，作用当前播放会话（组件注明单设备场景，免逐次确认）+ 专属 REST + 审计日志 + 真机验证**✅ 2026-10-01**——`POST /api/navidrome/control`（Subsonic pause/next/previous/stop.view + 200-error body 语义）+ 专辑墙遥控行 + `widget.write-action` 审计；verify-svc 27/27、verify-live 24/24（真机点「播放」零错误）
-- [ ] Q56 · FR-X3f Portainer 容器重启（写操作，**D51**）：**仅 restart** + 容器白名单（缺省空=不允许）+ D31 二次确认 + 审计日志 + 真机验证
+- [x] Q56 · FR-X3f Portainer 容器重启（写操作，**D51**）：**仅 restart** + 容器白名单（缺省空=不允许）+ D31 二次确认 + 审计日志 + 真机验证**✅ 2026-10-01**——`POST /api/portainer/restart`（白名单落**连接配置 restartAllow** 服务端可信执行，按容器名称判定）+ 确认弹窗（图标触发，Q65）+ 审计；**真机=守卫路径验收**（白名单空→无入口+API 拒绝，零触碰真实容器；实际重启动作待用户指定可动容器后补验）
 - [ ] Q57 · FR-X3g Mihomo 策略组切换（写操作，**D51**）：切换前确认（当前→目标节点）+ 审计日志 + 真机验证
 
 - [x] Q58 · UI 现代化·阶段0 样张探索（用户拍板：**A 克制精致**主方向 / 先样张 / 含微交互+浅色主题 / 基础层先行）**✅ 2026-10-01**——4 张样张（现状/A 纯/A+玻璃/A+柔和，`capture-style-variants.mjs` 管线 + docs/design-audit/style-v2/）；**用户选定 02「A+玻璃背景」**（半透明卡片+氛围光斑）+ 微调要求**按钮尽量 icon 化**（→ Q65）
@@ -274,4 +274,5 @@
 | 95 | 2026-10-01 | **Q60–Q62 视觉批 1–3**：① 基础层：三色光晕氛围背景（tokenized）+ 定制滚动条/焦点环/选中色 + tabular-nums + Mantine 蓝阶对齐 accent；② 组件层：`.wb-widget` 玻璃材质（color-mix 令牌化 + backdrop-blur）+ hover 抬升、filled 按钮渐变/glow/按压、玻璃 Modal、pill Badge（双类选择器压 Mantine 注入，无 !important）；③ 内容层：`WbLoading` shimmer 骨架（12 组件 codemod 断言命中替换）+ `.wb-metric__value--display` 展示级数字 + 空态 hint 视觉 | verify-dark 3/3、m1 42/42、p8 11/11、svc 27/27 ✅（效果图 04/05/06） | `ab1f99a`、`2f5742e`、`e2cb8b1` |
 | 96 | 2026-10-01 | **Q63 浅色主题 + verify-dark 双主题硬化**：头部 Sun/Moon 切换（`data-theme` + localStorage + Mantine **forceColorScheme**（v9 无 colorScheme prop，typecheck 抓获））。**审计脚本硬化**：Chrome 把 color-mix 序列化为 `color(srgb 0-1)` 被按 0-255 解析致 LIGHT 1200+ 假阳；玻璃 alpha 未合成致假阴/假阳并存 —— 重写解析（双格式）+ 父链 alpha 逐层合成 + 半透明文字合成 → **双主题 6/6 AA** | verify-dark 6/6 ✅；typecheck ✅（效果图 07-light） | `1c90b38` |
 | 97 | 2026-10-01 | **Q64 视觉批 5 · 微交互 + 走查管线**：按钮/图标统一过渡、hover/按压反馈、内容入场动效（wb-rise，prefers-reduced-motion 兜底）+ `capture-style-tour.mjs` 六张关键表面走查图（登录/深色/编辑态/弹窗/选择器/浅色） | verify-dark 6/6 ✅ | `299f33d` |
-| 98 | 2026-10-01 | **Q65 按钮 icon 化（用户点名）**：@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**，verify 文本匹配零改动兼容——避免 30 个脚本选择器迁移）；刷新/详情/配置/移除/遥控×5 icon 化（24 处）。**AA 修三则**：浅色徽标语义色 3.81/3.16 不达 AA → 桥接 `--mantine-color-*-light-color`（!important 压 Mantine 运行时）；暗色 danger 令牌 4.28 → 提亮 ≥4.5；`c="red"` 文字走 `wb-text--danger` 语义类。**审计漏检教训**：Q63 时页面无徽标/异常清单组件 → LIGHT 假绿，组件覆盖面进 AA 快检才暴露 | 双主题 verify-dark 6/6 ✅；电池 9 套 255 项 ✅；verify-live 24/24 ✅；typecheck ✅ | （本提交） |
+| 98 | 2026-10-01 | **Q65 按钮 icon 化（用户点名）**：@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**，verify 文本匹配零改动兼容——避免 30 个脚本选择器迁移）；刷新/详情/配置/移除/遥控×5 icon 化（24 处）。**AA 修三则**：浅色徽标语义色 3.81/3.16 不达 AA → 桥接 `--mantine-color-*-light-color`（!important 压 Mantine 运行时）；暗色 danger 令牌 4.28 → 提亮 ≥4.5；`c="red"` 文字走 `wb-text--danger` 语义类。**审计漏检教训**：Q63 时页面无徽标/异常清单组件 → LIGHT 假绿，组件覆盖面进 AA 快检才暴露 | 双主题 verify-dark 6/6 ✅；电池 9 套 255 项 ✅；verify-live 24/24 ✅；typecheck ✅ | `f91bd5e` |
+| 99 | 2026-10-01 | **Q56 Portainer 容器重启（FR-X3f 写操作 D51）**：`POST /api/portainer/restart` —— **仅 restart**、白名单按容器名称、缺省空=禁止；**白名单落连接配置 `restartAllow`**（相对 D51"组件配置"的实现细化：服务端可信执行，组件只展示与确认——记为实现口径）；确认弹窗图标触发（ConfirmAction 扩 icon，D31 文案含容器名与中断提示）+ 审计 `widget.write-action`。契约测试 2（179/179）。**真机=守卫路径**（无白名单→无入口 + API 400"重启未开放"，零触碰真实容器；实际重启动作待用户指定可动容器）。**账本纠错**：状态行误写"队列已清空"（Q56/Q57 未完）已修正 | server 179/179 ✅；verify-svc 31/31 ✅；verify-live 26/26 ✅ | （本提交） |

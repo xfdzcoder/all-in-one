@@ -195,6 +195,8 @@ export const api = {
   // ── 写操作深度组件（D51：专属 REST + 服务端审计）──
   navidromeControl: (sourceId: string, action: string) =>
     req<{ ok: boolean }>("POST", "/api/navidrome/control", { sourceId, action }),
+  portainerRestart: (sourceId: string, containerId: string) =>
+    req<{ ok: boolean; name: string }>("POST", "/api/portainer/restart", { sourceId, containerId }),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
   // ── 命名数据连接（D42）：monitor / opencode / http ──

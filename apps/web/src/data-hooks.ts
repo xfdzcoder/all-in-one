@@ -506,6 +506,22 @@ export function useNavidromeControl(sourceId?: string) {
   };
 }
 
+/** Portainer 容器重启（FR-X3f 写操作，D51：仅 restart + 白名单 + 确认）。 */
+export function usePortainerRestart(sourceId?: string) {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (containerId: string) => api.portainerRestart(sourceId ?? "", containerId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["portainer-containers"] }),
+  });
+  return {
+    send: (containerId: string) => {
+      if (sourceId) mutation.mutate(containerId);
+    },
+    busy: mutation.isPending,
+    error: mutation.error instanceof Error ? mutation.error.message : undefined,
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];

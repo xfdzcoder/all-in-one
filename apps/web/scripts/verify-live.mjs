@@ -263,6 +263,23 @@ try {
   });
   ok("LIVE portainer container list matches real host", pcTxt.includes("homepage") && pcTxt.includes("minecraft-mc-1") && pcTxt.includes("Exited (143)"), pcTxt.slice(0, 160));
 
+  // Q56 容器重启守卫（D51）：真机连接无白名单 → 无重启入口 + API 拒绝（不触碰真实容器）
+  const restartBtns = await page.evaluate(
+    () => [...document.querySelectorAll("button")].filter((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "重启").length,
+  );
+  ok("LIVE portainer restart hidden without whitelist (guardrail)", restartBtns === 0, "count=" + restartBtns);
+  const denied = await page.evaluate(async (name) => {
+    const list = await (await fetch("/api/data-sources")).json();
+    const row = list.find((r) => r.name === name);
+    const r = await fetch("/api/portainer/restart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceId: row?.id ?? "missing", containerId: "probe" }),
+    });
+    return { status: r.status, body: (await r.text()).slice(0, 120) };
+  }, names.portainer);
+  ok("LIVE portainer restart API denies without whitelist", denied.status === 400 && denied.body.includes("重启未开放"), JSON.stringify(denied));
+
   // Q53 Mihomo 节点面板（D50）：真机策略组/节点/订阅源
   await clickBtn("编辑页面");
   await sleep(300);

@@ -18,7 +18,7 @@ export const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> 
   // Q39/D46：服务概览四类（认证字段与各服务 API 对齐；secret 值为凭证库引用 SEC3）
   immich: ["url", "apiKey"],
   navidrome: ["url", "username", "password"],
-  portainer: ["url", "apiToken"],
+  portainer: ["url", "apiToken", "restartAllow"], // restartAllow=容器重启白名单（Q56/D51，逗号分隔或数组，空=禁止重启）
   mihomo: ["url", "secret"],
 };
 

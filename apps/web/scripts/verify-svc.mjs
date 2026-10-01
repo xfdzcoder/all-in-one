@@ -28,6 +28,11 @@ const mock = createServer((req, res) => {
     ctrlHits.push(url.split("?")[0]);
     return res.end(json({ "subsonic-response": { status: "ok" } }));
   }
+  // portainer 容器重启（Q56 写操作）——记录命中供断言
+  if (url.includes("/restart") && req.method === "POST") {
+    ctrlHits.push("restart:" + url);
+    return res.end(json({ message: "restarted" }));
+  }
   // mihomo
   if (url.startsWith("/version")) return res.end(json("v1.18.8"));
   if (url.startsWith("/proxies"))
@@ -204,7 +209,7 @@ try {
         }).then((r) => r.ok);
       return {
         mihomo: await mk("mihomo", `svc-mihomo-${uniq}`, { url: base }),
-        portainer: await mk("portainer", `svc-portainer-${uniq}`, { url: base }),
+        portainer: await mk("portainer", `svc-portainer-${uniq}`, { url: base, restartAllow: "bad" }),
         navidrome: await mk("navidrome", `svc-navidrome-${uniq}`, { url: base, username: "u", password: { credentialRef: "cred:none" } }),
         immich: await mk("immich", `svc-immich-${uniq}`, { url: base }),
         broken: await mk("mihomo", `svc-broken-${uniq}`, { url: "http://127.0.0.1:1" }),
@@ -293,6 +298,33 @@ try {
   ok("SVC portainer logs tail renders", (await page.evaluate(() => document.body.textContent ?? "")).includes("hello"), "");
   await page.keyboard.press("Escape");
   await sleep(300);
+
+  // Q56 容器重启（D51：仅 restart + 白名单 + 确认）——白名单行才有入口
+  const restartBtns = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
+    return [...(item?.querySelectorAll("button") ?? [])].filter((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "重启").length;
+  });
+  ok("SVC portainer restart only on whitelisted row (D51)", restartBtns === 1, "count=" + restartBtns);
+  ok(
+    "SVC portainer restart confirm dialog (D31)",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "重启");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(500);
+  ok(
+    "SVC portainer restart confirmed",
+    await page.evaluate(() => {
+      const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  ok("SVC portainer restart hit mock endpoint (audited)", ctrlHits.some((h) => String(h).includes("restart")), JSON.stringify(ctrlHits));
 
   // Q53 Mihomo 节点面板（D50 只读深度）：策略组/节点延迟/订阅源
   ok("SVC add mihomo nodes panel", await addOverview(`svc-mihomo-${uniq}`, "Mihomo 节点面板"));
