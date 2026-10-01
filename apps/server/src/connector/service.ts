@@ -54,12 +54,12 @@ function count(n: number): string {
 }
 
 /** 降级说明：区分"权限不足"与其它失败，给"原因 + 怎么修"（08 §5）。 */
-function degradeNote(what: string, err: unknown, permissionHint?: string): string {
+function degradeNote(what: string, err: unknown, permissionHint?: string, genericHint?: string): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (permissionHint && (msg.includes("403") || msg.toLowerCase().includes("permission"))) {
     return `${what}获取失败（${msg}）—— ${permissionHint}`;
   }
-  return `${what}获取失败（${msg}）—— 该项暂缺`;
+  return `${what}获取失败（${msg}）—— ${genericHint ?? "该项暂缺"}`;
 }
 
 /** Immich（实测 v3 路由 /api/server/*，旧版 /api/*；API Key 细粒度权限）。 */
@@ -350,7 +350,12 @@ export function normalizeMihomo(parts: {
 
   for (const e of parts.errors ?? []) {
     (out.notes ??= []).push(
-      degradeNote(e.what, e.err, "若经反代部署，/memory 可能被缓冲或超时 —— 该项可忽略或直连 external-controller"),
+      degradeNote(
+        e.what,
+        e.err,
+        "API Key 缺权限 —— 检查 external-controller 密钥（mihomo external-controller 配置）",
+        "若经反代部署，/memory 可能被缓冲或超时 —— 可直连 external-controller 或忽略该项",
+      ),
     );
   }
   return out;

@@ -7,8 +7,8 @@
 | 项 | 值 |
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
-| 循环状态 | **运行中**（2026-10-01 用户反馈⑫入队 Q40–Q48，用户指令恢复；顺序 = 质量机制 → 小 bug → 指标重做） |
-| 最近更新 | 2026-10-01（第 80 轮 · 用户反馈⑫入队 Q40–Q48 + Q40a 调研/真机探测启动） |
+| 循环状态 | **暂停**（队列已清空 —— 用户反馈⑫（Q40–Q48）全部完成，写 STOP 待新指令；`/loop-resume` 恢复） |
+| 最近更新 | 2026-10-01（第 86 轮 · Q45–Q48 真机验收 ✅ —— 用户反馈⑫（Q40–Q48）全部完成） |
 
 ## 迭代队列
 
@@ -130,10 +130,10 @@
   - [x] Q44a · widget-sdk 结构化契约先行（service-overview.ts + validateServiceOverview + 契约测试 7 + README）**✅（`bac03ed`）**
   - [x] Q44b · 服务端四适配器结构化重做（按 research 用户问题清单取数 + 多路由回落 + 诚实降级 notes；真机实测形状进契约测试）**✅（`cd5fcf0`）**
   - [x] Q44c · 服务概览组件重写（主/次指标分层 + 状态徽标 + 清单置顶 + 迷你趋势 sparkline + notes）+ verify-svc 14/14**✅（`0d4afb7`）**
-- [ ] Q45 · Immich 指标重做（真机验证）：照片/视频数、占用、近 7 天新增、最近上传、用户数；多接口聚合 + 逐项降级诚实文案
-- [ ] Q46 · Navidrome 指标重做（真机验证）：歌曲/专辑/艺术家数、总时长、最近添加、正在播放、活跃用户/转码
-- [ ] Q47 · Portainer 指标重做（真机验证）：运行/停止/异常计数、异常容器清单、栈/镜像数、最近事件、节点资源
-- [ ] Q48 · Mihomo 指标重做（真机验证）：当前出口节点+延迟、实时上下行、活动连接数、累计流量、内存/运行时长
+- [x] Q45 · Immich 指标重做（真机验证）：照片/视频数、占用、近 7 天新增、最近上传、用户数；多接口聚合 + 逐项降级诚实文案**✅ 2026-10-01**——真机 v3.2.2：16,309 照片/140 视频/88.6 GB/按用户分解（"最近上传/新增"待 API Key 扩 asset.read 后排期）
+- [x] Q46 · Navidrome 指标重做（真机验证）：歌曲/专辑/艺术家数、总时长、最近添加、正在播放、活跃用户/转码**✅ 2026-10-01**——真机 0.58：1,376 曲目/269 专辑/38 艺术家 + 最近添加/正在播放清单（getStats 不存在 → getScanStatus+getArtists 聚合）
+- [x] Q47 · Portainer 指标重做（真机验证）：运行/停止/异常计数、异常容器清单、栈/镜像数、最近事件、节点资源**✅ 2026-10-01**——真机 2.27.6：23/25 运行 + 2 异常容器清单（homepage Exited(143)、minecraft-mc-1 Exited(255)）+ 宿主 12 核/15.4 GB
+- [x] Q48 · Mihomo 指标重做（真机验证）：当前出口节点+延迟、实时上下行、活动连接数、累计流量、内存/运行时长**✅ 2026-10-01**——真机 meta v1.19.31：出口 DIRECT/15 策略组/活动连接/累计流量/节点延迟 + `/memory` 反代不可用的诚实降级（速率趋势=累计量前端差分，D48）
 
 ## 历轮记录
 
@@ -240,3 +240,4 @@
 | 83 | 2026-10-01 | **Q42 OpenCode 组件只选数据源（一.2）+ 账本维护**：① configSchema 收敛——去 `url`/`apiToken` 重填字段，只留 `sourceId`（`data-source:opencode`）+ `limit`，旧组件内联配置仍生效（D42 前端合并回落），交互文档 opencode 篇同步；verify-opc 旅程改"数据连接 API 建源 → 表单只选"（+2 断言：表单无连接字段/选择即配）、verify-i4 同步改造。② 账本维护：`apps/server/data/` 运行时目录移出版本控制（Q38b/Q39a `git add -A` 误入库的 verify 图标残留一并 untrack，文件保留磁盘）+ gitignore | verify-opc 17/17、i4 22/22 ✅；Vitest sdk 21 + server 162 ✅；typecheck/lint ✅ | `0e3f6d0`、`ed8cbbf`（账本维护） |
 | 84 | 2026-10-01 | **Q43 拖动卡片偶发消失（一.3）**：新建 `verify-gdrag` 压测（多路径拖拽 + 拖远放回原位）无稳定复现 → 转机制分析 + 确定性竞态用例：**根因实锤**（红-绿）= gridstack@14.0.0 React wrapper 渲染期 `findInGrid` 竞态（拖动中节点短暂离开引擎 / `node.el` 被换成 placeholder）→ syntheticItems `return null` / `setContainer(null)` → **portal 卸载且不自愈**（上游 #2976 同族）。**D49**：`pnpm patch` 两处守卫（last-node 回退 + keep-previous-container），patches 入库；还原补丁 → 5 卡内容全消失（用例有效）→ 恢复 → 28/28。回归电池 p8/m1/kan/drag/j4/w4 全绿；**j3 一度误报**（verify-gdrag 污染首页布局，脚本不自播种）→ gdrag 收尾恢复标准 seed 后 j3 10/10（教训入 D49） | verify-gdrag 28/28（含确定性竞态用例）✅；回归 7 脚本 ✅；typecheck/lint ✅ | `a5f0e78` |
 | 85 | 2026-10-01 | **Q44 ServiceOverview 契约演进（D48，Q44a–c）**：① 契约先行：widget-sdk `service-overview.ts`（主/次指标+emphasis、状态徽标、清单、sample 采样点、**notes 诚实降级**）+ `validateServiceOverview` + 契约测试 7；② 四适配器按 research 用户问题清单结构化重做——Immich v3 路由回落+按用户清单+权限提示、Navidrome getScanStatus+getArtists 聚合（getStats 不存在）、Portainer 异常容器清单置顶+宿主规格+全健康绿态、Mihomo 策略组选择+节点延迟+连接采样（速率前端差分）；③ 组件重写：分层渲染+sparkline 迷你趋势+notes；verify-svc mock/断言全改结构化。**教训**：verify 栈 server 未随源码重载（node--watch 未生效）致一次假阴性——改服务端后必须确认 :3001 进程重启 | sdk 28/28、server 164/164 ✅；verify-svc 14/14 ✅；typecheck/lint ✅ | `bac03ed`、`cd5fcf0`、`0d4afb7` |
+| 86 | 2026-10-01 | **Q45–Q48 四服务真机验收（D47 DoD：真机验证才算完成）**：新增 `verify-live.mjs` 真机旅程（凭证从 `.opencode/.env.verify` 读、缺失即 SKIP；重置布局 + 轮询等待真机多接口串行返回）——**13/13 二连全绿**：Immich v3.2.2（16,309 照片/140 视频/88.6 GB/按用户 xfdzcoder）、Navidrome 0.58（1,376 曲目/269 专辑/38 艺术家 + 最近添加/正在播放）、Portainer 2.27.6（23/25 + 异常清单 homepage Exited(143)、minecraft-mc-1 Exited(255) + 12 核/15.4 GB）、Mihomo meta v1.19.31（出口 DIRECT/15 策略组/活动连接/累计流量/节点延迟）。降级文案补"怎么修"（mihomo /memory 反代超时 → 直连 external-controller 提示）。**DoD 自检**：用户问题/对照/指标映射四列/降级诚实/多路由回落/契约测试/真机通过/单位语义/全绿 —— 全勾。**教训×2**：verify 脚本 `ok()` 参数顺序写反会假 PASS（gdrag/live 各一次，已修）；断言前必须等真机数据就绪（3s 不够，改轮询） | verify-live 13/13 ✅；verify-svc 14/14 ✅；server 164/164 ✅ | （本提交） |
