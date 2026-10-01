@@ -56,7 +56,7 @@ export const todoManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "workspace", resource: "todo" },
-    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -124,7 +124,7 @@ export const customApiManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -148,7 +148,7 @@ export const rssManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "workspace", resource: "rss" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -172,7 +172,7 @@ export const launcherManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 120, supportsManualRefresh: true },
   },
 };
 
@@ -206,7 +206,7 @@ export const kanbanManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "workspace", resource: "kanban" },
-    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -227,7 +227,7 @@ export const opencodeManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -247,7 +247,7 @@ export const monitorManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -267,7 +267,7 @@ export const serviceOverviewManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 10, defaultRefreshSec: 60, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
 };
@@ -308,7 +308,7 @@ export const immichGalleryManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 60, defaultRefreshSec: 300, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
   },
 };
 
@@ -349,7 +349,7 @@ export const navidromeLibraryManifest: WidgetManifest = {
   // D54：播放遥控（navidrome.play/pause/next/prev/stop）已移除 —— 本组件纯只读
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 60, defaultRefreshSec: 300, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
   },
 };
 
@@ -367,7 +367,7 @@ export const portainerContainersManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 120, supportsManualRefresh: true },
   },
 };
 
@@ -385,7 +385,7 @@ export const mihomoNodesManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "http-connector" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 120, supportsManualRefresh: true },
   },
 };
 
@@ -402,7 +402,7 @@ export const mailManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "workspace", resource: "mail" },
-    refresh: { minRefreshSec: 30, defaultRefreshSec: 300, supportsManualRefresh: true },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
     detail: true,
   },
 };
