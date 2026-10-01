@@ -72,6 +72,42 @@ export function normalizeImmichGallery(
   return out;
 }
 
+/** Q72/D57：**相册清单**（配置表单「只看某相册」的选项源，随 sourceId 变化）。
+ *  形状直接是 select 选项 `{items:[{value,label}]}`，前端零转换。 */
+export const immichAlbumsConnector: WidgetConnector = {
+  type: "immich-albums",
+  async fetch(query: WidgetDataQuery, ctx: FetchContext): Promise<{ items: Array<{ value: string; label: string }> }> {
+    const sourceId = typeof query.config.sourceId === "string" ? query.config.sourceId : "";
+    if (!sourceId) throw new Error("未选择数据连接");
+    const rows = await ctx.db.select().from(dataSource).where(eq(dataSource.id, sourceId)).limit(1);
+    const row = rows[0];
+    if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
+    if (row.kind !== "immich") throw new Error(`相册清单需要 Immich 连接（当前：${row.kind}）`);
+    let rawConfig: Record<string, unknown> = {};
+    try {
+      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
+    } catch {
+      /* noop */
+    }
+    const config = await resolveSecretRefs(rawConfig, ctx);
+    const base = (str(config.url) ?? "").replace(/\/+$/, "");
+    if (!base) throw new Error("连接缺少地址");
+    const res = await outboundRequest(`${base}/api/albums`, {
+      headers: { "X-API-Key": str(config.apiKey) ?? "" },
+      timeoutMs: TIMEOUT_MS,
+      maxBytes: 2_000_000,
+      allowPrivate: true,
+    });
+    if (res.status >= 400) throw new Error(`Immich 相册接口 HTTP ${res.status}`);
+    const list = Array.isArray(JSON.parse(res.text)) ? (JSON.parse(res.text) as Array<Record<string, unknown>>) : [];
+    return {
+      items: list
+        .map((a) => ({ value: str(a.id) ?? "", label: str(a.albumName) ?? str(a.albumName) ?? "(未命名相册)" }))
+        .filter((x) => x.value),
+    };
+  },
+};
+
 export const immichGalleryConnector: WidgetConnector = {
   type: "immich-gallery",
   async fetch(query: WidgetDataQuery, ctx: FetchContext): Promise<ImmichGalleryData> {
@@ -97,6 +133,8 @@ export const immichGalleryConnector: WidgetConnector = {
     const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
 
     const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 24);
+    // Q72：只看某个相册（配置项 albumId → search/metadata 的 albumIds 过滤）
+    const albumId = str(query.config.albumId);
     const notes: string[] = [];
 
     let search: unknown;
@@ -104,7 +142,13 @@ export const immichGalleryConnector: WidgetConnector = {
       const res = await outboundRequest(`${base}/api/search/metadata`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...apiKey },
-        body: JSON.stringify({ page: 1, size: limit, sortField: "recent", sortOrder: "desc" }),
+        body: JSON.stringify({
+          page: 1,
+          size: limit,
+          sortField: "recent",
+          sortOrder: "desc",
+          ...(albumId ? { albumIds: [albumId] } : {}),
+        }),
         timeoutMs: TIMEOUT_MS,
         maxBytes: 1_000_000,
         allowPrivate: true,

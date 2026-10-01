@@ -751,7 +751,14 @@ export function useDataSourceMutations() {
 }
 
 /** 动态选项源（Q26b / D42）：ConfigForm 的 select.dynamic 取数（一次取全，按 key 查表）。 */
-export function useDynamicOptionsMap(): Record<string, Array<{ value: string; label: string }>> {
+/**
+ * 动态选项源（Q26b/D42）。`scopeSourceId`（Q72/**D57**）= 当前表单选中的「数据连接」：
+ * 相册/艺人清单随连接变化，故按 `依赖key:sourceId` 形式额外产出两个**带作用域**的选项源。
+ */
+export function useDynamicOptionsMap(
+  scopeSourceId?: string,
+  scopeDynamic?: string,
+): Record<string, Array<{ value: string; label: string }>> {
   const tags = useQuery({ queryKey: ["tags"], queryFn: () => api.listTags() });
   const todosAll = useQuery({
     queryKey: ["todos", "all", "__names__"],
@@ -768,7 +775,21 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
   const svcNavidrome = useDataSources("navidrome");
   const svcPortainer = useDataSources("portainer");
   const svcMihomo = useDataSources("mihomo");
+  // Q72/D57：依赖 sourceId 的选项源 —— `scope.dynamic` 指明要哪类清单，
+  // 换连接即换 queryKey → 自动重取；未选连接时不发请求。
+  const sid = typeof scopeSourceId === "string" ? scopeSourceId : "";
+  const scoped = useQuery({
+    queryKey: ["media-options", scopeDynamic ?? "", sid],
+    queryFn: () =>
+      api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
+        const items = (d as { items?: Array<{ value: string; label: string }> }).items;
+        return Array.isArray(items) ? items : [];
+      }),
+    enabled: Boolean(scopeDynamic && sid),
+  });
   return {
+    // Q72/D57：带作用域的选项源 —— ConfigForm 按 `${dynamic}:${depValue}` 取
+    [`${scopeDynamic ?? ""}:${sid}`]: scoped.data ?? [],
     "kanban-boards": boards.boards.map((b) => ({ value: b.id, label: b.title })),
     "todo-names": [...new Set((todosAll.data ?? []).map((t: { list: string }) => t.list))].map((n: string) => ({
       value: n,

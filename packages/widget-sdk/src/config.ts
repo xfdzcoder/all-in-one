@@ -30,6 +30,13 @@ export interface ConfigField {
    * 约定 key："kanban-boards" | "data-source:monitor" | "data-source:opencode" | "data-source:http"。
    */
   dynamic?: string;
+  /**
+   * 动态选项的**依赖字段**（Q72 / **D57**）：本字段的 dynamic 选项需要以另一字段的当前值
+   * 为参数取（例：Immich「只看某相册」的相册列表要跟着「数据连接」走 —— 不同连接的相册不同）。
+   * 宿主在被依赖字段的值变化时**重解本字段的选项**，并把依赖值传给选项源。
+   * 缺省 = 不依赖任何字段（现状：全局静态选项源）。
+   */
+  dependsOn?: string;
   /** type=select 且 dynamic：允许输入新值创建（Q29b，如 ToDo 名称选已有或新建）。 */
   creatable?: boolean;
   placeholder?: string;
@@ -63,8 +70,15 @@ export function validateConfigSchema(schema: ConfigSchema): string[] {
     if (seen.has(f.key)) errors.push(`duplicate field key: ${f.key}`);
     seen.add(f.key);
     if (!f.label) errors.push(`field ${f.key}: missing label`);
-    if (f.type === "select" && (!f.options || f.options.length === 0)) {
+    if (f.type === "select" && !f.dynamic && (!f.options || f.options.length === 0)) {
       errors.push(`field ${f.key}: select requires options`);
+    }
+    // Q72/D57：dependsOn 必须指向同一 schema 里已声明的字段（否则宿主无从取依赖值）
+    if (f.dependsOn && !schema.some((o) => o.key === f.dependsOn)) {
+      errors.push(`field ${f.key}: dependsOn references unknown field ${f.dependsOn}`);
+    }
+    if (f.dependsOn && f.dependsOn === f.key) {
+      errors.push(`field ${f.key}: dependsOn must reference another field`);
     }
   }
   return errors;

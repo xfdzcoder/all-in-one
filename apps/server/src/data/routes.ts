@@ -21,8 +21,8 @@ import { iframeEmbedConnector } from "../connector/iframe.ts";
 import { opencodeConnector } from "../connector/opencode.ts";
 import { monitorConnector } from "../connector/monitor.ts";
 import { serviceOverviewConnector } from "../connector/service.ts";
-import { immichGalleryConnector } from "../connector/gallery.ts";
-import { navidromeLibraryConnector } from "../connector/navidrome-library.ts";
+import { immichGalleryConnector, immichAlbumsConnector } from "../connector/gallery.ts";
+import { navidromeLibraryConnector, navidromeArtistsConnector } from "../connector/navidrome-library.ts";
 import { portainerContainersConnector, portainerLogsConnector } from "../connector/portainer-containers.ts";
 import { mihomoNodesConnector } from "../connector/mihomo-nodes.ts";
 import {
@@ -61,6 +61,9 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(serviceOverviewConnector);
   registry.register(immichGalleryConnector);
   registry.register(navidromeLibraryConnector);
+  // Q72/D57：配置表单的「只看某相册 / 某艺人」选项源（随 sourceId 变化）
+  registry.register(immichAlbumsConnector);
+  registry.register(navidromeArtistsConnector);
   registry.register(portainerContainersConnector);
   registry.register(portainerLogsConnector);
   registry.register(mihomoNodesConnector);

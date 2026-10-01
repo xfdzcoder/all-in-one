@@ -96,6 +96,48 @@ async function subsonicAuth(config: Record<string, unknown>): Promise<string> {
   return `u=${encodeURIComponent(user)}&t=${token}&s=${salt}&v=1.16.1&c=all-in-one&f=json`;
 }
 
+/** Q72/D57：**艺人清单**（配置表单「只看某艺人」的选项源，随 sourceId 变化）。
+ *  Subsonic `getArtists`（**Navidrome 0.58 无 getArtists2，实测 404**）→ `artists.artist[]` 或 `artists.index[].artist[]`。形状直接是 select 选项。 */
+export const navidromeArtistsConnector: WidgetConnector = {
+  type: "navidrome-artists",
+  async fetch(query: WidgetDataQuery, ctx: FetchContext): Promise<{ items: Array<{ value: string; label: string }> }> {
+    const sourceId = typeof query.config.sourceId === "string" ? query.config.sourceId : "";
+    if (!sourceId) throw new Error("未选择数据连接");
+    const rows = await ctx.db.select().from(dataSource).where(eq(dataSource.id, sourceId)).limit(1);
+    const row = rows[0];
+    if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
+    if (row.kind !== "navidrome") throw new Error(`艺人清单需要 Navidrome 连接（当前：${row.kind}）`);
+    let rawConfig: Record<string, unknown> = {};
+    try {
+      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
+    } catch {
+      /* noop */
+    }
+    const config = await resolveSecretRefs(rawConfig, ctx);
+    const base = (str(config.url) ?? "").replace(/\/+$/, "");
+    if (!base) throw new Error("连接缺少地址");
+    const auth = await subsonicAuth(config);
+    const res = await outboundRequest(`${base}/rest/getArtists.view?${auth}`, {
+      timeoutMs: TIMEOUT_MS,
+      maxBytes: 5_000_000,
+      allowPrivate: true,
+    });
+    if (res.status >= 400) throw new Error(`Navidrome 艺人接口 HTTP ${res.status}`);
+    const artistsObj = sr(JSON.parse(res.text)).artists as Record<string, unknown> | undefined;
+    // Subsonic 有两种形态：扁平 `artists.artist[]` 或分组 `artists.index[].artist[]`（Navidrome 两者都出现过）
+    const idx = artistsObj?.index;
+    const groups = Array.isArray(idx) ? (idx as Array<Record<string, unknown>>) : [];
+    const flat = Array.isArray(artistsObj?.artist)
+      ? (artistsObj.artist as Array<Record<string, unknown>>)
+      : groups.flatMap((g) => (Array.isArray(g.artist) ? (g.artist as Array<Record<string, unknown>>) : []));
+    return {
+      items: flat
+        .map((a) => ({ value: str(a.id) ?? "", label: str(a.name) ?? "(未知艺人)" }))
+        .filter((x) => x.value),
+    };
+  },
+};
+
 export const navidromeLibraryConnector: WidgetConnector = {
   type: "navidrome-library",
   async fetch(query: WidgetDataQuery, ctx: FetchContext): Promise<NavidromeLibraryData> {
@@ -120,11 +162,16 @@ export const navidromeLibraryConnector: WidgetConnector = {
     if (!base) throw new Error("连接缺少地址");
     const auth = await subsonicAuth(config);
     const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 24);
+    // Q72：只看某个艺人（配置项 artistId → getAlbumList2 的 type=byArtist&artist=<ID3 艺人 id>）
+    const artistId = str(query.config.artistId);
     const notes: string[] = [];
 
     let newest: unknown;
     try {
-      const res = await outboundRequest(`${base}/rest/getAlbumList2?type=newest&size=${limit}&${auth}`, {
+      const listPath = artistId
+        ? `getAlbumList2?type=byArtist&artist=${encodeURIComponent(artistId)}&size=${limit}&${auth}`
+        : `getAlbumList2?type=newest&size=${limit}&${auth}`;
+      const res = await outboundRequest(`${base}/rest/${listPath}`, {
         timeoutMs: TIMEOUT_MS,
         maxBytes: 1_000_000,
         allowPrivate: true,

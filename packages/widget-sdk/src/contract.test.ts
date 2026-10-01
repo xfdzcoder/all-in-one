@@ -67,4 +67,29 @@ describe("widget-sdk contract (FR-W1/W2)", () => {
     expect(validateConfigSchema(schema)).toEqual([]);
     expect(isSecretRef({ credentialRef: "cred_2" })).toBe(true);
   });
+
+  // Q72/D57：dependsOn —— 动态选项依赖另一字段（相册/艺人清单随「数据连接」变化）
+  it("dependsOn must reference another declared field (D57)", () => {
+    const good = [
+      { key: "sourceId", label: "数据连接", type: "select" as const, dynamic: "data-source:immich" },
+      { key: "albumId", label: "只看相册", type: "select" as const, dynamic: "immich-albums", dependsOn: "sourceId" },
+    ];
+    expect(validateConfigSchema(good)).toEqual([]);
+    // 指向未声明字段 / 指向自身 → 拒绝（宿主无从取依赖值）
+    expect(validateConfigSchema([{ key: "albumId", label: "相册", type: "select" as const, dynamic: "immich-albums", dependsOn: "nope" }])).toContain(
+      "field albumId: dependsOn references unknown field nope",
+    );
+    expect(
+      validateConfigSchema([{ key: "albumId", label: "相册", type: "select" as const, dynamic: "immich-albums", dependsOn: "albumId" }]),
+    ).toContain("field albumId: dependsOn must reference another field");
+  });
+
+  it("select may take options from `dynamic` instead of a static list (D57)", () => {
+    expect(
+      validateConfigSchema([
+        { key: "sourceId", label: "数据连接", type: "select" as const, dynamic: "data-source:navidrome" },
+        { key: "artistId", label: "只看艺人", type: "select" as const, dynamic: "navidrome-artists", dependsOn: "sourceId" },
+      ]),
+    ).toEqual([]);
+  });
 });

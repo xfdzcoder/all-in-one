@@ -285,6 +285,14 @@ export const immichGalleryManifest: WidgetManifest = {
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:immich", help: "在「数据源管理 · 数据连接」维护（Immich）" },
     { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近上传优先" },
     {
+      key: "albumId",
+      label: "只看相册",
+      type: "select",
+      dynamic: "immich-albums",
+      dependsOn: "sourceId",
+      help: "Q72（项 6）：留空 = 全部相册；选项随上方「数据连接」变化",
+    },
+    {
       key: "layout",
       label: "展示模式",
       type: "select",
@@ -316,6 +324,14 @@ export const navidromeLibraryManifest: WidgetManifest = {
   configSchema: [
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:navidrome", help: "在「数据源管理 · 数据连接」维护（Navidrome）" },
     { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近添加优先" },
+    {
+      key: "artistId",
+      label: "只看艺人",
+      type: "select",
+      dynamic: "navidrome-artists",
+      dependsOn: "sourceId",
+      help: "Q72（项 6）：留空 = 全部艺人；选项随上方「数据连接」变化",
+    },
     {
       key: "layout",
       label: "展示模式",

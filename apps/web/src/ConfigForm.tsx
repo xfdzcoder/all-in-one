@@ -42,7 +42,15 @@ export function ConfigForm({
   // ISS-23 修复：校验失败内联提示（不再浏览器 alert）
   const [formError, setFormError] = useState<string | null>(null);
   // Q26b：select.dynamic 动态选项（看板/数据连接下拉）
-  const dynamicOptions = useDynamicOptionsMap();
+  // Q72/D57：`dependsOn` —— 选项随另一字段（通常是 sourceId）变化：换连接即换选项源 key → 自动重取
+  const depField = schema.find((f) => f.dependsOn && f.dynamic);
+  const scopeSourceId = depField?.dependsOn ? String(values[depField.dependsOn] ?? "") : "";
+  const dynamicOptions = useDynamicOptionsMap(scopeSourceId, depField?.dynamic);
+  const optionsFor = (f: { key: string; dynamic?: string; dependsOn?: string; options?: Array<{ value: string; label: string }> }) => {
+    if (!f.dynamic) return f.options ?? [];
+    const key = f.dependsOn ? `${f.dynamic}:${String(values[f.dependsOn] ?? "")}` : f.dynamic;
+    return dynamicOptions[key] ?? [];
+  };
   const submit = () => {
     const errors = validateForm(schema, values);
     if (errors.length === 0) {
@@ -100,7 +108,7 @@ export function ConfigForm({
                 key={f.key}
                 label={f.label}
                 size="xs"
-                data={f.dynamic ? dynamicOptions[f.dynamic] ?? [] : []}
+                data={optionsFor(f)}
                 value={Array.isArray(v) ? (v as string[]) : []}
                 onChange={(nv) => onChange(f.key, nv)}
                 placeholder={f.placeholder}
@@ -114,7 +122,7 @@ export function ConfigForm({
                 <CreatableSelect
                   key={f.key}
                   label={f.label}
-                  options={dynamicOptions[f.dynamic] ?? []}
+                  options={optionsFor(f)}
                   value={typeof v === "string" ? v : ""}
                   onChange={(nv) => onChange(f.key, nv || undefined)}
                   placeholder={f.placeholder}
@@ -127,7 +135,7 @@ export function ConfigForm({
                 key={f.key}
                 label={f.label}
                 size="xs"
-                data={f.dynamic ? dynamicOptions[f.dynamic] ?? [] : f.options ?? []}
+                data={optionsFor(f)}
                 value={typeof v === "string" ? v : null}
                 onChange={(nv) => onChange(f.key, nv ?? undefined)}
               />
