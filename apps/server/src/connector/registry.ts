@@ -85,6 +85,30 @@ function stableStringify(v: unknown): string {
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`).join(",")}}`;
 }
 
+/** SRV-29：**小并发映射** —— 串行 `for…await` 逐张抓缩略图，上游普遍超时时单个请求
+ *  最坏可挂十几分钟。并发上限 + 总时间预算：预算耗尽后未开始的项**直接跳过**（调用方按
+ *  「未取到」处理并给出原因），不再打上游。返回与入参等长的结果数组。 */
+export async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+  opts: { budgetMs?: number } = {},
+): Promise<Array<R | null>> {
+  const out: Array<R | null> = new Array(items.length).fill(null);
+  const deadline = opts.budgetMs !== undefined ? Date.now() + opts.budgetMs : Infinity;
+  let next = 0;
+  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      if (Date.now() > deadline) return; // 预算耗尽：剩余项跳过（保持 null）
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
 /** 缓存 key：type + config 的稳定哈希（config 含 SecretRef 不含明文，安全）。 */
 export function cacheKeyOf(query: WidgetDataQuery): string {
   return createHash("sha256")

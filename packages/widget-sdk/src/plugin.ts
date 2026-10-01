@@ -48,12 +48,14 @@ export function isSafePluginEntry(entry: string): boolean {
 }
 
 export function isPluginManifest(m: WidgetManifest): m is PluginManifest {
+  if (!m || typeof m !== "object") return false; // SDK-1：null 不崩
   const p = (m as PluginManifest).plugin;
   return p !== undefined && p !== null;
 }
 
 /** 插件契约校验（供安装器 FR-W6 与单元测试复用）：常规 manifest 校验 + 插件块。 */
 export function validatePluginManifest(m: PluginManifest): string[] {
+  if (!m || typeof m !== "object") return ["manifest must be an object"]; // SDK-1：null 不崩
   const errors = validateManifest(m);
   const p = m.plugin;
   if (!p || typeof p !== "object") {

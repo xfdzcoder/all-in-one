@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { cacheKeyOf, outboundRequest } from "./registry.ts";
+import { cacheKeyOf, mapLimit, outboundRequest } from "./registry.ts";
 
 describe("cacheKeyOf（SRV-03/SEC-5：嵌套键不得丢失）", () => {
   it("distinguishes configs that differ only in nested fields", () => {
@@ -66,5 +66,37 @@ describe("outboundRequest maxBytes（SEC-2/SRV-04：边读边判）", () => {
     const r = await outboundRequest(`${base}/small`, { maxBytes: 1024, allowPrivate: true, timeoutMs: 5000 });
     expect(r.status).toBe(200);
     expect(r.text).toBe("small");
+  });
+});
+
+describe("mapLimit（SRV-29：小并发 + 总时间预算）", () => {
+  it("并发不超过上限，结果保序", async () => {
+    let running = 0;
+    let peak = 0;
+    const out = await mapLimit([1, 2, 3, 4, 5, 6], 2, async (n) => {
+      running += 1;
+      peak = Math.max(peak, running);
+      await new Promise((r) => setTimeout(r, 10));
+      running -= 1;
+      return n * 10;
+    });
+    expect(out).toEqual([10, 20, 30, 40, 50, 60]);
+    expect(peak).toBeLessThanOrEqual(2);
+  });
+
+  it("预算耗尽后不再打上游（剩余项保持 null）", async () => {
+    let calls = 0;
+    const out = await mapLimit(
+      [1, 2, 3, 4],
+      1,
+      async (n) => {
+        calls += 1;
+        await new Promise((r) => setTimeout(r, 30));
+        return n;
+      },
+      { budgetMs: 40 },
+    );
+    expect(calls).toBeLessThan(4);
+    expect(out.some((x) => x === null)).toBe(true);
   });
 });

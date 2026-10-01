@@ -52,6 +52,9 @@ export interface WidgetManifest {
 
 /** 契约校验：供单元测试与未来插件安装器（FR-W6）复用。 */
 export function validateManifest(m: WidgetManifest): string[] {
+  // SDK-1：`JSON.parse("null")` 是合法 JSON —— 入参 null/非对象时 `m.type` 直接 TypeError
+  // （插件安装 manifest.json 为 null → 未捕获异常 → 500 而非 400）
+  if (!m || typeof m !== "object") return ["manifest must be an object"];
   const errors: string[] = [];
   if (!m.type) errors.push("missing type");
   if (!m.name) errors.push(`${m.type}: missing name`);

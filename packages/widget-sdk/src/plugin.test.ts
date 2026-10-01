@@ -86,3 +86,14 @@ describe("plugin ABI contract (FR-W5③/FR-W6/FR-W7, D7)", () => {
     expect(isPluginManifest(plain)).toBe(false);
   });
 });
+
+describe("SDK-1：畸形 manifest 不崩（返回错误清单）", () => {
+  it("null/非对象入参返回错误而非 TypeError", async () => {
+    const { validateManifest } = await import("./manifest.ts");
+    const { isPluginManifest, validatePluginManifest } = await import("./plugin.ts");
+    expect(validateManifest(null as never)).toEqual(["manifest must be an object"]);
+    expect(validatePluginManifest(null as never)).toEqual(["manifest must be an object"]);
+    expect(validatePluginManifest("x" as never)).toEqual(["manifest must be an object"]);
+    expect(isPluginManifest(null as never)).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { outboundRequest, resolveSecretRefs , mapLimit } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
 
 /**
@@ -40,6 +40,10 @@ export interface ImmichGalleryData {
   /** 诚实降级说明（08 §5）。 */
   notes?: string[];
 }
+
+// SRV-29：并发上限与总时间预算（缩略图批量抓取）
+const THUMB_CONCURRENCY = 8;
+const FETCH_BUDGET_MS = 20_000;
 
 const TIMEOUT_MS = 8000;
 const THUMB_MAX_BYTES = 500_000; // 缩略图（thumb 尺寸）通常 < 50KB
@@ -199,28 +203,50 @@ export const immichGalleryConnector: WidgetConnector = {
     const reasons = new Map<string, number>();
     let failCount = 0;
     let failVideo = 0;
-    for (const a of wanted) {
-      const id = str(a.id);
-      if (!id) continue;
-      try {
-        const res = await outboundRequest(`${base}/api/assets/${id}/thumbnail?size=thumbnail`, {
-          headers: apiKey,
-          timeoutMs: TIMEOUT_MS,
-          maxBytes: THUMB_MAX_BYTES,
-          allowPrivate: true,
-        });
-        if (res.status >= 400 || res.bytes.byteLength === 0) {
-          // Q70：带出服务端真实响应体（只报 HTTP 码不利于定位，08 §5「原因」要具体）
-          const body = (res.text ?? "").slice(0, 120).replace(/\s+/g, " ").trim();
-          throw new Error(body ? `HTTP ${res.status} · ${body}` : `HTTP ${res.status}`);
+    // SRV-29：**小并发 + 总时间预算**（原先串行 for-await，上游普遍超时时单个请求可挂十几分钟）
+    type ThumbResult = { id: string; bytes?: Uint8Array; fail?: string; video?: boolean };
+    const got = await mapLimit<Record<string, unknown>, ThumbResult | null>(
+      wanted,
+      THUMB_CONCURRENCY,
+      async (a) => {
+        const id = str(a.id);
+        if (!id) return null;
+        try {
+          const res = await outboundRequest(`${base}/api/assets/${id}/thumbnail?size=thumbnail`, {
+            headers: apiKey,
+            timeoutMs: TIMEOUT_MS,
+            maxBytes: THUMB_MAX_BYTES,
+            allowPrivate: true,
+          });
+          if (res.status >= 400 || res.bytes.byteLength === 0) {
+            // Q70：带出服务端真实响应体（只报 HTTP 码不利于定位，08 §5「原因」要具体）
+            const body = (res.text ?? "").slice(0, 120).replace(/\s+/g, " ").trim();
+            throw new Error(body ? `HTTP ${res.status} · ${body}` : `HTTP ${res.status}`);
+          }
+          return { id, bytes: res.bytes, video: a.type === "VIDEO" };
+        } catch (err) {
+          return { id, fail: err instanceof Error ? err.message : "未知错误", video: a.type === "VIDEO" };
         }
-        thumbs.set(id, res.bytes);
-      } catch (err) {
-        const raw = err instanceof Error ? err.message : "未知错误";
-        failCount += 1;
-        if (a.type === "VIDEO") failVideo += 1;
-        reasons.set(raw, (reasons.get(raw) ?? 0) + 1);
+      },
+      { budgetMs: FETCH_BUDGET_MS },
+    );
+    let budgetSkip = 0;
+    for (const r of got) {
+      if (!r) {
+        budgetSkip += 1;
+        continue;
       }
+      if (r.fail !== undefined) {
+        failCount += 1;
+        if (r.video) failVideo += 1;
+        reasons.set(r.fail, (reasons.get(r.fail) ?? 0) + 1);
+      } else if (r.bytes) {
+        thumbs.set(r.id, r.bytes);
+      }
+    }
+    if (budgetSkip > 0) {
+      failCount += budgetSkip;
+      reasons.set("抓取超出时间预算（缩略图较多或上游较慢）", budgetSkip);
     }
     if (failCount > 0 && wanted.length > 0) {
       const [reason, n] = [...reasons.entries()].sort((x, y) => y[1] - x[1])[0];

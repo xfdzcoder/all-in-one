@@ -9,30 +9,46 @@
  * 而自动轮询从不带 force，因此仍然受控。
  */
 
+/** 粗略字节估算（JSON 序列化长度；缓存值都是可序列化的连接器输出）。 */
+function estimateBytes(data: unknown): number {
+  try {
+    return JSON.stringify(data)?.length ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 interface CacheEntry {
   data: unknown;
   fetchedAt: string;
   expiresAt: number;
+  /** SRV-05：字节占用（估算值），用于字节封顶与淘汰退还。 */
+  size: number;
 }
 
 export interface DataCacheOptions {
   defaultTtlSec?: number;
   minIntervalSec?: number;
   maxEntries?: number;
+  maxBytes?: number;
 }
 
 export class DataCache {
   private entries = new Map<string, CacheEntry>();
   private lastFetch = new Map<string, number>();
   private inflight = new Map<string, Promise<unknown>>();
+  private totalBytes = 0;
   private readonly defaultTtlMs: number;
   private readonly minIntervalMs: number;
   private readonly maxEntries: number;
+  /** SRV-05：**字节封顶**（条目数封顶挡不住 base64 缩略图 —— 单条数据可达数十 MB）。 */
+  private readonly maxBytes: number;
 
   constructor(opts: DataCacheOptions = {}) {
     this.defaultTtlMs = (opts.defaultTtlSec ?? 60) * 1000;
     this.minIntervalMs = (opts.minIntervalSec ?? 5) * 1000;
     this.maxEntries = opts.maxEntries ?? 200;
+    this.maxBytes = opts.maxBytes ?? 64 * 1024 * 1024;
   }
 
   /** 返回缓存值；过期或无缓存返回 null。 */
@@ -40,6 +56,7 @@ export class DataCache {
     const e = this.entries.get(key);
     if (!e) return null;
     if (Date.now() > e.expiresAt) {
+      this.totalBytes -= e.size;
       this.entries.delete(key);
       return null;
     }
@@ -64,23 +81,38 @@ export class DataCache {
   }
 
   set(key: string, data: unknown, ttlSec?: number): CacheEntry {
-    // 简单 LRU：超上限时删最旧
-    if (this.entries.size >= this.maxEntries && !this.entries.has(key)) {
+    const size = estimateBytes(data);
+    // 覆盖旧值：先退还旧字节
+    const prev = this.entries.get(key);
+    if (prev) this.totalBytes -= prev.size;
+    // 简单 LRU：超条目/字节上限时删最旧（直到装得下；单条超预算则清空后仍缓存，保证命中率）
+    while (
+      this.entries.size > 0 &&
+      (this.entries.size >= this.maxEntries || this.totalBytes + size > this.maxBytes) &&
+      !this.entries.has(key)
+    ) {
       const oldest = this.entries.keys().next().value;
-      if (oldest !== undefined) this.entries.delete(oldest);
+      if (oldest === undefined) break;
+      const evicted = this.entries.get(oldest);
+      if (evicted) this.totalBytes -= evicted.size;
+      this.entries.delete(oldest);
     }
     const entry: CacheEntry = {
       data,
       fetchedAt: new Date().toISOString(),
       expiresAt: Date.now() + (ttlSec !== undefined ? ttlSec * 1000 : this.defaultTtlMs),
+      size,
     };
     this.entries.set(key, entry);
+    this.totalBytes += size;
     this.lastFetch.set(key, Date.now());
     return entry;
   }
 
   /** 失效（SSE 广播前清缓存用）。 */
   invalidate(key: string): void {
+    const e = this.entries.get(key);
+    if (e) this.totalBytes -= e.size;
     this.entries.delete(key);
     this.lastFetch.delete(key);
   }
