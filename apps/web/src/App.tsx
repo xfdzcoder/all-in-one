@@ -216,7 +216,7 @@ function Workbench({
 
   return (
     <AppShell header={{ height: 56 }} padding="md">
-      <AppShell.Header>
+      <AppShell.Header className="wb-header">
         <Group h="100%" px="md" justify="space-between">
           <Group gap="md">
             <Group gap={6}>
@@ -369,9 +369,9 @@ function Workbench({
       <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
       <AppShell.Main
+        className="wb-main"
         style={{
           background: view === "data" ? "transparent" : active?.background ?? "transparent",
-          minHeight: "100vh",
         }}
       >
         {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />}

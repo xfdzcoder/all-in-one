@@ -149,6 +149,31 @@ try {
     await sleep(300);
     await clickBtn("完成编辑");
     await sleep(300);
+
+    // Q90（项 6）：顶栏底色 = **surface 层**，不是页面底色（原先落到 --wb-color-bg 发灰）
+    const bar = await page.evaluate(() => {
+      const probe = (v) => {
+        const d = document.createElement("div");
+        d.style.backgroundColor = `var(${v})`;
+        document.body.appendChild(d);
+        const c = getComputedStyle(d).backgroundColor;
+        d.remove();
+        return c;
+      };
+      const h = document.querySelector("header");
+      const cs = h ? getComputedStyle(h) : null;
+      return {
+        bg: cs?.backgroundColor ?? null,
+        borderBottom: cs?.borderBottomWidth ?? null,
+        surface: probe("--wb-color-surface"),
+        pageBg: probe("--wb-color-bg"),
+      };
+    });
+    ok(
+      `${label} topbar is a surface layer with divider (Q90 项 6)`,
+      bar.bg !== null && bar.bg === bar.surface && bar.bg !== bar.pageBg && bar.borderBottom !== "0px",
+      JSON.stringify(bar),
+    );
   };
 
   await runThemeChecks("DARK");
@@ -158,6 +183,24 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(1000);
   await runThemeChecks("LIGHT");
+
+  // Q90（项 9）：滚动条**不含固定的顶栏** —— 滚动容器是 AppShell.Main，不是文档视口
+  const scroll = await page.evaluate(() => {
+    const main = document.querySelector(".wb-main");
+    const cs = main ? getComputedStyle(main) : null;
+    return {
+      bodyOverflow: getComputedStyle(document.body).overflow,
+      mainScrolls: cs?.overflowY === "auto" || cs?.overflowY === "scroll",
+      mainHeight: cs?.height ?? null,
+      // 文档本身不该再滚（否则滚动条会贯穿含顶栏的整个窗口）
+      docScrolls: document.documentElement.scrollHeight > document.documentElement.clientHeight,
+    };
+  });
+  ok(
+    "Q90 scrollbar excludes the fixed topbar (项 9)",
+    scroll.bodyOverflow === "hidden" && scroll.mainScrolls && scroll.docScrolls === false,
+    JSON.stringify(scroll),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

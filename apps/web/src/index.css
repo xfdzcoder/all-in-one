@@ -24,6 +24,23 @@ body {
 }
 
 /* ── D52 批1 细节基座：滚动条 / 焦点环 / 选中色 ─────────────── */
+/* Q90（项 9）：滚动条不应包含**固定的顶栏**。
+   此前滚动发生在文档视口（body 无 height/overflow 约束）→ 滚动条贯穿整个窗口，
+   含与顶栏平齐的那 56px。改为 `AppShell.Main` 自己滚：顶栏 fixed 在上、主区独立滚动，
+   滚动条自然从顶栏下沿开始。 */
+body {
+  overflow: hidden;
+}
+/* 双类名保特异度：Mantine 的 `.m_*` 同为 0,1,0 且带 min-height:100dvh（会撑破滚动容器） */
+.wb-main.wb-main {
+  height: 100dvh;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 滚动条贴着内容区边缘，不被顶栏遮挡 */
+  scrollbar-gutter: stable;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--wb-color-border-strong) transparent;
