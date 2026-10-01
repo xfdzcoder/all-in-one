@@ -118,11 +118,11 @@
   - [x] Q39a · 连接 + 概览展示（**D46**）：四类数据连接 + ServiceOverview 适配器 + 「服务概览」组件 + 品牌图标**✅（`ca3bdfa`）**
   - [x] Q39b · 文档收口（01 §2.7 FR-X1~X3 + 组件篇 + 全量回归）**✅（`1bf3c99`）**
 
-- [ ] Q40 · 用户反馈⑫·质量机制（**本次重点**，用户批评"指标是 demo 级、没从用户角度考虑"；用户拍板"三层全要 + 结构化卡片含迷你图表 + 允许联网调研 + 真机验证"）（**D47**）
-  - [x] Q40a · 同类产品对照调研（Immich/Navidrome/Portainer/Mihomo 官方 UI + Homarr/Homepage）+ 用户生产实例真机 API 探测 → [research/00-service-metrics.md](research/00-service-metrics.md)「用户期望指标清单」**✅ 2026-10-01**
-  - [ ] Q40b · 指标设计规范 `docs/feature-plan/08-widget-quality.md`（用户问题→对照→指标→API→降级规则→真机验证纪律）
-  - [ ] Q40c · AGENTS.md「完成定义 DoD」硬门禁 + loop-prompt 第 7 步引用
-  - [ ] Q40d · 项目 skill `.opencode/skills/service-integration/`（接入新服务全流程）
+- [x] Q40 · 用户反馈⑫·质量机制（**本次重点**，用户批评"指标是 demo 级、没从用户角度考虑"；用户拍板"三层全要 + 结构化卡片含迷你图表 + 允许联网调研 + 真机验证"）（**D47**）**✅ 2026-10-01**
+  - [x] Q40a · 同类产品对照调研（Immich/Navidrome/Portainer/Mihomo 官方 UI + Homarr/Homepage）+ 用户生产实例真机 API 探测 → [research/00-service-metrics.md](research/00-service-metrics.md)「用户期望指标清单」**✅ 2026-10-01（`d4bbfaa`）**
+  - [x] Q40b · 指标设计规范 `docs/feature-plan/08-widget-quality.md`（用户问题→对照→指标→API→降级规则→真机验证纪律）**✅ 2026-10-01（`c088b50`）**
+  - [x] Q40c · AGENTS.md「完成定义 DoD」硬门禁 + loop-prompt 第 7 步引用（D47/D48 落盘 + FR-X4）**✅ 2026-10-01（`b4b387d`）**
+  - [x] Q40d · 项目 skill `.opencode/skills/service-integration/`（接入新服务全流程）**✅ 2026-10-01**
 - [ ] Q41 · 编辑态 overlay 统一收口：卡片右上角「刷新」等叠加层编辑态隐藏（Q34 同族，全卡片排查非只补一处）
 - [ ] Q42 · OpenCode 组件配置只选已配置数据源（Q36 同族：configSchema 收敛 sourceId，旧内联兼容）
 - [ ] Q43 · 缺陷：拖动卡片偶发消失（只剩右下角缩放手柄）——复现脚本 → 定位（拖动中 React 重渲染 vs gridstack 状态）→ 修复
@@ -231,4 +231,5 @@
 | 77 | 2026-10-01 | **Q39b 文档收口 + 全量回归（用户反馈⑪全部完成）**：① 01-requirements 增 **§2.7 图标体系与第三方服务概览**（FR-X1 图标库/自定义图标库、FR-X2 服务概览、FR-X3 深度组件排后）；② 06-roadmap 增「更多数据源接入（FR-E5）/图标体系」兑现注记；③ 组件篇 **service-overview.md**（配置/数据流/结构/各服务 v1 指标/交互点/行为边界）+ README 组件索引补位；④ **monitor.md Q36 同步补课**——上轮 doc replace 未命中静默失败（configSchema 表仍旧），本轮改精确锚点重写（教训再现：文档 replace 也须断言命中）；⑤ **全量回归 29 脚本 448 项** + Playwright 5/5 + Vitest（server 162 + sdk 21）+ typecheck 全绿 | 29 脚本 448 项 ✅（含 verify-icons/svc）；Playwright 5/5 ✅；Vitest 183 ✅；typecheck ✅ | `1bf3c99` |
 | 78 | 2026-10-01 | **第 78 轮：队列收口 + 自主循环暂停**：Q30–Q39（用户反馈⑪：数据源管理布局/Glances 详情空白、编辑态可见禁交互/配置下拉/未读徽标/列宽/监控选择化/监控样式、图标库+自定义图标库、五服务接入）**全部完成**。可自主推进源已尽 —— 按第 27 轮先例写 `.opencode/opencode-loop/STOP` 暂停调度（删除该文件或 `/loop-resume` 恢复） | 本轮 docs-only（状态收口） | `944dccb`、`3a111f5` |
 | 79 | 2026-10-01 | **第 79 轮：队列状态修复（账本维护）**：读状态发现 Q30–Q39 队列行仍为 `[ ]` —— 各完成轮的勾选 replace 用两空格缩进而文件是顶格 `- [ ]`，**静默 no-op**（与 Q29e hooks 守卫、monitor.md 同类教训，本批第三次）。按 commit 记录补齐勾选与 Q38/Q39 子项行，并在队列头部写入维护约定（replace 必须断言命中）。STOP 状态维持（队列已清空，等新指令） | docs-only（零代码变更） | `56a3556` |
-| 80 | 2026-10-01 | **用户反馈⑫入队 Q40–Q48 + Q40a 对照调研/真机探测**：① 用户批评四服务指标 demo 级（Immich/Navidrome"未提供计数指标"、Portainer/Mihomo 指标过简），拍板"三层自我约束（规范+门禁+skill）/ 结构化卡片含迷你图表 / 允许联网调研 / 真机验证"，顺序 = 机制→小 bug（刷新按钮 overlay、OpenCode 选源、拖动卡片消失）→契约演进→四服务指标重做；② Q40a：真机探测用户生产实例（Immich v3.2.2 / Navidrome 0.58 / Portainer 2.27.6 / Mihomo meta v1.19.31）+ Homarr/Homepage 对照 → `research/00-service-metrics.md`。**根因实锤**：Immich 正确路由是 `/api/server/statistics`（旧码调 `/api/statistics` 全 404 → 谎称"服务未提供"）；Navidrome 无 getStats（改 getScanStatus+getArtists 聚合）；mihomo `/memory`、`/traffic` 经用户反代不可用（改 `/connections` 差分测速）。真机凭证落 `.opencode/.env.verify`（`.env.*` 已 gitignore，不入库） | 真机探测 20+ 接口实测 ✅；调研文档落盘 ✅ | （本提交） |
+| 80 | 2026-10-01 | **用户反馈⑫入队 Q40–Q48 + Q40a 对照调研/真机探测**：① 用户批评四服务指标 demo 级（Immich/Navidrome"未提供计数指标"、Portainer/Mihomo 指标过简），拍板"三层自我约束（规范+门禁+skill）/ 结构化卡片含迷你图表 / 允许联网调研 / 真机验证"，顺序 = 机制→小 bug（刷新按钮 overlay、OpenCode 选源、拖动卡片消失）→契约演进→四服务指标重做；② Q40a：真机探测用户生产实例（Immich v3.2.2 / Navidrome 0.58 / Portainer 2.27.6 / Mihomo meta v1.19.31）+ Homarr/Homepage 对照 → `research/00-service-metrics.md`。**根因实锤**：Immich 正确路由是 `/api/server/statistics`（旧码调 `/api/statistics` 全 404 → 谎称"服务未提供"）；Navidrome 无 getStats（改 getScanStatus+getArtists 聚合）；mihomo `/memory`、`/traffic` 经用户反代不可用（改 `/connections` 差分测速）。真机凭证落 `.opencode/.env.verify`（`.env.*` 已 gitignore，不入库） | 真机探测 20+ 接口实测 ✅；调研文档落盘 ✅ | `d4bbfaa` |
+| 81 | 2026-10-01 | **Q40b–Q40d 质量机制三件套**：① `08-widget-quality.md` 推导顺序（用户问题→对照→指标映射四列→API 落实→真机验证）+ 展示形态（D48 分层）+ DoD 清单 + 反模式台账；② AGENTS.md「组件/接入质量门禁（D47）」硬条款 + loop-prompt 第 7 步挂 DoD 自检；**D47/D48** 入 02-decisions、**FR-X4** 入 01；③ 项目 skill `.opencode/skills/service-integration/SKILL.md`（流程执行版，含真机探测方法与历史教训表）。**Q40 全部完成** | docs-only；门禁条款与 skill 交叉引用一致 ✅ | `c088b50`、`b4b387d`、（本提交） |
