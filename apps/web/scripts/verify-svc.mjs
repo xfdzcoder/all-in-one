@@ -485,6 +485,20 @@ try {
   });
   ok("SVC gallery shows official brand icons (Q39)", galleryIcons.total >= 7 && galleryIcons.iconed >= 6, JSON.stringify(galleryIcons));
 
+  // Q93（项 5）：计数必须按**全量**统计。原来复用「按选中类型过滤」的查询，
+  // 首进 tab 所有类型都是「0 个连接」；进详情页才临时对上，切走又没了。
+  const dsCounts = await page.evaluate(() =>
+    [...document.querySelectorAll(".wb-source-card, [class*=source]")]
+      .map((c) => (c.textContent || "").trim())
+      .filter((t) => /\d+\s*个连接/.test(t))
+      .map((t) => Number((/(\d+)\s*个连接/.exec(t) || [])[1])),
+  );
+  ok(
+    "Q93 数据源计数首进即正确（不随选中类型过滤而归零）(项 5)",
+    dsCounts.length > 0 && dsCounts.some((n) => n > 0),
+    JSON.stringify({ counts: dsCounts }),
+  );
+
   // 回到工作台（上一步切到了「数据源管理」全页视图，工作台组件不在 DOM）
   await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("返回工作台"))?.click());
   await sleep(600);

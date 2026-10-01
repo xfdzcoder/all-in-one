@@ -102,6 +102,10 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const dsMut = useDataSourceMutations();
   const [dsKind, setDsKind] = useState<string>("monitor");
   const dsRows = useDataSources(dsKind);
+  // Q93（项 5）：计数要用**全量**，不能跟着选中类型过滤 —— 否则其它类型的计数恒为 0。
+  // 原来复用 `dsRows`（已按 dsKind 过滤），首进 tab 全是「0 个连接」；进详情页会改 dsKind
+  // 才临时对上，再切走就又没了。计数与列表**解耦**：列表按选中类型过滤，计数按全量统计。
+  const allDsRows = useDataSources();
   const [dsEditing, setDsEditing] = useState<string | null>(null);
   const [dsName, setDsName] = useState("");
   const [dsConfig, setDsConfig] = useState<Record<string, string>>({});
@@ -669,7 +673,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
             {dsView === "gallery" ? (
               <div className="wb-source-grid">
                 {DS_KINDS.map((k) => {
-                  const count = (dsRows.data ?? []).filter((r: DataSourceRow) => r.kind === k.value).length;
+                  const count = (allDsRows.data ?? []).filter((r: DataSourceRow) => r.kind === k.value).length;
                   return (
                     <button
                       key={k.value}
