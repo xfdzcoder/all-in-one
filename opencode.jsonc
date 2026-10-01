@@ -33,7 +33,11 @@
     { "action": "shell", "resource": "rm *", "effect": "ask" },
     { "action": "shell", "resource": "npx *", "effect": "ask" },
     { "action": "shell", "resource": "curl *", "effect": "ask" },
+    // D53：提交即推送 —— 仅放行精确的 `git push origin main`（门禁全绿由 loop 协议约束）。
+    // 规则后匹配优先：deny 兜底在前，allow 在后仅覆盖这一条命令；
+    // `git push --force origin main` / 其它分支 / tag 仍命中 deny。
     { "action": "shell", "resource": "git push *", "effect": "deny" },
+    { "action": "shell", "resource": "git push origin main", "effect": "allow" },
     { "action": "shell", "resource": "sudo *", "effect": "deny" }
   ]
 }

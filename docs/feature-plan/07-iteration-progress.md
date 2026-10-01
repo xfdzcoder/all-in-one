@@ -6,9 +6,9 @@
 
 | 项 | 值 |
 |---|---|
-| 模式 | 自主迭代 loop（D22） |
-| 循环状态 | **暂停**（队列已清空 —— Q40–Q65 + 写操作 Q55–Q57 全部完成，写 STOP 待新指令；`/loop-resume` 恢复） |
-| 最近更新 | 2026-10-01（第 100 轮 · Q57 ✅ —— **D50/D51 全部落地**，队列清零） |
+| 模式 | 自主迭代 loop（D22；**D53 起 commit 后自动 `git push origin main`**） |
+| 循环状态 | **运行中**（新指令入队 Q66–Q78：Dashboard 反馈 11 项 + 图表选型；Q66 ✅ 批0 行为准则已生效） |
+| 最近更新 | 2026-10-01（第 101 轮 · Q66 ✅ —— **D53 提交即推送**落地，队列 Q67–Q78 待推进） |
 
 ## 迭代队列
 
@@ -155,6 +155,24 @@
 - [x] Q64 · UI 现代化·批5 微交互+收尾：统一过渡/微动画/数字滚动 + design-audit 全站走查前后对照**✅ 2026-10-01**——按钮/图标统一过渡与 hover/按压反馈、内容入场动效（wb-rise，reduced-motion 兜底）+ `capture-style-tour.mjs` 走查管线 6 张关键表面（登录/深色/编辑态/弹窗/选择器/浅色）；verify-dark 6/6
 - [x] Q65 · UI 现代化·按钮 icon 化（用户要求"文字按钮尽量用 icon 替换"）**✅ 2026-10-01**——@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**——verify 文本匹配零改动兼容）；刷新/详情/配置/移除/播放遥控×5 全 icon 化（17+7 处）；**AA 修**：浅色徽标语义色桥接（`--mantine-color-*-light-color`，实测 3.81/3.16）+ danger 令牌提亮（暗色 4.28→≥4.5）+ `wb-text--danger` 语义类；双主题 6/6 AA、电池 9 套 255 项、真机 24/24
 
+### 新一轮队列（2026-10-01 新指令：Dashboard 反馈 11 项 + 图表选型）
+
+> **用户已拍板**：① 图表引擎 = **Apache ECharts**（按需注册）；② WS 数据源 **v1 就做**（服务端 WS 客户端 + SSE 推送）；③ 邮件卡头显示**账号名 `name`**；④ 媒体墙筛选**写在组件配置里**；⑤「出口选择」问题 = 卡片小时**展示不全**（→ 最小高度 + 单行省略 + 字号自适应）。真机凭证已落 `.opencode/.env.verify`（Immich / Portainer / Mihomo / Navidrome，用后轮换）。
+
+- [x] Q66 · **批0 行为准则：提交即推送（D53）**——显式解除 D22 的 `git push` 硬禁令；约束：门禁全绿才推 / 失败不阻塞记待办 / 仅 `git push origin main`（force、其它分支、tag 仍拒）；AGENTS.md + loop-prompt.md + opencode.jsonc + .gitignore（补 `apps/server/data*.zip`）四处同步**✅ 2026-10-01**
+- [ ] Q67 · **批A 移除写操作 + 全局去灰**：删 Navidrome 播放遥控 / Mihomo 策略组切换（前后端 + 路由测试 + verify 用例，**D54** 部分取代 D51 §1/§3；Portainer 重启不动）；`styles-bridge` 把 Mantine `dark-*`/`gray-*` 色阶整体映射到 `--wb-*` tinted slate（根治 Card/Input/Checkbox/Menu/Popover/Table/Progress 等 40+ 组件的 `#2e2e2e` 中性灰）+ 邮件行补 `wb-card` 语义类；**verify-dark AA 必跑**
+- [ ] Q68 · **批B 邮件卡头 + 头部 icon 化**：邮件卡左上角显示账号名（`name`，`，` 连接、单行省略号），删「管理邮箱」按钮（空态文案改指「数据源管理 · 邮箱」）；头部「编辑页面/数据源管理/插件管理/退出登录」→ `IconAction`（D52/Q65 既定方向）；核对 verify-mail/gmail/m1/j3 选择器（sr-only 文本保证 textContent 兼容）
+- [ ] Q69 · **批C 指标重排与字号自适应**（**D47 门禁**）：mihomo 概览卡「累计流量」拆下行/上行两块 + 与「活动连接」合成一行三个；删「策略组选择」清单、保留「节点延迟」；出口选择块最小高度 + 单行省略；`照片/曲目` 等指标字号随卡片缩放（容器查询 + clamp，上限 32px）；内存降级改走 `diagnostics` → `console.error`（不进 UI）
+- [ ] Q70 · **批D 媒体墙缩略图修复**（**D47 + 真机**）：Navidrome `getCoverArt&size=600` + `COVER_MAX_BYTES` 提到 1MB + 过大时 `size=256` 重试；Immich `size=thumbnail` 失败回落 `size=preview` + note 带响应体摘要（08 §5 原因+怎么修）+ 失败项渲染占位不丢格 + note 聚合成一条
+- [ ] Q71 · **批E1 媒体墙填满与模式**：列 `auto-fill minmax(minCell,1fr)` + 行 `minmax(minCell,1fr)` 去 `aspect-ratio`（无上限放大 / 低于最小不压缩 / 超出滚动），`minCell` 可配；`layout: grid|random` + `randomIntervalSec`（随机整卡一图 + 定时随机换 + 交叉淡入，reduced-motion 退化）
+- [ ] Q72 · **批E2 媒体墙配置筛选**（**D47** + **D57**）：Immich 按相册 / Navidrome 按艺人，**写在组件配置**；`ConfigForm` 动态选项按 `sourceId` 联动（widget-sdk `ConfigField.dependsOn` + 契约测试）；新增只读端点列相册（`GET /api/albums`）/ 艺人（`getArtists2`）
+- [ ] Q73 · **批F 预览升级**：Immich 铺开模式预览加左右切换（圆形图标钮 + `←/→` 键盘 + 循环）；Immich/Navidrome 预览改**无边框遮罩层**（`MediaLightbox` 共享组件，尺寸明显放大）
+- [ ] Q74 · **批G 监控液态填充**：CPU/内存/负载卡背景动态液面（CSS 波动 + `--wb-fill` 数据绑变量，沿用 `--wb-placeholder-bg` 先例，D39 不写死内联样式）；负载按 `load1/cores` 归一；reduced-motion 静态退化；**verify-dark AA 必跑**
+- [ ] Q75 · **批H1 图表引擎接入**（**D55**）：Apache ECharts 按需注册（`echarts/core`）+ 自写 `useEcharts` hook（dispose/resize/option diff，不引 `echarts-for-react`）+ 主题桥（`--wb-*` → echarts theme，深浅双主题）
+- [ ] Q76 · **批H2 自定义图表组件 v1**（**D47** + **D57**）：配置 = `chartType` + `xField/yFields/path/unit/stack/smooth/…` → 编译成 ECharts option（配置即 spec，非预设指标）；HTTP 数据源复用 `httpConnector`（零服务端改动）
+- [ ] Q77 · **批H3 WS 数据源**（**D56**）：服务端 WS 客户端连用户源 + 经现有 `/api/events` SSE 推送（前端仍只有 HTTP+SSE，不动 04-tech-stack 前端传输层决策）；SSRF/凭证解析沿用 `outboundRequest` 基线 + 连接生命周期管理
+- [ ] Q78 · **批H4** WS 接入图表组件 + 全量回归收口
+
 ## 历轮记录
 
 | # | 日期 | 内容 | 验证 | commit |
@@ -277,3 +295,4 @@
 | 98 | 2026-10-01 | **Q65 按钮 icon 化（用户点名）**：@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**，verify 文本匹配零改动兼容——避免 30 个脚本选择器迁移）；刷新/详情/配置/移除/遥控×5 icon 化（24 处）。**AA 修三则**：浅色徽标语义色 3.81/3.16 不达 AA → 桥接 `--mantine-color-*-light-color`（!important 压 Mantine 运行时）；暗色 danger 令牌 4.28 → 提亮 ≥4.5；`c="red"` 文字走 `wb-text--danger` 语义类。**审计漏检教训**：Q63 时页面无徽标/异常清单组件 → LIGHT 假绿，组件覆盖面进 AA 快检才暴露 | 双主题 verify-dark 6/6 ✅；电池 9 套 255 项 ✅；verify-live 24/24 ✅；typecheck ✅ | `f91bd5e` |
 | 99 | 2026-10-01 | **Q56 Portainer 容器重启（FR-X3f 写操作 D51）**：`POST /api/portainer/restart` —— **仅 restart**、白名单按容器名称、缺省空=禁止；**白名单落连接配置 `restartAllow`**（相对 D51"组件配置"的实现细化：服务端可信执行，组件只展示与确认——记为实现口径）；确认弹窗图标触发（ConfirmAction 扩 icon，D31 文案含容器名与中断提示）+ 审计 `widget.write-action`。契约测试 2（179/179）。**真机=守卫路径**（无白名单→无入口 + API 400"重启未开放"，零触碰真实容器；实际重启动作待用户指定可动容器）。**账本纠错**：状态行误写"队列已清空"（Q56/Q57 未完）已修正 | server 179/179 ✅；verify-svc 31/31 ✅；verify-live 26/26 ✅ | `6969c23` |
 | 100 | 2026-10-01 | **Q57 Mihomo 策略组切换（FR-X3g 写操作 D51）**：`POST /api/mihomo/select`（仅切换组选择 `PUT /proxies/{group}`，**服务端成员校验**（须为组 all 成员）防越界）+ 切换弹层（组行「切换」图标 → 选成员 → 确认条「当前→目标，影响全部代理流量」D51）+ 审计（from/to/组入日志）。契约测试 1（180/180）。**真机=空切换**（GLOBAL→DIRECT 同名 PUT 零实际影响）验证完整写路径 —— verify-live 29/29。**D50/D51 全部落地，队列清零** | server 180/180 ✅；verify-svc 36/36 ✅；verify-live 29/29 ✅ | （本提交） |
+| 101 | 2026-10-01 | **Q66 批0 行为准则 · 提交即推送（D53）**：用户显式要求「提交后自动推送」，主动解除 D22 的 `git push` 硬禁令。**约束三条**（用户拍板）：① 仅**门禁全绿**的批次才推（test/typecheck/lint + 本批 verify 脚本，改配色含 `verify-dark`）；② push 失败（非快进/不可达/认证）记 07 待办、**不阻塞**、本地保留、下批重试一次；③ 范围**仅 `git push origin main`**。落地 5 处：`02-decisions.md` 追加 D53（ADR 风格，D22 原文保留、禁止项被部分取代）、`AGENTS.md` 硬边界段改写、`.opencode/loop-prompt.md` 边界段（允许/禁止 + 落盘步骤）、`opencode.jsonc`（deny 兜底在前 + `git push origin main` allow 在后——规则后匹配优先，force/其它分支/tag 仍拒）、`.gitignore` 补 `apps/server/data*.zip`（防本地备份包被 `git add` 顺带推送）。**附带**：真机凭证落 `.opencode/.env.verify`（Immich/Portainer/Mihomo/Navidrome，`git check-ignore` 确认不入库）；新一轮队列 Q67–Q78 入 07（Dashboard 反馈 11 项 + 图表选型，含 5 项用户拍板结论） | `pnpm test` 180/180（34 files）✅；typecheck exit 0 ✅；lint exit 0（仅存量 warning）✅；`opencode.jsonc` JSON 解析 OK；`.opencode/.env.verify` 经 `git check-ignore` 确认忽略 ✅ | （本提交） |

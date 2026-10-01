@@ -463,3 +463,14 @@
   3. **按钮 icon 化**（用户要求）：文字按钮尽量替换为图标 + tooltip + aria-label；verify 脚本选择器同步 text→aria-label（Q65）。
   4. **契约不变（D39）**：视觉只经 `--wb-*` 令牌与 `.wb-*` 语义类表达，`./data/custom.css` 覆盖能力保持；样张管线 `capture-style-variants.mjs` 留作后续风格迭代工具。
 - **落地**：Q60–Q65 六批（基础层→组件层→内容层→浅色→微交互→icon 化），每批前后截图 + AA + 全量回归。
+
+## D53 · 提交即推送（部分取代 D22 的 `git push` 禁止项）
+
+- **日期**：2026-10-01（用户主动要求「添加一个行为准则：从现在开始，提交后自动推送」）
+- **背景**：D22 授权自主迭代 loop 时把 `git push` 列为硬禁令（`opencode.jsonc` permissions 显式 deny），理由是无人值守下避免未经人审的产出离开本机。用户此后显式要求改为「提交后自动推送」，即主动解除该硬边界。远端为自建私有库（`git.xfdzcoder.space:2222`），非公网托管，风险面低于公开仓库，但仍需质量闸与范围收窄。
+- **决策**：**每批次 commit 后自动 `git push origin main`**，附带三条约束：
+  1. **前置条件 = 该批门禁全绿**：`pnpm test` / `pnpm typecheck` / `pnpm lint` + 本批涉及的 `apps/web/scripts/verify-*.mjs`（改配色另含 `verify-dark.mjs`）。任一未过或因环境跑不了（缺真机凭证 / server 起不来）→ **只 commit 不 push**，原因记入 07 待办、继续下一项。
+  2. **push 失败不阻塞**：非快进 / 远端不可达 / 认证失败 → 记入 07 待办，本地 commit 保留，下批开跑前重试一次；不因推送失败暂停 loop。
+  3. **范围仅 `git push origin main`**：`opencode.jsonc` 放行行精确匹配该命令、且置于 deny 之后（规则后匹配优先），force-push / 其它分支 / tag 仍命中 deny。
+- **影响**：`AGENTS.md` 硬边界段、`.opencode/loop-prompt.md` 边界段、`opencode.jsonc` permissions、`.gitignore`（补 `apps/server/data*.zip`，防本地备份包被 `git add` 顺带推送）四处同步改写。**D22 原文保留**，其「禁止 `git push` 及任何远端外发」部分自本条起被取代。安全基线不变：凭证仍不入日志 / 前端明文 / 入库（`.env.*` 已 gitignore），其余远端外发仍禁。
+- **被否备选**：① 每 commit 就推（无质量闸，坏提交立即离开本机）；② push 失败即写 stop-file 暂停 loop（中断无人值守，与 D22「长期自我迭代」诉求冲突）；③ 自动 `git pull --rebase` 后重试（用户若从别处推过会产生意外历史改写）；④ 保持手动推送（不满足用户诉求）。

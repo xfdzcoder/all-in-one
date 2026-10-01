@@ -14,7 +14,8 @@
 
 - 迭代阶段运行自主 loop（`@bybrawe/opencode-loop`）：**豁免阶段门控的逐批确认**，每批次完成后直接 commit 并继续下一项，无需等待用户确认；授权范围与禁令见 `docs/feature-plan/02-decisions.md` **D22**。
 - 每轮协议见 `.opencode/loop-prompt.md`；状态落盘 `docs/feature-plan/07-iteration-progress.md`（队列/记录/待用户确认）。
-- **硬边界**：禁止 `git push` 与任何远端外发（`opencode.jsonc` permissions 已 deny）；需要用户拍板的产品决策记入 07「待用户确认」并跳过该项。
+- **提交即推送（D53）**：每批次 commit 后自动 `git push origin main`。**前置条件**：该批门禁全绿（`pnpm test` / `typecheck` / `lint` + 本批涉及的 `apps/web/scripts/verify-*.mjs`，改配色另含 `verify-dark.mjs`）；任一未过或因环境跑不了 → **只 commit 不 push**，原因记 07 待办、继续下一项。push 失败（非快进/远端不可达/认证失败）→ 记 07 待办、**不阻塞**、本地 commit 保留，下批开跑前重试一次。
+- **硬边界**：除上述 `git push origin main` 外，禁止任何远端外发（`opencode.jsonc` permissions 已 deny，force-push / 其它分支 / tag 仍拒）；凭证不入日志/前端明文、不入库；需要用户拍板的产品决策记入 07「待用户确认」并跳过该项。
 - 停止：会话内发「停止」指令或 `/loop-stop`、`/loop-pause`（`/loop-clear` 清除）；恢复 `/loop-resume`。
 
 ## 组件/接入质量门禁（D47，硬约束）

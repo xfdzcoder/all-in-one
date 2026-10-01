@@ -21,15 +21,15 @@
 6. **实现**：遵循 AGENTS.md「架构不变量」与 Monorepo 边界；改 `apps/server/src/db/schema.ts` 必须 `pnpm --filter @all-in-one/server exec drizzle-kit generate`（D18，勿手写 DDL）；前端改动与现有组件风格保持一致。
 7. **自测**：`pnpm test` / `pnpm typecheck` / `pnpm lint`（按改动面选择，测试必须全绿）；涉及 UI 行为用 `apps/web/scripts/verify-*.mjs` 验证（可按需新增 verify 脚本）；涉及部署做本地 Docker 构建验证。**涉及组件/接入/指标的改动，还必须按 `docs/feature-plan/08-widget-quality.md` §2 推导并勾全 §5 DoD 清单（含真机验证或显式"待真机验证"标注），自检结果写入当轮记录（D47 硬门禁）。**
 8. **落盘**：
-   - 自测全绿后**单独一条** git commit（英文 conventional commits，**不 push**）；
+   - 自测全绿后**单独一条** git commit（英文 conventional commits）；**该批门禁全绿即 `git push origin main`**（D53：门禁 = test/typecheck/lint + 本批 verify 脚本，改配色含 `verify-dark.mjs`；任一未过或跑不了 → 只 commit 不 push 并把原因记 07 待办；push 失败记 07 待办、不阻塞、本地保留，下批重试一次）；
    - 更新 07：完成项标 `[x]`，历轮记录追加「做了什么 / 分析结论 / 验证结果 / commit」；
    - 涉及需求或技术决策：更新 `01-requirements.md` 并向 `02-decisions.md` **追加**新 D# 条目（保留历史，不改写旧结论）；范围变化同步 `06-roadmap.md`。
 9. **汇报**：本轮结束输出 ≤10 行摘要：完成项、分析结论要点、验证结果、commit、下一步。
 
 ## 边界（D22 授权范围）
 
-- **允许**：实现代码、跑测试/构建、本地 `git commit`、推进队列项、按维护约定更新 01/02/06/07 文档、本地 Docker 构建与部署验证、使用任务中给出的外部服务地址联调。
-- **禁止**：`git push` 及任何远端外发；凭证入日志/前端明文（安全基线不变）；实现非目标功能；破坏性 shell 操作。
+- **允许**：实现代码、跑测试/构建、本地 `git commit` 与门禁全绿时的 `git push origin main`（**D53**）、推进队列项、按维护约定更新 01/02/06/07 文档、本地 Docker 构建与部署验证、使用任务中给出的外部服务地址联调。
+- **禁止**：除 `git push origin main`（D53，且仅门禁全绿的批次）外的任何远端外发；凭证入日志/前端明文（安全基线不变）；实现非目标功能；破坏性 shell 操作。
 - **需要用户拍板的产品决策**：记入 07「待用户确认」清单并**跳过该项**，继续下一项，不要自行拍板。
 
 ## 失败处理

@@ -24,5 +24,9 @@ ses_*.json
 apps/web/test-results/
 apps/web/playwright-report/
 
+# 运行数据备份压缩包（本地备份产物，不入库）
+apps/server/data.zip
+apps/server/data-*.zip
+
 # 运行时数据（数据库/上传图标/插件包等，随 ./data 备份，不入库）
 apps/server/data/
