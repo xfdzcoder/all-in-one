@@ -23,20 +23,11 @@ const ctrlHits = [];
 const mock = createServer((req, res) => {
   res.setHeader("Content-Type", "application/json");
   const url = req.url ?? "";
-  // navidrome 播放遥控（Q55 写操作）——记录命中供断言
-  if (url.startsWith("/rest/pause.view") || url.startsWith("/rest/next.view") || url.startsWith("/rest/previous.view") || url.startsWith("/rest/stop.view")) {
-    ctrlHits.push(url.split("?")[0]);
-    return res.end(json({ "subsonic-response": { status: "ok" } }));
-  }
   // portainer 容器重启（Q56 写操作）——记录命中供断言
+  // （D54：navidrome 播放遥控 / mihomo 策略组切换的 mock 与用例已随写操作移除）
   if (url.includes("/restart") && req.method === "POST") {
     ctrlHits.push("restart:" + url);
     return res.end(json({ message: "restarted" }));
-  }
-  // mihomo 策略组切换（Q57 写操作）——记录命中供断言
-  if (url.startsWith("/proxies/") && req.method === "PUT") {
-    ctrlHits.push("select:" + decodeURIComponent(url));
-    return res.end(json({ message: "ok" }));
   }
   // mihomo
   if (url.startsWith("/version")) return res.end(json("v1.18.8"));
@@ -267,19 +258,15 @@ try {
     return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
   });
   ok("SVC navidrome album covers render (D50)", ndGal.count >= 1 && ndGal.dataUri, JSON.stringify(ndGal));
-
-  // Q55 Navidrome 播放遥控（D51 写操作）：点「下一首」→ Subsonic next.view
+  // D54：播放遥控写操作已移除 —— 专辑墙应为纯只读（无播放/暂停等按钮）
   ok(
-    "SVC navidrome remote click (write action)",
+    "SVC navidrome is read-only (D54, no remote control)",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
-      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "下一首");
-      btn?.click();
-      return Boolean(btn);
+      const labels = [...(item?.querySelectorAll("button") ?? [])].map((b) => (b.getAttribute("aria-label") || b.textContent || "").trim());
+      return !labels.some((l) => ["播放", "暂停", "上一首", "下一首", "停止"].includes(l));
     }),
   );
-  await sleep(1500);
-  ok("SVC navidrome control hit Subsonic next.view (audited)", ctrlHits.includes("/rest/next.view"), JSON.stringify(ctrlHits));
 
   // Q52 Portainer 容器清单（D50 只读深度）：清单 + 异常高亮 + 日志尾部只读
   ok("SVC add portainer containers", await addOverview(`svc-portainer-${uniq}`, "Portainer 容器清单"));
@@ -341,41 +328,16 @@ try {
   });
   ok("SVC mihomo nodes groups/delays/providers render", mn.groups && mn.pick && mn.delay && mn.prov, JSON.stringify(mn));
 
-  // Q57 策略组切换（D51：切换前确认 当前→目标 + 服务端成员校验 + 审计）
+  // D54：策略组切换（FR-X3g 写操作）已移除 —— 节点面板应为纯只读（无「切换」入口）
   ok(
-    "SVC mihomo switch entry (D51)",
+    "SVC mihomo nodes panel is read-only (D54, no switch entry)",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
-      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "切换");
-      btn?.click();
-      return Boolean(btn);
+      const labels = [...(item?.querySelectorAll("button") ?? [])].map((b) => (b.getAttribute("aria-label") || b.textContent || "").trim());
+      return !labels.includes("切换") && !labels.some((l) => l.includes("确认切换"));
     }),
   );
-  await sleep(500);
-  ok(
-    "SVC mihomo switch pick member",
-    await page.evaluate(() => {
-      const btns = [...document.querySelectorAll(".mantine-Modal-root button")].filter((b) => {
-        const t = b.textContent.trim();
-        return t && !t.includes("确认切换") && t !== "取消";
-      });
-      btns[0]?.click();
-      return Boolean(btns[0]);
-    }),
-  );
-  await sleep(300);
-  const confirmShown = await page.evaluate(() => (document.body.textContent ?? "").includes("确认切换"));
-  ok("SVC mihomo switch confirm copy (current->target)", confirmShown);
-  ok(
-    "SVC mihomo switch confirmed",
-    await page.evaluate(() => {
-      const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认切换");
-      btn?.click();
-      return Boolean(btn);
-    }),
-  );
-  await sleep(1500);
-  ok("SVC mihomo select hit mock endpoint (audited)", ctrlHits.some((h) => String(h).startsWith("select:")), JSON.stringify(ctrlHits));
+  ok("SVC no mihomo write endpoint hit (D54)", !ctrlHits.some((h) => String(h).startsWith("select:")), JSON.stringify(ctrlHits));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));

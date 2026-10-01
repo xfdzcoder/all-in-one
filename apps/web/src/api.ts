@@ -192,13 +192,9 @@ export const api = {
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
   widgetData: (type: string, config: Record<string, unknown>, force = false) =>
     req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
-  // ── 写操作深度组件（D51：专属 REST + 服务端审计）──
-  navidromeControl: (sourceId: string, action: string) =>
-    req<{ ok: boolean }>("POST", "/api/navidrome/control", { sourceId, action }),
+  // ── 写操作深度组件（D51：专属 REST + 服务端审计；D54 起 Navidrome 遥控与 Mihomo 切换已移除，仅剩 Portainer 重启）──
   portainerRestart: (sourceId: string, containerId: string) =>
     req<{ ok: boolean; name: string }>("POST", "/api/portainer/restart", { sourceId, containerId }),
-  mihomoSelect: (sourceId: string, group: string, name: string) =>
-    req<{ ok: boolean; from: string; to: string }>("POST", "/api/mihomo/select", { sourceId, group, name }),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
   // ── 命名数据连接（D42）：monitor / opencode / http ──

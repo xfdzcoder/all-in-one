@@ -490,22 +490,6 @@ export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
   };
 }
 
-/** Navidrome 播放遥控（FR-X3e 写操作，D51）：作用当前播放会话，专属 REST + 服务端审计。 */
-export function useNavidromeControl(sourceId?: string) {
-  const qc = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (action: string) => api.navidromeControl(sourceId ?? "", action),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["navidrome-library"] }),
-  });
-  return {
-    send: (action: string) => {
-      if (sourceId) mutation.mutate(action);
-    },
-    busy: mutation.isPending,
-    error: mutation.error instanceof Error ? mutation.error.message : undefined,
-  };
-}
-
 /** Portainer 容器重启（FR-X3f 写操作，D51：仅 restart + 白名单 + 确认）。 */
 export function usePortainerRestart(sourceId?: string) {
   const qc = useQueryClient();
@@ -516,22 +500,6 @@ export function usePortainerRestart(sourceId?: string) {
   return {
     send: (containerId: string) => {
       if (sourceId) mutation.mutate(containerId);
-    },
-    busy: mutation.isPending,
-    error: mutation.error instanceof Error ? mutation.error.message : undefined,
-  };
-}
-
-/** Mihomo 策略组切换（FR-X3g 写操作，D51：切换前确认 + 审计）。 */
-export function useMihomoSelect(sourceId?: string) {
-  const qc = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (v: { group: string; name: string }) => api.mihomoSelect(sourceId ?? "", v.group, v.name),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["mihomo-nodes"] }),
-  });
-  return {
-    send: (group: string, name: string) => {
-      if (sourceId) mutation.mutate({ group, name });
     },
     busy: mutation.isPending,
     error: mutation.error instanceof Error ? mutation.error.message : undefined,

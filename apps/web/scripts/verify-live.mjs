@@ -234,22 +234,15 @@ try {
   }
   ok("LIVE navidrome album covers render", ndGal.count >= 6 && ndGal.dataUri === ndGal.count, JSON.stringify(ndGal));
 
-  // Q55 Navidrome 播放遥控（D51）：真机写操作（点「播放」= 唤醒/继续，最低干预）
+  // D54：播放遥控写操作已移除 —— 真机专辑墙应为纯只读（无播放/暂停等入口）
   ok(
-    "LIVE navidrome write action accepted",
+    "LIVE navidrome is read-only (D54, no remote control)",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
-      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "播放");
-      btn?.click();
-      return Boolean(btn);
+      const labels = [...(item?.querySelectorAll("button") ?? [])].map((b) => (b.getAttribute("aria-label") || b.textContent || "").trim());
+      return !labels.some((l) => ["播放", "暂停", "上一首", "下一首", "停止"].includes(l));
     }),
   );
-  await sleep(1500);
-  const ndCtrlErr = await page.evaluate(() => {
-    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
-    return item?.textContent.includes("控制失败") ?? false;
-  });
-  ok("LIVE navidrome write action no error surfaced", !ndCtrlErr);
 
   // Q52 Portainer 容器清单（D50）：真机清单 + 异常高亮
   await clickBtn("编辑页面");
@@ -292,36 +285,17 @@ try {
   });
   ok("LIVE mihomo nodes panel matches real instance", mnTxt.includes("策略组") && mnTxt.includes("节点（") && mnTxt.includes("订阅源"), mnTxt.slice(0, 160));
 
-  // Q57 策略组切换（D51）：真机**空切换**（选当前节点 → PUT 同名，零实际影响）验证写路径
+  // D54：策略组切换写操作已移除 —— 真机节点面板应为纯只读（无「切换」入口）
   ok(
-    "LIVE mihomo switch entry",
+    "LIVE mihomo nodes panel is read-only (D54, no switch entry)",
     await page.evaluate(() => {
       const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
-      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "切换");
-      btn?.click();
-      return Boolean(btn);
+      const labels = [...(item?.querySelectorAll("button") ?? [])].map((b) => (b.getAttribute("aria-label") || b.textContent || "").trim());
+      return !labels.includes("切换") && !labels.some((l) => l.includes("确认切换"));
     }),
   );
-  await sleep(500);
-  const pickNoop = await page.evaluate(() => {
-    const current = document.querySelector(".mantine-Modal-root b")?.textContent ?? "";
-    const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === current || b.textContent.trim() === `${current}（当前）`);
-    btn?.click();
-    return current;
-  });
-  await sleep(300);
-  ok(
-    "LIVE mihomo noop-switch confirmed (same node)",
-    await page.evaluate(() => {
-      const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认切换");
-      btn?.click();
-      return Boolean(btn);
-    }) && Boolean(pickNoop),
-    "current=" + pickNoop,
-  );
-  await sleep(1500);
-  const switchErr = await page.evaluate(() => (document.body.textContent ?? "").includes("切换失败"));
-  ok("LIVE mihomo noop-switch no error surfaced", !switchErr);
+  const switchGone = await page.evaluate(() => !(document.body.textContent ?? "").includes("确认切换"));
+  ok("LIVE mihomo switch modal gone (D54)", switchGone);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

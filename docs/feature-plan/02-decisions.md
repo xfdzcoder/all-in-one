@@ -474,3 +474,14 @@
   3. **范围仅 `git push origin main`**：`opencode.jsonc` 放行行精确匹配该命令、且置于 deny 之后（规则后匹配优先），force-push / 其它分支 / tag 仍命中 deny。
 - **影响**：`AGENTS.md` 硬边界段、`.opencode/loop-prompt.md` 边界段、`opencode.jsonc` permissions、`.gitignore`（补 `apps/server/data*.zip`，防本地备份包被 `git add` 顺带推送）四处同步改写。**D22 原文保留**，其「禁止 `git push` 及任何远端外发」部分自本条起被取代。安全基线不变：凭证仍不入日志 / 前端明文 / 入库（`.env.*` 已 gitignore），其余远端外发仍禁。
 - **被否备选**：① 每 commit 就推（无质量闸，坏提交立即离开本机）；② push 失败即写 stop-file 暂停 loop（中断无人值守，与 D22「长期自我迭代」诉求冲突）；③ 自动 `git pull --rebase` 后重试（用户若从别处推过会产生意外历史改写）；④ 保持手动推送（不满足用户诉求）。
+
+## D54 · 移除 Navidrome / Mihomo 写操作（部分取代 D51 §1/§3）
+
+- **日期**：2026-10-01（用户指令「一、Dashboard 1. 移除 navidrome、mihomo 节点面板的写入操作」）
+- **背景**：D51 为三项写操作立项（Navidrome 播放遥控 / Portainer 容器重启 / Mihomo 策略组切换）。用户此后要求**移除 Navidrome 与 Mihomo 两项写操作**，即推翻 D51 的第 1、3 项。Portainer 容器重启（第 2 项）不在本次范围，保留。移除后两个深度组件回归 D50 的"只读优先"口径。
+- **决策**：整体删除两条写路径（**无 DB 迁移** —— 审计是 `app.log` 结构化 `widget.write-action`，无审计表）：
+  1. **服务端**：删 `apps/server/src/navidrome/`、`apps/server/src/mihomo/` 两个 routes 目录（各含 `routes.ts` + `routes.test.ts`），`app.ts` 去注册；`connector/mihomo-nodes.ts` 删 `MihomoGroupItem.options`（仅切换弹层消费）。
+  2. **前端**：删 `useNavidromeControl` / `useMihomoSelect` 两个 hook 与 `api.navidromeControl` / `api.mihomoSelect`；删专辑墙遥控行、节点面板「切换」按钮与切换确认弹层；`navidromeLibraryManifest.capabilities.actions` 声明移除。
+  3. **验收**：`verify-svc.mjs` / `verify-live.mjs` 的写路径 mock 与断言移除，改为**反向断言**（"只读：无播放/暂停/切换入口"、"未命中任何写端点"），确保回归不会被静默重新引入。
+- **影响**：两个组件**不可逆地回到只读**；FR-X3 写操作范围收缩为仅 Portainer 重启。删除 3 个单测（navidrome 2 + mihomo 1），新增 4 条 UI 反向断言。`01-requirements.md` FR-X3 行改写、`06-roadmap.md` 同步。
+- **被否备选**：① 保留端点但前端隐藏按钮（服务端仍可被调用，不满足"移除写入操作"）；② 加开关按配置启用（用户未要求，属扩大需求范围）；③ 连 Portainer 重启一并移除（用户只点名两项，不擅自扩大）。

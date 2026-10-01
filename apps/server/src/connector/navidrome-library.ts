@@ -8,7 +8,7 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
  * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑 + 正在播放。
  * - 封面**服务端代取**（`getCoverArt.view` 需 Subsonic 认证参数）→ data URI（SEC3）；
  * - 列表 `getAlbumList2?type=newest` + `getNowPlaying`（实测 0.58 可用）；
- * - 只读边界（D50）：无播放控制/收藏等写操作（播放遥控待拍板，FR-X3b）。
+ * - 只读边界（D50 / **D54**）：无播放控制/收藏等写操作 —— 播放遥控（FR-X3e）已于 D54 移除，组件纯只读。
  */
 
 export interface NavidromeAlbumItem {

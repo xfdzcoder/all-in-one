@@ -26,9 +26,7 @@ import { registerIconRoutes } from "./icon/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
 import { registerMailRoutes } from "./mail/routes.ts";
-import { registerNavidromeRoutes } from "./navidrome/routes.ts";
 import { registerPortainerRoutes } from "./portainer/routes.ts";
-import { registerMihomoRoutes } from "./mihomo/routes.ts";
 import { MANTINE_BRIDGE_CSS } from "./styles-bridge.ts";
 import type { MailClientFactory } from "./mail/client.ts";
 
@@ -110,9 +108,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
   // 邮件只读聚合（Q7a）：账号管理 + 列表/正文，无写邮箱端点（D3）
   registerMailRoutes(app, { clientFactory: deps.mailClientFactory });
-  registerNavidromeRoutes(app);
+  // D54：Navidrome 播放遥控 / Mihomo 策略组切换已移除 —— 两个深度组件回归只读
   registerPortainerRoutes(app);
-  registerMihomoRoutes(app);
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;

@@ -5,9 +5,9 @@ import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
 
 /**
- * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组选择 / 节点延迟 / 订阅源详情。
+ * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组 / 节点延迟 / 订阅源详情。
  * - `GET /proxies`（组 now + 节点 alive + history 延迟）、`GET /providers/proxies`（订阅源）；
- * - 只读边界（D50）：无代理切换/重载配置（写操作待拍板，FR-X3b）。
+ * - 只读边界（D50 / **D54**）：无代理切换/重载配置 —— 策略组切换（FR-X3g）已于 D54 移除，组件纯只读。
  */
 
 export interface MihomoNodeItem {
@@ -22,8 +22,6 @@ export interface MihomoGroupItem {
   name: string;
   now?: string;
   members: number;
-  /** 可切换成员（Q57 切换弹层用）。 */
-  options: string[];
 }
 
 export interface MihomoProviderItem {
@@ -58,7 +56,7 @@ export function normalizeMihomoNodes(proxies: unknown, providers: unknown): Omit
   for (const [name, p] of Object.entries(px ?? {})) {
     const all = Array.isArray(p.all) ? (p.all as unknown[]) : undefined;
     if (all && p.now) {
-      groups.push({ name, now: str(p.now), members: all.length, options: all.map(String) });
+      groups.push({ name, now: str(p.now), members: all.length });
       continue;
     }
     const hist = Array.isArray(p.history) ? (p.history as Array<Record<string, unknown>>) : [];

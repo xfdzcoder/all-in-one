@@ -304,16 +304,10 @@ export const navidromeLibraryManifest: WidgetManifest = {
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:navidrome", help: "在「数据源管理 · 数据连接」维护（Navidrome）" },
     { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近添加优先" },
   ],
+  // D54：播放遥控（navidrome.play/pause/next/prev/stop）已移除 —— 本组件纯只读
   capabilities: {
     data: { source: "http-connector" },
     refresh: { minRefreshSec: 60, defaultRefreshSec: 300, supportsManualRefresh: true },
-    actions: [
-      { name: "navidrome.play", label: "播放" },
-      { name: "navidrome.pause", label: "暂停" },
-      { name: "navidrome.next", label: "下一首" },
-      { name: "navidrome.prev", label: "上一首" },
-      { name: "navidrome.stop", label: "停止" },
-    ],
   },
 };
 
@@ -339,7 +333,7 @@ export const portainerContainersManifest: WidgetManifest = {
 export const mihomoNodesManifest: WidgetManifest = {
   type: "mihomo-nodes",
   name: "Mihomo 节点面板",
-  description: "策略组选择 / 节点延迟 / 订阅源详情（只读）：无代理切换",
+  description: "策略组 / 节点延迟 / 订阅源详情（只读）：无代理切换",
   icon: "mihomo",
   category: "服务",
   defaultSize: { w: 6, h: 4 },

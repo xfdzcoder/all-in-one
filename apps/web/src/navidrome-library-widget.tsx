@@ -1,15 +1,16 @@
-import { IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward, IconPlayerStop, IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Group, Modal, Text } from "@mantine/core";
 
-import { useNavidromeControl, useNavidromeLibrary } from "./data-hooks";
+import { useNavidromeLibrary } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
- * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑网格 + 正在播放。
- * 封面由服务端代取为 data URI（Subsonic 认证不进前端 SEC3）；只读 —— 无播放控制（FR-X3b 待拍板）。
+ * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑 + 正在播放。
+ * 封面由服务端代取为 data URI（Subsonic 认证不进前端 SEC3）。
+ * **D54**：播放遥控（FR-X3e）已移除 —— 本组件回归纯只读，无任何写操作。
  */
 export function NavidromeLibraryWidget({
   sourceId,
@@ -21,7 +22,6 @@ export function NavidromeLibraryWidget({
   refreshSec?: number;
 }) {
   const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec);
-  const control = useNavidromeControl(sourceId);
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
@@ -47,30 +47,6 @@ export function NavidromeLibraryWidget({
       )}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
-
-      {sourceId && (
-        <div className="wb-svc-notes">
-          <Group gap={6}>
-            {(
-              [
-                ["prev", "上一首", IconPlayerSkipBack],
-                ["play", "播放", IconPlayerPlay],
-                ["pause", "暂停", IconPlayerPause],
-                ["next", "下一首", IconPlayerSkipForward],
-                ["stop", "停止", IconPlayerStop],
-              ] as const
-            ).map(([act, label, Icon]) => (
-              <IconAction key={act} label={label} disabled={control.busy} onClick={() => control.send(act)}>
-                <Icon size={14} />
-              </IconAction>
-            ))}
-          </Group>
-          <Text size="xs" c="dimmed">
-            遥控作用于服务器当前播放会话（多设备收听会互相干扰，单设备场景为宜）
-          </Text>
-          {control.error && <WbAlert tone="error" size="sm">{control.error}</WbAlert>}
-        </div>
-      )}
 
       {(data?.nowPlaying ?? []).length > 0 && (
         <div className="wb-svc-notes">
@@ -125,7 +101,7 @@ export function NavidromeLibraryWidget({
             style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }}
           />
           <Text size="xs" c="dimmed" mt="sm" ta="center">
-            只读展示 —— 播放控制属写操作（FR-X3b 待拍板）
+            只读展示 —— 播放控制属写操作，已于 D54 移除
           </Text>
         </Modal>
       )}
