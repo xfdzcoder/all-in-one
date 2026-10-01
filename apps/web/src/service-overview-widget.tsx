@@ -211,6 +211,7 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
                   key={i}
                   size="xs"
                   variant="light"
+                  className="wb-status-badge"
                   color={s.tone === "ok" ? "green" : s.tone === "error" ? "red" : s.tone === "warn" ? "orange" : "blue"}
                 >
                   {s.text}

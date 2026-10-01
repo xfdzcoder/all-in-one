@@ -8,6 +8,7 @@ export function IconAction({
   label,
   tooltip,
   onClick,
+  href,
   danger,
   disabled,
   variant = "subtle",
@@ -17,6 +18,8 @@ export function IconAction({
   label: string;
   tooltip?: string;
   onClick?: () => void;
+  /** 外链：渲染成 `<a>`（新标签 + noopener），如「在 Immich 中打开」。 */
+  href?: string;
   danger?: boolean;
   disabled?: boolean;
   /** 顶部工具栏等处用 "default" 保持与原文字按钮同观感；默认 "subtle"（卡片内动作簇）。 */
@@ -27,6 +30,9 @@ export function IconAction({
   return (
     <Tooltip label={tooltip ?? label} withinPortal>
       <ActionIcon
+        {...(href
+          ? ({ component: "a", href, target: "_blank", rel: "noopener noreferrer" } as object)
+          : {})}
         variant={variant}
         color={danger ? "red" : "gray"}
         size={size}

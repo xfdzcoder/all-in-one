@@ -551,6 +551,43 @@ try {
     }),
   );
   await sleep(400);
+  // Q84（项 1）：预览遮罩不再有「照片预览（只读）」标题；「在 Immich 中打开」是 icon 链接
+  const lbQ84 = await page.evaluate(() => {
+    const root = document.querySelector(".wb-lightbox");
+    const title = root?.querySelector(".wb-lightbox__title");
+    const link = root?.querySelector(".wb-lightbox__actions a");
+    // IconAction 会渲染 `.wb-sr-only` 无障碍文本（设计如此），断言要排除它 ——
+    // 判据是「去掉 sr-only 后无可见文字 + 有图标」，而非整段 textContent
+    let visibleText = "";
+    if (link) {
+      const clone = link.cloneNode(true);
+      clone.querySelectorAll(".wb-sr-only").forEach((n) => n.remove());
+      visibleText = (clone.textContent ?? "").trim();
+    }
+    return {
+      hasTitle: Boolean(title && (title.textContent ?? "").trim()),
+      linkHref: link?.getAttribute("href") ?? null,
+      linkTarget: link?.getAttribute("target") ?? null,
+      linkRel: link?.getAttribute("rel") ?? null,
+      visibleText,
+      hasSvg: Boolean(link?.querySelector("svg")),
+    };
+  });
+  ok(
+    "Q84 lightbox has no title text (项 1)",
+    lbQ84.hasTitle === false,
+    JSON.stringify(lbQ84),
+  );
+  ok(
+    "Q84 open-in-Immich is an icon link (项 1)",
+    Boolean(lbQ84.linkHref) &&
+      lbQ84.linkTarget === "_blank" &&
+      (lbQ84.linkRel ?? "").includes("noopener") &&
+      lbQ84.visibleText === "" &&
+      Boolean(lbQ84.hasSvg),
+    JSON.stringify(lbQ84),
+  );
+
   ok(
     "Q82 Esc closes lightbox",
     await page.evaluate(() => {
@@ -560,6 +597,24 @@ try {
   );
   await sleep(300);
   ok("Q82 lightbox closed", await page.evaluate(() => !document.querySelector(".wb-lightbox")));
+
+  // Q84（项 5）：状态徽标不加粗 —— Mantine Badge 根类默认 700，须被 .wb-status-badge 压到非粗
+  const sb = await page.evaluate(() => {
+    const el = document.querySelector(".wb-status-badge");
+    return el
+      ? { found: true, fw: getComputedStyle(el).fontWeight, text: (el.textContent ?? "").trim() }
+      : { found: false };
+  });
+  ok("Q84 status badge exists", sb.found === true, JSON.stringify(sb));
+  ok("Q84 status badge is not bold (项 5)", Number(sb.fw) < 600, JSON.stringify(sb));
+
+  // Q84（项 7）：Navidrome 概览不再展示「库就绪」
+  ok(
+    "Q84 no 库就绪 badge (项 7)",
+    await page.evaluate(
+      () => ![...document.querySelectorAll(".wb-status-badge")].some((b) => (b.textContent ?? "").includes("库就绪")),
+    ),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

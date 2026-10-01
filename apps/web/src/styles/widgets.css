@@ -886,6 +886,14 @@
   border-radius: var(--wb-radius-pill);
 }
 
+/* Q84（项 5）：状态徽标不加粗 —— Mantine Badge 根类默认 `font-weight: 700`，
+   「N 个容器异常」这类红底徽标再加粗就过了（红底本身已足够突出）。
+   特异度取 0,2,0：Mantine 的 `.mantine-Badge-root` 是 0,1,0，单写 `.wb-status-badge`
+   会与它同级、由加载顺序决定胜负（同上那条双类写法的由来）。 */
+.mantine-Badge-root.wb-status-badge {
+  font-weight: var(--wb-weight-medium);
+}
+
 /* ── 可点击数据行（Q52 容器清单等；D52 批1 补齐 —— 裸 button 会吃 UA 底色破坏 AA）── */
 .wb-admin-row {
   display: block;

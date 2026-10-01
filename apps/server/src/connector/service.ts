@@ -229,7 +229,8 @@ export function normalizeNavidrome(parts: {
   if (scan) {
     const scanning = scan.scanning === true;
     const lastScan = str(scan.lastScan);
-    out.statuses = [scanning ? { tone: "info", text: "库扫描中" } : { tone: "ok", text: "库就绪" }];
+    // Q84（项 7）：「库就绪」无信息量，用户要求去掉 —— 只在扫描进行中时才提示
+    if (scanning) out.statuses = [{ tone: "info", text: "库扫描中" }];
     if (lastScan) out.metrics.push({ label: "上次扫描", value: new Date(lastScan).toLocaleString("zh-CN") });
   }
 

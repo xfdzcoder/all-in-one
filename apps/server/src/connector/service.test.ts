@@ -83,7 +83,8 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     expect(m.metrics[0].emphasis).toBe(true);
     expect(m.lists?.find((l) => l.title === "最近添加")?.items[0].title).toBe("CHIN UP!");
     expect(m.lists?.find((l) => l.title === "正在播放")?.items[0]).toMatchObject({ title: "曲A" });
-    expect(m.statuses?.[0].text).toBe("库就绪");
+    // Q84（项 7）：「库就绪」无信息量，用户要求去掉 —— 空闲时不再下发任何状态，只在扫描中时提示
+    expect(m.statuses ?? []).toHaveLength(0);
   });
 
   it("normalizePortainer：异常容器清单优先（用户头号问题「容器都活着吗」）", () => {

@@ -62,7 +62,7 @@ export function MediaLightbox({
         {src ? <img className="wb-lightbox__img" src={src} alt="" /> : children}
         {(title || meta || footer) && (
           <figcaption className="wb-lightbox__bar">
-            <span className="wb-lightbox__title">{title}</span>
+            {title && <span className="wb-lightbox__title">{title}</span>}
             <span className="wb-lightbox__meta">{meta}</span>
             <span className="wb-lightbox__actions">{footer}</span>
           </figcaption>

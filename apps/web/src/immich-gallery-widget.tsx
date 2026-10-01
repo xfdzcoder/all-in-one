@@ -1,6 +1,6 @@
-import { IconPhotoOff, IconRefresh } from "@tabler/icons-react";
+import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Group, Text } from "@mantine/core";
+import { Badge, Group, Text } from "@mantine/core";
 
 import { useImmichGallery } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
@@ -109,12 +109,12 @@ export function ImmichGalleryWidget({
       {preview && (
         <MediaLightbox
           src={preview.thumb || undefined}
-          title="照片预览（只读）"
           meta={preview.at ? <RelativeTime value={preview.at} /> : undefined}
           footer={
-            <Button size="compact-xs" component="a" href={preview.href} target="_blank" rel="noopener noreferrer" variant="light">
-              在 Immich 中打开
-            </Button>
+            /* Q84（项 1）：不再展示「照片预览（只读）」标题；「在 Immich 中打开」改 icon 按钮 */
+            <IconAction label="在 Immich 中打开" tooltip="在 Immich 中打开原片" href={preview.href}>
+              <IconExternalLink size={16} />
+            </IconAction>
           }
           onPrev={() => step(-1)}
           onNext={() => step(1)}
