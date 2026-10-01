@@ -105,7 +105,7 @@ export function WidgetPicker({
             refresh={selected.capabilities?.refresh}
           />
           {error && (
-            <Text size="xs" c="red">
+            <Text size="xs" className="wb-text--danger">
               {error}
             </Text>
           )}

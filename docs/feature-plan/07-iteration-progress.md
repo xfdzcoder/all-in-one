@@ -7,8 +7,8 @@
 | 项 | 值 |
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
-| 循环状态 | **运行中**（2026-10-01 写操作三项拍板（D51）+ Q50 真机收尾 ✅；队列 Q55–Q57） |
-| 最近更新 | 2026-10-01（第 92 轮 · Q50 收口 + D51 写操作立项） |
+| 循环状态 | **暂停**（队列已清空 —— 用户反馈⑫+拍板项+UI 现代化（Q40–Q65）全部完成，写 STOP 待新指令；`/loop-resume` 恢复） |
+| 最近更新 | 2026-10-01（第 98 轮 · Q65 按钮 icon 化 ✅ —— UI 现代化 Q58–Q65 收官） |
 
 ## 迭代队列
 
@@ -152,8 +152,8 @@
 - [x] Q61 · UI 现代化·批2 组件层：卡片 hover 抬升/边框高光、按钮渐变+按压反馈、徽标/弹窗/表单质感**✅ 2026-10-01**——`.wb-widget` 玻璃材质（color-mix 令牌化透明度+backdrop-blur）+ hover 抬升/高亮；filled 按钮渐变+glow+按压 scale、Modal 玻璃、Badge pill（双类选择器压 Mantine 注入）；verify-dark 3/3、m1 42/42、p8 11/11（效果图 05-batch2）
 - [x] Q62 · UI 现代化·批3 内容层：数据卡片数字排版（tabular-nums/大字重对比）、骨架屏替换"加载中…"、空态插图+引导**✅ 2026-10-01**——`WbLoading` shimmer 骨架（12 组件批量替换，codemod 断言命中）+ `.wb-metric__value--display` 展示级数字 + 空态 hint 视觉（accent 左标）；verify-dark 3/3、svc 27/27、m1 42/42（效果图 06-batch3）
 - [x] Q63 · UI 现代化·批4 浅色主题：双主题变量完备 + verify-dark AA 双主题校验**✅ 2026-10-01**——头部 Sun/Moon 切换（localStorage 持久化 + `data-theme` + Mantine `forceColorScheme`）；**verify-dark 硬化**：解析 `color(srgb 0-1)` 序列化 + 玻璃 alpha 逐层合成（原假阴/假阳）→ 双主题 6/6 AA（效果图 07-batch4-light）
-- [ ] Q64 · UI 现代化·批5 微交互+收尾：统一过渡/微动画/数字滚动 + design-audit 全站走查前后对照
-- [ ] Q65 · UI 现代化·按钮 icon 化（用户要求"文字按钮尽量用 icon 替换"）：UI 图标集选型（vendored SVG 或 @tabler/icons）+ tooltip/aria-label + 全站按钮替换（刷新/详情/配置/移除/管理等）+ **verify 脚本选择器同步（text→aria-label）**
+- [x] Q64 · UI 现代化·批5 微交互+收尾：统一过渡/微动画/数字滚动 + design-audit 全站走查前后对照**✅ 2026-10-01**——按钮/图标统一过渡与 hover/按压反馈、内容入场动效（wb-rise，reduced-motion 兜底）+ `capture-style-tour.mjs` 走查管线 6 张关键表面（登录/深色/编辑态/弹窗/选择器/浅色）；verify-dark 6/6
+- [x] Q65 · UI 现代化·按钮 icon 化（用户要求"文字按钮尽量用 icon 替换"）**✅ 2026-10-01**——@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**——verify 文本匹配零改动兼容）；刷新/详情/配置/移除/播放遥控×5 全 icon 化（17+7 处）；**AA 修**：浅色徽标语义色桥接（`--mantine-color-*-light-color`，实测 3.81/3.16）+ danger 令牌提亮（暗色 4.28→≥4.5）+ `wb-text--danger` 语义类；双主题 6/6 AA、电池 9 套 255 项、真机 24/24
 
 ## 历轮记录
 
@@ -272,4 +272,6 @@
 | 93 | 2026-10-01 | **D51 决策落盘 + Q55 Navidrome 播放遥控（写操作）**：① D51 入 02（三项安全边界）+ FR-X3 写操作转【必须】+ 入队 Q55–Q57；② Q55：`POST /api/navidrome/control`（play/pause/next/prev/stop → Subsonic pause.view?paused=…/next/previous/stop.view；**Subsonic 200+error body 语义**解析）+ 专辑墙遥控行（按钮蓝 light 与只读区隔 + 单设备场景注明，免逐次确认 D51）+ 审计 `widget.write-action`（who/when/what，凭证/URL 参数不入日志）+ 契约测试 2（177/177）。verify-svc 27/27（mock 命中断言 next.view）；**verify-live 24/24**（真机点「播放」写操作零错误） | server 177/177 ✅；verify-svc 27/27 ✅；verify-live 24/24 ✅ | `4256788` |
 | 94 | 2026-10-01 | **Q58 风格样张 + Q59 视觉规范 v2（D52）**：① `capture-style-variants.mjs` 样张管线（现状/A 纯/A+玻璃/A+柔和 4 张）→ **用户选 02「A+玻璃背景」**+ 要求按钮尽量 icon 化（→Q65）；② D52 落盘 + tokens.css v2（tinted slate/玻璃与氛围/多层阴影/动效令牌/展示级字阶 + `[data-theme=light]` 变量组）+ @fontsource-variable/inter + `design-audit/03-style-v2.md`。**AA 修**：`.wb-admin-row` 裸 button 吃 UA 底色（Q52 遗留）、muted 提亮 → verify-dark 3/3 | verify-dark 3/3 ✅；typecheck ✅ | `89a819f`、`34b06b9` |
 | 95 | 2026-10-01 | **Q60–Q62 视觉批 1–3**：① 基础层：三色光晕氛围背景（tokenized）+ 定制滚动条/焦点环/选中色 + tabular-nums + Mantine 蓝阶对齐 accent；② 组件层：`.wb-widget` 玻璃材质（color-mix 令牌化 + backdrop-blur）+ hover 抬升、filled 按钮渐变/glow/按压、玻璃 Modal、pill Badge（双类选择器压 Mantine 注入，无 !important）；③ 内容层：`WbLoading` shimmer 骨架（12 组件 codemod 断言命中替换）+ `.wb-metric__value--display` 展示级数字 + 空态 hint 视觉 | verify-dark 3/3、m1 42/42、p8 11/11、svc 27/27 ✅（效果图 04/05/06） | `ab1f99a`、`2f5742e`、`e2cb8b1` |
-| 96 | 2026-10-01 | **Q63 浅色主题 + verify-dark 双主题硬化**：头部 Sun/Moon 切换（`data-theme` + localStorage + Mantine **forceColorScheme**（v9 无 colorScheme prop，typecheck 抓获））。**审计脚本硬化**：Chrome 把 color-mix 序列化为 `color(srgb 0-1)` 被按 0-255 解析致 LIGHT 1200+ 假阳；玻璃 alpha 未合成致假阴/假阳并存 —— 重写解析（双格式）+ 父链 alpha 逐层合成 + 半透明文字合成 → **双主题 6/6 AA** | verify-dark 6/6 ✅；typecheck ✅（效果图 07-light） | （本提交） |
+| 96 | 2026-10-01 | **Q63 浅色主题 + verify-dark 双主题硬化**：头部 Sun/Moon 切换（`data-theme` + localStorage + Mantine **forceColorScheme**（v9 无 colorScheme prop，typecheck 抓获））。**审计脚本硬化**：Chrome 把 color-mix 序列化为 `color(srgb 0-1)` 被按 0-255 解析致 LIGHT 1200+ 假阳；玻璃 alpha 未合成致假阴/假阳并存 —— 重写解析（双格式）+ 父链 alpha 逐层合成 + 半透明文字合成 → **双主题 6/6 AA** | verify-dark 6/6 ✅；typecheck ✅（效果图 07-light） | `1c90b38` |
+| 97 | 2026-10-01 | **Q64 视觉批 5 · 微交互 + 走查管线**：按钮/图标统一过渡、hover/按压反馈、内容入场动效（wb-rise，prefers-reduced-motion 兜底）+ `capture-style-tour.mjs` 六张关键表面走查图（登录/深色/编辑态/弹窗/选择器/浅色） | verify-dark 6/6 ✅ | `299f33d` |
+| 98 | 2026-10-01 | **Q65 按钮 icon 化（用户点名）**：@tabler/icons-react + `IconAction`（图标+tooltip+aria-label+**sr-only 文本**，verify 文本匹配零改动兼容——避免 30 个脚本选择器迁移）；刷新/详情/配置/移除/遥控×5 icon 化（24 处）。**AA 修三则**：浅色徽标语义色 3.81/3.16 不达 AA → 桥接 `--mantine-color-*-light-color`（!important 压 Mantine 运行时）；暗色 danger 令牌 4.28 → 提亮 ≥4.5；`c="red"` 文字走 `wb-text--danger` 语义类。**审计漏检教训**：Q63 时页面无徽标/异常清单组件 → LIGHT 假绿，组件覆盖面进 AA 快检才暴露 | 双主题 verify-dark 6/6 ✅；电池 9 套 255 项 ✅；verify-live 24/24 ✅；typecheck ✅ | （本提交） |

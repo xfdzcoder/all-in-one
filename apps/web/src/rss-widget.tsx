@@ -1,8 +1,9 @@
-import { Badge, Button, Group, Text } from "@mantine/core";
+import { IconRefresh } from "@tabler/icons-react";
+import { Badge, Group, Text } from "@mantine/core";
 
 import type { FeedItem } from "./api";
 import { useFeeds, useFeedMutations } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
@@ -34,9 +35,7 @@ export function RssWidget({
           信息流
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <Button size="compact-xs" variant="subtle" onClick={refresh}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
           <Badge size="xs" variant="light">
             未读 {data?.unread ?? 0}
           </Badge>

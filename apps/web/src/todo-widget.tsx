@@ -1,10 +1,11 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { Button, Checkbox, Group, List, Modal, Stack, Text, TextInput } from "@mantine/core";
 
 import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
-import { RelativeTime, WbAlert, WbLoading } from "./ui";
+import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
  *  gridstack 直接把布局 JSON 的 props 展开传入，即扁平 config 形态。 */
@@ -53,9 +54,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
           Todo · {group}
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <Button size="compact-xs" variant="subtle" onClick={refresh}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
       <Group gap="xs">

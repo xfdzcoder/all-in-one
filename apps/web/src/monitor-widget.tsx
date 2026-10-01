@@ -1,8 +1,9 @@
+import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
 import { useMonitorData, useResolvedSourceConfig } from "./data-hooks";
-import { WbAlert } from "./ui";
+import { WbAlert, IconAction } from "./ui";
 
 /**
  * 服务器监控组件（FR：服务器监控；**D36 打通第三方服务，只做连接与展示**）。
@@ -77,13 +78,9 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
             </Badge>
           )}
           {data && (
-            <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
-              详情
-            </Button>
+            <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

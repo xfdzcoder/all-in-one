@@ -1,9 +1,10 @@
-import { Badge, Button, Group, Stack, Text } from "@mantine/core";
+import { IconRefresh } from "@tabler/icons-react";
+import { Badge, Group, Stack, Text } from "@mantine/core";
 
 import { useMihomoNodes } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组选择 / 节点延迟 / 订阅源。
@@ -22,9 +23,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
           节点面板{row?.name ? ` · ${row.name}` : ""}
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

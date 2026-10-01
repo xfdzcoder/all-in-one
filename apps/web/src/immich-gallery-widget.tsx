@@ -1,10 +1,11 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 
 import { useImmichGallery } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { RelativeTime, WbAlert, WbLoading } from "./ui";
+import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Immich 照片墙（FR-X3 只读深度，**D50**）：最近照片网格。
@@ -33,9 +34,7 @@ export function ImmichGalleryWidget({
           照片墙{row?.name ? ` · ${row.name}` : ""}
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

@@ -1,7 +1,8 @@
-import { Badge, Button, Group, Text } from "@mantine/core";
+import { IconRefresh } from "@tabler/icons-react";
+import { Badge, Group, Text } from "@mantine/core";
 
 import { useAppLauncher } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * 应用入口 + 服务状态组件（FR：图标网格、HTTP/TCP 存活探测、点击跳转）。
@@ -41,9 +42,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
               {data.up}/{data.total} 在线
             </Badge>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={refresh}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
       {loading && <WbLoading />}

@@ -1,9 +1,10 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 
 import type { MailListEntry } from "./api";
 import { HtmlSandbox } from "./html-sandbox";
-import { RelativeTime, WbAlert, WbLoading } from "./ui";
+import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
 import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
 
 /**
@@ -44,9 +45,7 @@ export function MailWidget({
         >
           管理邮箱
         </Button>
-        <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-          刷新
-        </Button>
+        <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
       </Group>
 
       {(agg?.errors ?? []).map((e) => (

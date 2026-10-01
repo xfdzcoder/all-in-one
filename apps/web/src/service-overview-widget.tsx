@@ -1,3 +1,4 @@
+import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Stack, Text } from "@mantine/core";
 
@@ -6,7 +7,7 @@ import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-on
 import { useServiceOverview } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 import { RelativeTime } from "./ui";
 
 /**
@@ -106,7 +107,7 @@ function ListBlock({ list }: { list: { title: string; items: ServiceListItem[] }
         )}
         {list.items.map((it, i) => (
           <Group key={`${it.title}-${i}`} gap={6} wrap="nowrap">
-            <Text size="xs" truncate fw={it.tone === "error" ? 700 : 400} c={it.tone === "error" ? "red" : undefined}>
+            <Text size="xs" truncate fw={it.tone === "error" ? 700 : 400} className={it.tone === "error" ? "wb-text--danger" : undefined}>
               {it.title}
             </Text>
             {it.detail && (
@@ -167,13 +168,9 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
             </Badge>
           )}
           {ov && (
-            <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
-              详情
-            </Button>
+            <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

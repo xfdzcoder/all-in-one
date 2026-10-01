@@ -1,8 +1,9 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Card, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { useOpencodeData, useResolvedSourceConfig, type OpencodeSession } from "./data-hooks";
-import { RelativeTime, WbAlert, WbLoading } from "./ui";
+import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -44,9 +45,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
               探测失败
             </Badge>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

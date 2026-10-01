@@ -1,3 +1,4 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { Fragment, useContext, useRef, useState } from "react";
 import {
   Button,
@@ -15,7 +16,7 @@ import type { KanbanCardRow } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
 import { WidgetEditContext } from "./widget-edit-context";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Kanban 组件（二期 Q6b）：多项目看板、列与卡片、卡片操作（编辑/移动/归档/删除）。
@@ -92,9 +93,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           >
             管理
           </Button>
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
           {archivedCount > 0 && (
             // ISS-13 修复：计数可点 —— 打开归档列表（恢复/删除），打通归档恢复路径
             <Button size="compact-xs" variant="subtle" onClick={() => setArchiveOpen(true)}>

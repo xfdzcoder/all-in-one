@@ -1,10 +1,11 @@
+import { IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward, IconPlayerStop, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Group, Modal, Text } from "@mantine/core";
+import { Badge, Group, Modal, Text } from "@mantine/core";
 
 import { useNavidromeControl, useNavidromeLibrary } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑网格 + 正在播放。
@@ -33,9 +34,7 @@ export function NavidromeLibraryWidget({
           专辑墙{row?.name ? ` · ${row.name}` : ""}
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 
@@ -54,23 +53,16 @@ export function NavidromeLibraryWidget({
           <Group gap={6}>
             {(
               [
-                ["prev", "上一首"],
-                ["play", "播放"],
-                ["pause", "暂停"],
-                ["next", "下一首"],
-                ["stop", "停止"],
+                ["prev", "上一首", IconPlayerSkipBack],
+                ["play", "播放", IconPlayerPlay],
+                ["pause", "暂停", IconPlayerPause],
+                ["next", "下一首", IconPlayerSkipForward],
+                ["stop", "停止", IconPlayerStop],
               ] as const
-            ).map(([act, label]) => (
-              <Button
-                key={act}
-                size="compact-xs"
-                variant="light"
-                color="blue"
-                disabled={control.busy}
-                onClick={() => control.send(act)}
-              >
-                {label}
-              </Button>
+            ).map(([act, label, Icon]) => (
+              <IconAction key={act} label={label} disabled={control.busy} onClick={() => control.send(act)}>
+                <Icon size={14} />
+              </IconAction>
             ))}
           </Group>
           <Text size="xs" c="dimmed">

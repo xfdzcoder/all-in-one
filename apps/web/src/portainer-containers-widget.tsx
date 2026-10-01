@@ -1,10 +1,11 @@
+import { IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Code, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Code, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { usePortainerContainers, usePortainerLogs } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Portainer 容器清单（FR-X3 只读深度，**D50**）：状态/端口/镜像，点行看日志尾部（只读）。
@@ -33,9 +34,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
               {containers.length - abnormal.length}/{containers.length} 正常
             </Badge>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
 

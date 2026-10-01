@@ -1,9 +1,10 @@
+import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@mantine/core";
 import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
-import { WbAlert, WbLoading } from "./ui";
+import { WbAlert, WbLoading, IconAction } from "./ui";
 import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
 /**
@@ -60,13 +61,9 @@ export function CustomApiWidget(props: CustomApiConfig) {
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data !== undefined && data !== null && (
-            <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
-              详情
-            </Button>
+            <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
           )}
-          <Button size="compact-xs" variant="subtle" onClick={refresh}>
-            刷新
-          </Button>
+          <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
         </Group>
       </Group>
       {loading && <WbLoading />}

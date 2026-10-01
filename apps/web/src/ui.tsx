@@ -1,4 +1,39 @@
 import type { ReactNode } from "react";
+import { ActionIcon, Tooltip } from "@mantine/core";
+
+/** 图标动作按钮（Q65/D52「文字按钮尽量 icon 化」）：图标 + tooltip + aria-label + sr-only 文本。
+ *  sr-only 保留可访问名与 verify 文本匹配兼容（视觉上只剩图标）。 */
+export function IconAction({
+  label,
+  tooltip,
+  onClick,
+  danger,
+  disabled,
+  children,
+}: {
+  label: string;
+  tooltip?: string;
+  onClick?: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip label={tooltip ?? label} withinPortal>
+      <ActionIcon
+        variant="subtle"
+        color={danger ? "red" : "gray"}
+        size="sm"
+        aria-label={label}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {children}
+        <span className="wb-sr-only">{label}</span>
+      </ActionIcon>
+    </Tooltip>
+  );
+}
 
 /** 骨架屏（D52 批3）：替换"加载中…"文本 —— shimmer 占位条（宽度档位在 CSS 中按序定义）。 */
 export function WbLoading({ rows = 3 }: { rows?: number }) {

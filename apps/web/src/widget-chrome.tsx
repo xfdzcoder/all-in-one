@@ -1,9 +1,10 @@
 import { useContext } from "react";
 import type { ComponentType, ReactNode } from "react";
-import { Button } from "@mantine/core";
+import { IconSettings, IconTrash } from "@tabler/icons-react";
 import { useGridStack, useGridStackItem } from "gridstack/dist/react";
 
 import { WidgetEditContext } from "./widget-edit-context";
+import { IconAction } from "./ui";
 
 /**
  * 编辑态组件外框（FR-W4 生命周期"配置变更"收口）：
@@ -30,26 +31,20 @@ export function WidgetChrome({ children }: { children: ReactNode }) {
       </div>
       {editMode && (
         <div className="wb-chrome__actions">
-          <Button
-            size="compact-xs"
-            variant="light"
-            color="gray"
-            onClick={() => onConfigure(String(id))}
-          >
-            配置
-          </Button>
-          <Button
-            size="compact-xs"
-            variant="subtle"
-            color="red"
-            title="仅移除卡片；数据保留，可在「数据源管理」查看或删除"
+          <IconAction label="配置" onClick={() => onConfigure(String(id))}>
+            <IconSettings size={14} />
+          </IconAction>
+          <IconAction
+            label="移除"
+            danger
+            tooltip="移除卡片（数据保留，可在「数据源管理」查看或删除）"
             onClick={() => {
               const el = node?.el;
               if (el && grid) removeWidget(el);
             }}
           >
-            移除
-          </Button>
+            <IconTrash size={14} />
+          </IconAction>
         </div>
       )}
     </div>

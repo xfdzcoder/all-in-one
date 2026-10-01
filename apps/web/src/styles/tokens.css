@@ -38,7 +38,7 @@
   --wb-color-accent-hover: #6a92ff;
   --wb-color-success: #2f9e63;
   --wb-color-warning: #d9822b;
-  --wb-color-danger: #d64545;
+  --wb-color-danger: #e35d5d;
   --wb-color-info: #2f9fc4;
   --wb-color-accent-glow: rgba(63, 99, 232, 0.35);
 
@@ -90,6 +90,12 @@
 
 /* ── 浅色主题（Q63 接线切换；值先备齐，AA 双主题守护） ─────── */
 :root[data-theme="light"] {
+  /* AA 桥接（Q65）：Mantine 亮色变体徽标标签色实测 3.81/3.16 不达 AA —— 按语义加深（!important 压 Mantine 运行时注入） */
+  --mantine-color-green-light-color: #146c36 !important;
+  --mantine-color-red-light-color: #a01f1f !important;
+  --mantine-color-orange-light-color: #8a4b08 !important;
+  --mantine-color-blue-light-color: #23459c !important;
+  --mantine-color-dark-light-color: var(--wb-color-text) !important;
   --wb-color-bg: #f4f6fb;
   --wb-color-surface: rgba(255, 255, 255, 0.72);
   --wb-color-surface-hover: rgba(255, 255, 255, 0.86);

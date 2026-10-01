@@ -180,7 +180,7 @@ export function PluginFrame({
 
   if (loadError) {
     return (
-      <Text size="xs" c="red">
+      <Text size="xs" className="wb-text--danger">
         插件加载失败：{loadError}
       </Text>
     );

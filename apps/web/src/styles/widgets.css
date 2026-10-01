@@ -620,7 +620,25 @@
   }
 }
 
+/* Q65/AA：语义危险文字（Mantine c=\"red\" 在浅色下不达 AA —— 走令牌） */
+.wb-text--danger {
+  color: var(--wb-color-danger);
+}
+
 /* ── D52 批5 · 微交互（统一过渡/入场动效；尊重 reduced-motion） ── */
+/* Q65：sr-only 文本（图标按钮的可访问名与文本匹配兼容） */
+.wb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .mantine-Button-root,
 .mantine-ActionIcon-root {
   transition:
