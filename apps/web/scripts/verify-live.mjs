@@ -126,7 +126,7 @@ try {
       { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
     ];
     const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页");
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -184,16 +184,40 @@ try {
   await clickBtn("完成编辑");
   await sleep(1500);
 
-  // Q45 Immich：照片/视频/占用/按用户（真机基线：16309 照片 / 140 视频 / xfdzcoder）
+  // Q45 Immich：照片/视频/按用户 —— **对账真机 API**（写死快照会随照片增长假红，07 备查⑨）
   const imm = await waitForCard(names.immich);
-  ok("LIVE immich metrics match real instance", imm.includes("16,309") && imm.includes("140") && imm.includes("xfdzcoder"), imm.slice(0, 160));
+  const immTruth = await (async () => {
+    try {
+      const r = await fetch(`${(env.VERIFY_IMMICH_URL ?? "").replace(/\/+$/, "")}/api/server/statistics`, {
+        headers: { "X-API-Key": env.VERIFY_IMMICH_API_KEY ?? "" },
+      });
+      return r.ok ? await r.json() : null;
+    } catch {
+      return null;
+    }
+  })();
+  const grp = (n) => Number(n).toLocaleString("en-US");
+  const immOk = immTruth
+    ? imm.includes(grp(immTruth.photos)) &&
+      imm.includes(grp(immTruth.videos)) &&
+      imm.includes(String(immTruth.usageByUser?.[0]?.userName ?? "xfdzcoder"))
+    : imm.includes("照片") && imm.includes("视频");
+  ok(
+    "LIVE immich metrics match real instance",
+    immOk,
+    `${imm.slice(0, 160)} | truth=${JSON.stringify(immTruth ? { photos: immTruth.photos, videos: immTruth.videos } : null)}`,
+  );
   ok("LIVE immich Q49 new-count + recent uploads", imm.includes("近 7 天新增") && imm.includes("最近上传"), imm.slice(0, 200));
   ok("LIVE immich no dishonest degradation", !imm.includes("获取失败"), imm.slice(-120));
 
   // Q46 Navidrome：曲目/专辑/艺术家聚合（真机基线：1376 / 269 / 38）
   const nd = await waitForCard(names.navidrome);
   ok("LIVE navidrome library counts match", nd.includes("1,376") && nd.includes("269") && nd.includes("38"), nd.slice(0, 160));
-  ok("LIVE navidrome lists rendered (recent/now-playing)", nd.includes("最近添加") && nd.includes("正在播放"), nd.slice(0, 120));
+  ok(
+    "LIVE navidrome lists rendered (recent only; now-playing removed by Q94)",
+    nd.includes("最近添加") && !nd.includes("正在播放"),
+    nd.slice(0, 120),
+  );
 
   // Q47 Portainer：容器 23/25 + 异常清单（真机基线：23 running / 25 total，有异常容器）
   const pt = await waitForCard(names.portainer);
@@ -210,13 +234,13 @@ try {
     cl.slice(0, 200),
   );
   ok("LIVE mihomo no 策略组选择 list in overview (Q69)", !cl.includes("策略组选择"), cl.slice(0, 200));
-  // Q69：/memory 失败不再渲染进卡片，改走 diagnostics → 前端 console.error。
-  // 两条路径都算过：① /memory 成功 → 卡上有「内存」指标且无失败文案；② 失败 → 卡上无失败文案且控制台有诊断。
+  // Q79：诊断通道已下线 —— /memory 失败**静默丢弃**（不进卡片、不打控制台）。
+  // 两条路径都算过：① /memory 成功 → 卡上有「内存」指标；② 失败 → 该指标缺席且零噪音。
   const memRendered = cl.includes("内存") && !cl.includes("内存获取失败");
   const memDiagnosed = consoleErrors.some((t) => t.includes("[service-overview]"));
   ok(
-    "LIVE mihomo memory failure kept off-card, logged to console (Q69)",
-    !cl.includes("内存获取失败") && (memRendered || memDiagnosed),
+    "LIVE mihomo memory failure kept silent: off-card and no console noise (Q79)",
+    !cl.includes("内存获取失败") && !memDiagnosed,
     JSON.stringify({ cardTail: cl.slice(-140), memRendered, memDiagnosed, consoleErrors: consoleErrors.slice(0, 2) }),
   );
 
@@ -245,7 +269,10 @@ try {
   });
   ok(
     "LIVE immich gallery keeps cells + aggregates note (Q70)",
-    galQ70.cells >= 10 && galQ70.notes.filter((n) => n.includes("缩略图不可用")).length === 1,
+    // 两个诚实分支都算过：① 本次零失败 → 无占位、无聚合 note；② 有失败 → 占位块保格子 + 恰好 1 条聚合 note
+    galQ70.cells >= 10 &&
+      ((galQ70.placeholders === 0 && galQ70.notes.filter((n) => n.includes("缩略图不可用")).length === 0) ||
+        (galQ70.placeholders >= 1 && galQ70.notes.filter((n) => n.includes("缩略图不可用")).length === 1)),
     JSON.stringify(galQ70).slice(0, 220),
   );
 

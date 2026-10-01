@@ -149,13 +149,6 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
   const ov = data as unknown as ServiceOverview | undefined;
   const trend = useTrend(ov?.sample);
 
-  // Q69：`diagnostics` 只进开发者控制台、不渲染进卡片（典型：mihomo `/memory` 在反代下被
-  // 缓冲/挂起，实测 This operation was aborted）。开发期保留该通道便于排查，稳定后清理（见 07 待办）。
-  const diagKey = JSON.stringify(ov?.diagnostics ?? []);
-  useEffect(() => {
-    for (const d of JSON.parse(diagKey) as string[]) console.error("[service-overview]", d);
-  }, [diagKey]);
-
   const primary = ov?.metrics?.find((m) => m.emphasis);
   const secondary = (ov?.metrics ?? []).filter((m) => !m.emphasis);
 

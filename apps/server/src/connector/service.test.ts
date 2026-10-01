@@ -141,9 +141,9 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     // Q69：「策略组选择」清单不再进概览卡（职责归 Mihomo 节点面板组件）
     expect(m.lists?.find((l) => l.title === "策略组选择")).toBeUndefined();
     expect(m.lists?.find((l) => l.title === "节点延迟")?.items[0]).toMatchObject({ detail: "120 ms", tone: "ok" });
-    // Q69：/memory 失败**不进 notes**（不渲染进卡片），走 diagnostics → 前端 console.error
+    // Q79：/memory 失败**静默丢弃**（诊断通道已下线）—— 不进 notes、不再有 diagnostics
     expect((m.notes ?? []).some((n) => n.includes("内存"))).toBe(false);
-    expect(m.diagnostics?.[0]).toContain("内存获取失败");
+    expect("diagnostics" in m).toBe(false);
   });
 
   it("normalizeMihomo 降级：/connections 失败 → 累计流量两块不渲染 + note 带原因与怎么修", () => {
@@ -171,7 +171,7 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
       normalizeNavidrome({ ping: { "subsonic-response": { version: "1" } } }),
       normalizePortainer({ status: {}, endpoints: [] }),
       normalizeMihomo({ version: "v1", errors: [{ what: "内存", err: new Error("x") }] }),
-      // Q69：带 diagnostics 的输出同样必须过契约
+      // Q79：内存失败静默丢弃、其余降级照旧 —— 混合失败输出同样必须过契约
       normalizeMihomo({
         version: "v1",
         connections: { downloadTotal: 1, uploadTotal: 2, connections: [] },

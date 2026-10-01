@@ -382,17 +382,18 @@ export function normalizeMihomo(parts: {
   if (memInuse !== undefined) out.metrics.push({ label: "内存", value: `${(memInuse / 2 ** 20).toFixed(0)} MB` });
 
   for (const e of parts.errors ?? []) {
-    const msg = degradeNote(
-      e.what,
-      e.err,
-      "API Key 缺权限 —— 检查 external-controller 密钥（mihomo external-controller 配置）",
-      "若经反代部署，/memory 可能被缓冲或超时 —— 可直连 external-controller 或忽略该项",
+    // Q79：`/memory` 失败**静默丢弃** —— 诊断通道（diagnostics → 前端 console.error）已按
+    // 用户拍板下线（原话「后面得移除的」）。内存是次指标，语义为「仅在能取到时渲染」
+    // （research/01-mihomo-overview-metrics）：失败既不进卡片、也不再打控制台。
+    if (e.what === "内存") continue;
+    (out.notes ??= []).push(
+      degradeNote(
+        e.what,
+        e.err,
+        "API Key 缺权限 —— 检查 external-controller 密钥（mihomo external-controller 配置）",
+        "若经反代部署，接口可能被缓冲或超时 —— 可直连 external-controller 或忽略该项",
+      ),
     );
-    // Q69：`/memory` 失败**不进卡片**（用户明确不需要；经反代部署时它常被缓冲/挂起，
-    // 实测 `This operation was aborted`，卡片上纯属噪音）。改走 diagnostics → 前端 console.error。
-    // TODO(Q69 后续清理)：开发期保留该诊断通道便于排查；稳定后移除 diagnostics 字段与前端打印。
-    if (e.what === "内存") (out.diagnostics ??= []).push(msg);
-    else (out.notes ??= []).push(msg);
   }
   return out;
 }

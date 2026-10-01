@@ -62,24 +62,16 @@ describe("validateServiceOverview (D48)", () => {
     expect(errs).toContain("notes[1] 必须是非空字符串");
   });
 
-  // Q69：diagnostics —— 只进开发者控制台、不渲染进 UI 的诊断通道
-  it("accepts diagnostics and validates its shape", () => {
+  // Q79：`diagnostics` 通道已下线（用户拍板「后面得移除的」）——契约不再认识它，
+  // 但未知键一律忽略（无未知键拒绝规则），旧适配器/插件带它来也不该校验失败。
+  it("ignores the removed diagnostics key (Q79, backward compatible)", () => {
     expect(
       validateServiceOverview({
         probe: { ok: true, source: "mihomo" },
         metrics: [],
-        diagnostics: ["内存获取失败（This operation was aborted）—— 若经反代部署，/memory 可能被缓冲或超时"],
+        diagnostics: ["内存获取失败（This operation was aborted）"],
       }),
     ).toEqual([]);
-    const errs = validateServiceOverview({
-      probe: { ok: true, source: "mihomo" },
-      metrics: [],
-      diagnostics: ["ok", ""],
-    });
-    expect(errs).toContain("diagnostics[1] 必须是非空字符串");
-    expect(validateServiceOverview({ probe: { ok: true, source: "x" }, metrics: [], diagnostics: "nope" })).toContain(
-      "diagnostics 必须是数组",
-    );
   });
 
   it("emptyOverview keeps honest degradation (note = cause)", () => {

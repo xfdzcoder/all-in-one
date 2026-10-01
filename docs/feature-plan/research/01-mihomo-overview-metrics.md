@@ -56,7 +56,7 @@ D48 的 2–4 是通用建议，此处按用户显式指令执行并留痕。
 | 次指标网格 | 新增 `.wb-metric-grid--3`：`grid-template-columns: repeat(3, minmax(0,1fr))`，窄卡经 container query 降为 1 列 |
 | 出口选择（主指标） | `.wb-metric--primary` 设 `min-height` + 值 `nowrap` + 省略号 —— 保证卡片再小也不被裁切 |
 | 全组件字号 | `.wb-metric` 开 `container-type: inline-size`，值字号 `clamp(min, cqw, max)`：随卡片缩放、**上限 `--wb-text-display`（32px）**、下限保可读 |
-| 内存降级 | `ServiceOverview` 契约新增 `diagnostics?: string[]`（**只进开发者控制台，不渲染**），前端 `console.error` 输出；内存指标本身在取到时仍渲染 |
+| 内存降级 | `ServiceOverview` 契约新增 `diagnostics?: string[]`（**只进开发者控制台，不渲染**），前端 `console.error` 输出；内存指标本身在取到时仍渲染。**（Q79 已下线该通道**：用户拍板「后面得移除的」，内存失败改为静默丢弃 —— 指标语义仍是「仅在能取到时渲染」） |
 
 ## 5 · 降级文案自检（08 §5）
 
