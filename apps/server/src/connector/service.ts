@@ -1,29 +1,36 @@
 import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
+import { emptyOverview, validateServiceOverview } from "@all-in-one/widget-sdk";
+import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-one/widget-sdk";
+
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
 
 /**
- * 第三方服务概览适配器（Q39/D46 · D36 同族「只做连接与展示」）：
- * Immich / Navidrome / Portainer / Mihomo（metacubexd 为 Mihomo Web 前端，归 mihomo 类）。
- * v1 = 探活 + 版本 + 关键计数；深度组件（照片墙/播放/容器操作）属二期另立需求。
+ * 第三方服务概览适配器（Q39/D46 接入 · **Q44/D48 结构化重做**，指标按
+ * `docs/feature-plan/research/00-service-metrics.md`「用户期望指标清单」取数）。
+ *
+ * 质量门禁（D47/08-widget-quality）：
+ * - 指标从「用户问题」推导，多接口聚合 + 多版本路由回落；
+ * - 取不到的指标进 `notes`（"原因 + 怎么修"），禁止"该服务未提供"甩锅文案；
+ * - `sample` 只回本次采样点，趋势由客户端累积（D48）；速率类给累计量，前端差分。
  */
-
-export interface ServiceOverview {
-  probe: { ok: boolean; source: string; version?: string; error?: string };
-  /** 关键计数（各服务归一为标签+值，组件直接展示）。 */
-  stats: Array<{ label: string; value: string }>;
-}
 
 const TIMEOUT_MS = 5000;
 const MAX_BYTES = 1_000_000;
+const MAX_BYTES_LARGE = 5_000_000; // getArtists 等大响应
 
-async function getJson(base: string, path: string, headers: Record<string, string>): Promise<unknown> {
+async function getJson(
+  base: string,
+  path: string,
+  headers: Record<string, string>,
+  maxBytes = MAX_BYTES,
+): Promise<unknown> {
   const res = await outboundRequest(`${base}${path}`, {
     headers,
     timeoutMs: TIMEOUT_MS,
-    maxBytes: MAX_BYTES,
+    maxBytes,
     allowPrivate: true, // D36 族：服务即本机/内网
   });
   if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
@@ -38,75 +45,314 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
-/** Immich：/api/server/ping 探活，/api/server-info/version 取版本，/api/statistics 取计数。 */
-export function normalizeImmich(parts: { version?: unknown; stats?: unknown }): ServiceOverview {
-  const out: ServiceOverview = { probe: { ok: true, source: "immich" }, stats: [] };
+function gb(bytes: number): string {
+  return `${(bytes / 2 ** 30).toFixed(1)} GB`;
+}
+
+function count(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+/** 降级说明：区分"权限不足"与其它失败，给"原因 + 怎么修"（08 §5）。 */
+function degradeNote(what: string, err: unknown, permissionHint?: string): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (permissionHint && (msg.includes("403") || msg.toLowerCase().includes("permission"))) {
+    return `${what}获取失败（${msg}）—— ${permissionHint}`;
+  }
+  return `${what}获取失败（${msg}）—— 该项暂缺`;
+}
+
+/** Immich（实测 v3 路由 /api/server/*，旧版 /api/*；API Key 细粒度权限）。 */
+export function normalizeImmich(parts: {
+  version?: unknown;
+  stats?: unknown;
+  errors?: Array<{ what: string; err: unknown }>;
+}): ServiceOverview {
   const v = parts.version as Record<string, unknown> | string | null;
-  const version = typeof v === "string" ? v : str(((v ?? {}) as Record<string, unknown>).version);
+  const rawVersion = typeof v === "string" ? v : (v ?? {}) as Record<string, unknown>;
+  const version =
+    typeof rawVersion === "string"
+      ? rawVersion
+      : [num(rawVersion.major), num(rawVersion.minor), num(rawVersion.patch)].every((n) => n !== undefined)
+        ? `${rawVersion.major}.${rawVersion.minor}.${rawVersion.patch}`
+        : str(rawVersion.version);
+  const out: ServiceOverview = {
+    probe: { ok: true, source: "immich" },
+    metrics: [],
+  };
   if (version) out.probe.version = version;
+
   const st = (parts.stats ?? {}) as Record<string, unknown>;
   const photos = num(st.photos) ?? num(st.photosCount);
   const videos = num(st.videos) ?? num(st.videosCount);
-  if (photos !== undefined) out.stats.push({ label: "照片", value: String(photos) });
-  if (videos !== undefined) out.stats.push({ label: "视频", value: String(videos) });
   const usage = num(st.usage);
-  if (usage !== undefined) out.stats.push({ label: "占用", value: `${(usage / 2 ** 30).toFixed(1)} GB` });
-  return out;
-}
+  const usagePhotos = num(st.usagePhotos);
+  const usageVideos = num(st.usageVideos);
 
-/** Navidrome（Subsonic）：ping.view 探活+版本，getStats（Navidrome 扩展）取计数（缺失即省略）。 */
-export function normalizeNavidrome(parts: { ping?: unknown; stats?: unknown }): ServiceOverview {
-  const out: ServiceOverview = { probe: { ok: true, source: "navidrome" }, stats: [] };
-  const ping = ((parts.ping ?? {}) as Record<string, unknown>)["subsonic-response"] as
-    | Record<string, unknown>
-    | undefined;
-  const version = str(ping?.version);
-  if (version) out.probe.version = version;
-  const st = ((parts.stats ?? {}) as Record<string, unknown>)["subsonic-response"] as
-    | Record<string, unknown>
-    | undefined;
-  const inner = (st ?? {}) as Record<string, unknown>;
-  for (const [key, label] of [
-    ["songs", "歌曲"],
-    ["albums", "专辑"],
-    ["artists", "艺术家"],
-  ] as const) {
-    const n = num(inner[key]);
-    if (n !== undefined) out.stats.push({ label, value: String(n) });
+  if (photos !== undefined) {
+    out.metrics.push({
+      label: "照片",
+      value: count(photos),
+      emphasis: true,
+      hint: usagePhotos !== undefined ? `占用 ${gb(usagePhotos)}` : undefined,
+    });
+  }
+  if (videos !== undefined) {
+    out.metrics.push({
+      label: "视频",
+      value: count(videos),
+      hint: usageVideos !== undefined ? `占用 ${gb(usageVideos)}` : undefined,
+    });
+  }
+  if (usage !== undefined) {
+    out.metrics.push({ label: "存储占用", value: gb(usage) });
+  }
+
+  const byUser = Array.isArray(st.usageByUser) ? (st.usageByUser as Array<Record<string, unknown>>) : [];
+  if (byUser.length > 0) {
+    out.lists = [
+      {
+        title: "按用户",
+        items: byUser.map((u) => ({
+          title: str(u.userName) ?? str(u.userId) ?? "(未知用户)",
+          detail: `照片 ${count(num(u.photos) ?? 0)} · 视频 ${count(num(u.videos) ?? 0)} · ${gb(num(u.usage) ?? 0)}`,
+        })),
+      },
+    ];
+    if (out.metrics.length > 0) {
+      out.metrics.push({ label: "用户", value: String(byUser.length) });
+    }
+  }
+
+  for (const e of parts.errors ?? []) {
+    (out.notes ??= []).push(
+      degradeNote(e.what, e.err, "API Key 权限不足 —— Immich 后台「账号设置 → API Keys」勾选对应权限（如 server.statistics）"),
+    );
   }
   return out;
 }
 
-/** Portainer：/api/system/status 版本，/api/endpoints 端点数，容器计数。 */
-export function normalizePortainer(parts: { status?: unknown; endpoints?: unknown; containers?: unknown }): ServiceOverview {
-  const out: ServiceOverview = { probe: { ok: true, source: "portainer" }, stats: [] };
+/** Navidrome（Subsonic；实测 0.58 无 getStats → getScanStatus + getArtists 聚合）。 */
+export function normalizeNavidrome(parts: {
+  ping?: unknown;
+  scanStatus?: unknown;
+  artists?: unknown;
+  newest?: unknown;
+  nowPlaying?: unknown;
+  errors?: Array<{ what: string; err: unknown }>;
+}): ServiceOverview {
+  const sr = (x: unknown): Record<string, unknown> =>
+    (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
+  const ping = sr(parts.ping);
+  const out: ServiceOverview = { probe: { ok: true, source: "navidrome" }, metrics: [] };
+  const version = str(ping.version) ?? str(ping.serverVersion);
+  if (version) out.probe.version = version;
+
+  // 曲库规模：曲目 = scanStatus.count（实测唯一权威来源）；专辑/艺术家 = getArtists 聚合
+  const scan = sr(parts.scanStatus).scanStatus as Record<string, unknown> | undefined;
+  const songs = scan ? num(scan.count) : undefined;
+  const artistsResp = sr(parts.artists).artists as Record<string, unknown> | undefined;
+  const artistList: Array<Record<string, unknown>> = artistsResp
+    ? (artistsResp.artist ?? (artistsResp.index as Array<Record<string, unknown>> | undefined)?.flatMap((i) => (i.artist as Array<Record<string, unknown>>) ?? []) ?? []) as Array<Record<string, unknown>>
+    : [];
+  const albums = artistList.reduce((sum, a) => sum + (num(a.albumCount) ?? 0), 0);
+
+  if (songs !== undefined) out.metrics.push({ label: "曲目", value: count(songs), emphasis: true });
+  if (artistList.length > 0) {
+    out.metrics.push({ label: "专辑", value: count(albums) });
+    out.metrics.push({ label: "艺术家", value: String(artistList.length) });
+  }
+
+  const newest = (sr(parts.newest).albumList2 as Record<string, unknown> | undefined)?.album;
+  const newestList: Array<Record<string, unknown>> = Array.isArray(newest) ? newest : [];
+  const newestItems: ServiceListItem[] = newestList.slice(0, 4).map((a) => ({
+    title: str(a.name) ?? "(未命名专辑)",
+    detail: str(a.artist),
+  }));
+  const nowPlaying = (sr(parts.nowPlaying).nowPlaying as Record<string, unknown> | undefined)?.entry;
+  const npList: Array<Record<string, unknown>> = Array.isArray(nowPlaying) ? nowPlaying : [];
+  const playing: ServiceListItem[] = npList.map((e) => ({
+    title: str(e.title) ?? "(未知曲目)",
+    detail: [str(e.artist), str(e.username) ? `${str(e.username)} 正在收听` : undefined].filter(Boolean).join(" · "),
+    tone: "info" as const,
+  }));
+  out.lists = [
+    ...(newestItems.length > 0 ? [{ title: "最近添加", items: newestItems }] : []),
+    { title: "正在播放", items: playing },
+  ];
+
+  if (scan) {
+    const scanning = scan.scanning === true;
+    const lastScan = str(scan.lastScan);
+    out.statuses = [scanning ? { tone: "info", text: "库扫描中" } : { tone: "ok", text: "库就绪" }];
+    if (lastScan) out.metrics.push({ label: "上次扫描", value: new Date(lastScan).toLocaleString("zh-CN") });
+  }
+
+  for (const e of parts.errors ?? []) (out.notes ??= []).push(degradeNote(e.what, e.err));
+  return out;
+}
+
+/** Portainer（实测 2.27.6；用户头号问题 = "我的容器都活着吗"）。 */
+export function normalizePortainer(parts: {
+  status?: unknown;
+  endpoints?: unknown;
+  containers?: unknown;
+  info?: unknown;
+  errors?: Array<{ what: string; err: unknown }>;
+}): ServiceOverview {
+  const out: ServiceOverview = { probe: { ok: true, source: "portainer" }, metrics: [] };
   const st = (parts.status ?? {}) as Record<string, unknown>;
   const version = str(st.Version) ?? str(st.version);
   if (version) out.probe.version = version;
+
   const eps = Array.isArray(parts.endpoints) ? (parts.endpoints as unknown[]).length : undefined;
-  if (eps !== undefined) out.stats.push({ label: "端点", value: String(eps) });
-  const containers = Array.isArray(parts.containers) ? (parts.containers as Array<Record<string, unknown>>) : [];
-  if (parts.containers !== undefined) {
-    const running = containers.filter((c) => str(c.State) === "running").length;
-    out.stats.push({ label: "容器", value: `${running}/${containers.length} 运行中` });
+  const containers = Array.isArray(parts.containers)
+    ? (parts.containers as Array<Record<string, unknown>>)
+    : undefined;
+  const info = (parts.info ?? {}) as Record<string, unknown>;
+
+  if (containers) {
+    const running = containers.filter((c) => str(c.State) === "running");
+    const abnormal = containers.filter((c) => {
+      const state = str(c.State);
+      if (state === "running" || state === "created" || state === "paused") return false;
+      const status = str(c.Status) ?? "";
+      // "Exited (0) …" 正常退出；非 0 / 其它状态视为异常
+      const m = status.match(/Exited \((\d+)\)/);
+      return !m || Number(m[1]) !== 0;
+    });
+    out.metrics.push({
+      label: "容器运行",
+      value: `${running.length}/${containers.length}`,
+      emphasis: true,
+      hint: abnormal.length > 0 ? `${abnormal.length} 个异常` : "全部正常",
+    });
+    if (eps !== undefined) out.metrics.push({ label: "环境", value: String(eps) });
+    if (num(info.Images) !== undefined) out.metrics.push({ label: "镜像", value: String(info.Images) });
+    if (num(info.NVolumes) !== undefined) out.metrics.push({ label: "卷", value: String(info.NVolumes) });
+    if (num(info.NCPU) !== undefined && num(info.MemTotal) !== undefined) {
+      out.metrics.push({
+        label: "宿主",
+        value: `${info.NCPU} 核 · ${gb(info.MemTotal as number)}`,
+      });
+    }
+
+    out.statuses =
+      abnormal.length > 0
+        ? [{ tone: "error", text: `${abnormal.length} 个容器异常` }]
+        : [{ tone: "ok", text: "全部容器正常" }];
+    out.lists = [
+      {
+        title: abnormal.length > 0 ? "异常容器" : "容器状态",
+        items: (abnormal.length > 0 ? abnormal : containers.slice(0, 6)).map((c) => ({
+          title: (str((c.Names as string[] | undefined)?.[0]) ?? str(c.Id) ?? "").replace(/^\//, ""),
+          detail: str(c.Status) ?? str(c.State),
+          tone: abnormal.length > 0 ? ("error" as const) : ("ok" as const),
+        })),
+      },
+    ];
+  } else if (eps !== undefined) {
+    out.metrics.push({ label: "环境", value: String(eps) });
+  }
+
+  for (const e of parts.errors ?? []) {
+    (out.notes ??= []).push(
+      degradeNote(e.what, e.err, "API Key 缺 Docker 权限 —— Portainer「用户 → API keys」使用管理员创建的密钥"),
+    );
   }
   return out;
 }
 
-/** Mihomo（含 metacubexd）：/version 版本，/proxies 代理数，/memory 占用。 */
-export function normalizeMihomo(parts: { version?: unknown; proxies?: unknown; memory?: unknown }): ServiceOverview {
-  const out: ServiceOverview = { probe: { ok: true, source: "mihomo" }, stats: [] };
-  const versionRaw = parts.version;
-  const version =
-    typeof versionRaw === "string"
-      ? versionRaw
-      : str(((versionRaw ?? {}) as Record<string, unknown>).version);
+/** Mihomo（含 metacubexd 前端；实测 meta v1.19.31，/memory 与 /traffic 经反代不可用）。 */
+export function normalizeMihomo(parts: {
+  version?: unknown;
+  proxies?: unknown;
+  connections?: unknown;
+  rules?: unknown;
+  proxyProviders?: unknown;
+  memory?: unknown;
+  errors?: Array<{ what: string; err: unknown }>;
+}): ServiceOverview {
+  const out: ServiceOverview = { probe: { ok: true, source: "mihomo" }, metrics: [] };
+  const versionRaw = parts.version as Record<string, unknown> | string | null;
+  const version = typeof versionRaw === "string" ? versionRaw : str((versionRaw ?? {}).version);
   if (version) out.probe.version = version;
-  const px = ((parts.proxies ?? {}) as Record<string, unknown>).proxies as Record<string, unknown> | undefined;
-  if (px) out.stats.push({ label: "代理", value: String(Object.keys(px).length) });
-  const mem = (parts.memory ?? {}) as Record<string, unknown>;
-  const inuse = num(mem.inuse);
-  if (inuse !== undefined) out.stats.push({ label: "内存", value: `${(inuse / 2 ** 20).toFixed(0)} MB` });
+
+  const px = ((parts.proxies ?? {}) as Record<string, unknown>).proxies as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  if (px) {
+    const groups = Object.entries(px).filter(([, v]) => Array.isArray(v.all) && v.now);
+    const globalNow = str(px.GLOBAL?.now);
+    const picks: ServiceListItem[] = groups.slice(0, 6).map(([name, v]) => ({
+      title: name,
+      detail: `→ ${str(v.now)}`,
+      tone: "info" as const,
+    }));
+    out.metrics.push({
+      label: "出口选择",
+      value: globalNow ?? (groups[0] ? str(groups[0][1].now) ?? "—" : "—"),
+      emphasis: true,
+      hint: `${groups.length} 个策略组`,
+    });
+    out.metrics.push({ label: "节点/策略", value: String(Object.keys(px).length) });
+    out.lists = [{ title: "策略组选择", items: picks }];
+
+    // 最近延迟（history 尾点）
+    const delays: ServiceListItem[] = groups
+      .map(([name, v]) => {
+        const hist = Array.isArray(v.history) ? (v.history as Array<Record<string, unknown>>) : [];
+        const last = hist[hist.length - 1];
+        const delay = last ? num(last.delay) : undefined;
+        return delay !== undefined
+          ? { title: name, detail: `${delay} ms`, tone: (delay < 300 ? "ok" : "warn") as "ok" | "warn" }
+          : null;
+      })
+      .filter((x): x is ServiceListItem => x !== null);
+    if (delays.length > 0) out.lists.push({ title: "节点延迟", items: delays });
+  }
+
+  const conn = (parts.connections ?? {}) as Record<string, unknown>;
+  const active = Array.isArray(conn.connections) ? conn.connections.length : undefined;
+  const downTotal = num(conn.downloadTotal);
+  const upTotal = num(conn.uploadTotal);
+  if (active !== undefined) {
+    out.metrics.push({ label: "活动连接", value: String(active) });
+    out.sample = {
+      at: new Date().toISOString(),
+      series: {
+        ...(active !== undefined ? { connections: active } : {}),
+        ...(downTotal !== undefined ? { downTotal } : {}),
+        ...(upTotal !== undefined ? { upTotal } : {}),
+      },
+    };
+  }
+  if (downTotal !== undefined && upTotal !== undefined) {
+    out.metrics.push({ label: "累计流量", value: `↓ ${gb(downTotal)} · ↑ ${gb(upTotal)}` });
+  }
+
+  const rules = ((parts.rules ?? {}) as Record<string, unknown>).providers as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  if (rules) {
+    const ruleCount = Object.values(rules).reduce((s, r) => s + (num(r.ruleCount) ?? 0), 0);
+    if (ruleCount > 0) out.metrics.push({ label: "规则", value: String(ruleCount) });
+  }
+  const providers = ((parts.proxyProviders ?? {}) as Record<string, unknown>).providers as
+    | Record<string, unknown>
+    | undefined;
+  if (providers && Object.keys(providers).length > 0) {
+    out.metrics.push({ label: "订阅源", value: String(Object.keys(providers).length) });
+  }
+
+  const memInuse = num(((parts.memory ?? {}) as Record<string, unknown>).inuse);
+  if (memInuse !== undefined) out.metrics.push({ label: "内存", value: `${(memInuse / 2 ** 20).toFixed(0)} MB` });
+
+  for (const e of parts.errors ?? []) {
+    (out.notes ??= []).push(
+      degradeNote(e.what, e.err, "若经反代部署，/memory 可能被缓冲或超时 —— 该项可忽略或直连 external-controller"),
+    );
+  }
   return out;
 }
 
@@ -141,72 +387,80 @@ export const serviceOverviewConnector: WidgetConnector = {
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");
 
-    try {
-      switch (row.kind) {
-        case "immich": {
-          // 版本与计数接口随 Immich 版本演进 —— 逐个 best-effort，探活以 ping 为准
-          await getJson(base, "/api/server/ping", { "X-API-Key": str(config.apiKey) ?? "" });
-          let version: unknown;
-          let stats: unknown;
-          try {
-            version = await getJson(base, "/api/server-info/version", { "X-API-Key": str(config.apiKey) ?? "" });
-          } catch {
-            /* 版本接口缺失则省略 */
-          }
-          try {
-            stats = await getJson(base, "/api/statistics", { "X-API-Key": str(config.apiKey) ?? "" });
-          } catch {
-            /* 计数接口缺失则省略 */
-          }
-          return normalizeImmich({ version, stats });
-        }
-        case "navidrome": {
-          const auth = await subsonicAuth(config);
-          const ping = await getJson(base, `/rest/ping.view?${auth}`, {});
-          let stats: unknown;
-          try {
-            stats = await getJson(base, `/rest/getStats.view?${auth}`, {});
-          } catch {
-            /* getStats 为 Navidrome 扩展，缺失则省略 */
-          }
-          return normalizeNavidrome({ ping, stats });
-        }
-        case "portainer": {
-          const headers = { "X-API-Key": str(config.apiToken) ?? "" };
-          const status = await getJson(base, "/api/system/status", headers);
-          const endpoints = await getJson(base, "/api/endpoints", headers);
-          let containers: unknown;
-          const eps = Array.isArray(endpoints) ? (endpoints as Array<Record<string, unknown>>) : [];
-          const epId = num(eps[0]?.Id);
-          if (epId !== undefined) {
-            try {
-              containers = await getJson(base, `/api/endpoints/${epId}/docker/containers/json?all=1`, headers);
-            } catch {
-              /* 无 Docker 权限则省略容器计数 */
-            }
-          }
-          return normalizePortainer({ status, endpoints, containers });
-        }
-        case "mihomo": {
-          const headers = { Authorization: `Bearer ${str(config.secret) ?? ""}` };
-          const version = await getJson(base, "/version", headers);
-          const proxies = await getJson(base, "/proxies", headers);
-          let memory: unknown;
-          try {
-            memory = await getJson(base, "/memory", headers);
-          } catch {
-            /* 可选 */
-          }
-          return normalizeMihomo({ version, proxies, memory });
-        }
-        default:
-          throw new Error(`不支持的连接类型：${row.kind}`);
+    const errors: Array<{ what: string; err: unknown }> = [];
+    const best = async <T>(what: string, fn: () => Promise<T>): Promise<T | undefined> => {
+      try {
+        return await fn();
+      } catch (err) {
+        errors.push({ what, err });
+        return undefined;
       }
-    } catch (err) {
-      return {
-        probe: { ok: false, source: row.kind, error: err instanceof Error ? err.message : "fetch failed" },
-        stats: [],
-      } satisfies ServiceOverview;
+    };
+
+    let overview: ServiceOverview;
+    switch (row.kind) {
+      case "immich": {
+        const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
+        // 探活必须成功（否则整体 probe 失败）；版本/统计多路由回落
+        await getJson(base, "/api/server/ping", apiKey);
+        const version =
+          (await best("版本", () => getJson(base, "/api/server/version", apiKey))) ??
+          (await best("版本", () => getJson(base, "/api/server-info/version", apiKey)));
+        const stats =
+          (await best("统计", () => getJson(base, "/api/server/statistics", apiKey))) ??
+          (await best("统计", () => getJson(base, "/api/statistics", apiKey)));
+        overview = normalizeImmich({ version, stats, errors });
+        break;
+      }
+      case "navidrome": {
+        const auth = await subsonicAuth(config);
+        const ping = await getJson(base, `/rest/ping.view?${auth}`, {});
+        const [scanStatus, artists, newest, nowPlaying] = await Promise.all([
+          best("扫描状态", () => getJson(base, `/rest/getScanStatus.view?${auth}`, {})),
+          best("曲库统计", () => getJson(base, `/rest/getArtists.view?${auth}`, {}, MAX_BYTES_LARGE)),
+          best("最近添加", () => getJson(base, `/rest/getAlbumList2?type=newest&size=4&${auth}`, {})),
+          best("正在播放", () => getJson(base, `/rest/getNowPlaying.view?${auth}`, {})),
+        ]);
+        overview = normalizeNavidrome({ ping, scanStatus, artists, newest, nowPlaying, errors });
+        break;
+      }
+      case "portainer": {
+        const headers = { "X-API-Key": str(config.apiToken) ?? "" };
+        const status = await getJson(base, "/api/system/status", headers);
+        const endpoints = await getJson(base, "/api/endpoints", headers);
+        const eps = Array.isArray(endpoints) ? (endpoints as Array<Record<string, unknown>>) : [];
+        const epId = num(eps[0]?.Id);
+        let containers: unknown;
+        let info: unknown;
+        if (epId !== undefined) {
+          containers = await best("容器列表", () =>
+            getJson(base, `/api/endpoints/${epId}/docker/containers/json?all=1`, headers),
+          );
+          info = await best("宿主信息", () => getJson(base, `/api/endpoints/${epId}/docker/info`, headers));
+        }
+        overview = normalizePortainer({ status, endpoints, containers, info, errors });
+        break;
+      }
+      case "mihomo": {
+        const headers = { Authorization: `Bearer ${str(config.secret) ?? ""}` };
+        const version = await getJson(base, "/version", headers);
+        const proxies = await getJson(base, "/proxies", headers);
+        const [connections, rules, proxyProviders, memory] = await Promise.all([
+          best("连接", () => getJson(base, "/connections", headers)),
+          best("规则", () => getJson(base, "/providers/rules", headers)),
+          best("订阅源", () => getJson(base, "/providers/proxies", headers)),
+          best("内存", () => getJson(base, "/memory", headers)),
+        ]);
+        overview = normalizeMihomo({ version, proxies, connections, rules, proxyProviders, memory, errors });
+        break;
+      }
+      default:
+        throw new Error(`不支持的连接类型：${row.kind}`);
     }
+
+    // 契约兜底：任何适配器输出都必须合法（含降级路径）
+    const errs = validateServiceOverview(overview);
+    if (errs.length > 0) return emptyOverview(row.kind, `适配器输出不符合契约：${errs.join("；")}`);
+    return overview;
   },
 };
