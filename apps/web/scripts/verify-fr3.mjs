@@ -117,7 +117,7 @@ try {
       { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
     ];
     const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页");
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -222,7 +222,7 @@ try {
 
   // ① 刷新按钮统一存在
   ok("FR3 todo has 刷新", await hasRefreshIn("Todo ·"));
-  ok("FR3 rss has 刷新", await hasRefreshIn("信息流"));
+  ok("FR3 rss has 刷新", await hasRefreshIn("RSS")); // Q85 起信息流标题改为「RSS」
   ok("FR3 custom-api has 刷新", await hasRefreshIn("自定义 API"));
   ok("FR3 launcher has 刷新", await hasRefreshIn("应用入口"));
   ok("FR3 kanban has 刷新", await hasRefreshIn("fr3-board"));

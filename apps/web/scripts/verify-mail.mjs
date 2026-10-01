@@ -123,7 +123,7 @@ try {
       { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
     ];
     const dashboards = await (await fetch("/api/dashboards")).json();
-    const home = dashboards.find((d) => d.title === "首页");
+    const home = dashboards.find((d) => d.title === "首页") ?? dashboards[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
