@@ -19,9 +19,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const uniq = Date.now().toString(36).slice(-4);
 
 const json = (obj) => JSON.stringify(obj);
+const ctrlHits = [];
 const mock = createServer((req, res) => {
   res.setHeader("Content-Type", "application/json");
   const url = req.url ?? "";
+  // navidrome 播放遥控（Q55 写操作）——记录命中供断言
+  if (url.startsWith("/rest/pause.view") || url.startsWith("/rest/next.view") || url.startsWith("/rest/previous.view") || url.startsWith("/rest/stop.view")) {
+    ctrlHits.push(url.split("?")[0]);
+    return res.end(json({ "subsonic-response": { status: "ok" } }));
+  }
   // mihomo
   if (url.startsWith("/version")) return res.end(json("v1.18.8"));
   if (url.startsWith("/proxies"))
@@ -251,6 +257,19 @@ try {
     return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
   });
   ok("SVC navidrome album covers render (D50)", ndGal.count >= 1 && ndGal.dataUri, JSON.stringify(ndGal));
+
+  // Q55 Navidrome 播放遥控（D51 写操作）：点「下一首」→ Subsonic next.view
+  ok(
+    "SVC navidrome remote click (write action)",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "下一首");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  ok("SVC navidrome control hit Subsonic next.view (audited)", ctrlHits.includes("/rest/next.view"), JSON.stringify(ctrlHits));
 
   // Q52 Portainer 容器清单（D50 只读深度）：清单 + 异常高亮 + 日志尾部只读
   ok("SVC add portainer containers", await addOverview(`svc-portainer-${uniq}`, "Portainer 容器清单"));

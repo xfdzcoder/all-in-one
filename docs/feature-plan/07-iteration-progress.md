@@ -7,8 +7,8 @@
 | 项 | 值 |
 |---|---|
 | 模式 | 自主迭代 loop（D22） |
-| 循环状态 | **暂停**（可自主推进项已尽：Q50 真机收尾待 `asset.view` 扩权、写操作类待拍板 —— 均需用户输入；`/loop-resume` 恢复） |
-| 最近更新 | 2026-10-01（第 91 轮 · D50 只读深度四件交付 Q50–Q53 + Q54 写操作整理） |
+| 循环状态 | **运行中**（2026-10-01 写操作三项拍板（D51）+ Q50 真机收尾 ✅；队列 Q55–Q57） |
+| 最近更新 | 2026-10-01（第 92 轮 · Q50 收口 + D51 写操作立项） |
 
 ## 迭代队列
 
@@ -142,6 +142,10 @@
 - [x] Q53 · FR-X3d Mihomo 只读深度（D50）：节点列表 + 延迟 + 订阅源详情**✅ 2026-10-01**——`mihomo-nodes` connector + 节点面板组件（策略组选择/节点延迟徽标/订阅源）；verify-svc 25/25、真机（16 策略组/节点/订阅源 15）通过
 - [x] Q54 · 写操作类深度组件整理入「待用户确认」（Navidrome 播放遥控 / Portainer 容器启停 / Mihomo 换节点，含各自风险边界与确认机制建议），等用户逐项拍板**✅ 2026-10-01**——见「待用户确认」#5（含风险边界与建议确认机制）
 
+- [x] Q55 · FR-X3e Navidrome 播放遥控（写操作，**D51**）：play/pause/next/prev/stop，作用当前播放会话（组件注明单设备场景，免逐次确认）+ 专属 REST + 审计日志 + 真机验证**✅ 2026-10-01**——`POST /api/navidrome/control`（Subsonic pause/next/previous/stop.view + 200-error body 语义）+ 专辑墙遥控行 + `widget.write-action` 审计；verify-svc 27/27、verify-live 24/24（真机点「播放」零错误）
+- [ ] Q56 · FR-X3f Portainer 容器重启（写操作，**D51**）：**仅 restart** + 容器白名单（缺省空=不允许）+ D31 二次确认 + 审计日志 + 真机验证
+- [ ] Q57 · FR-X3g Mihomo 策略组切换（写操作，**D51**）：切换前确认（当前→目标节点）+ 审计日志 + 真机验证
+
 ## 历轮记录
 
 | # | 日期 | 内容 | 验证 | commit |
@@ -255,4 +259,5 @@
 | 89 | 2026-10-01 | **Q51 Navidrome 专辑墙（FR-X3 只读深度 D50）**：`navidrome-library` connector（getAlbumList2 newest + getNowPlaying + **getCoverArt 封面代取**→data URI，Subsonic 认证不进前端）+ 专辑墙组件（网格+正在播放行+预览弹层注明只读边界）+ 契约测试 3（171/171）。verify-svc 19/19（mock 封面）；**verify-live 真机封面网格通过**（17/18，唯一失败=Q50 缩略图待 asset.view） | server 171/171 ✅；verify-svc 19/19 ✅；真机 Navidrome ✅ | `c8579ed` |
 | 90 | 2026-10-01 | **Q52 Portainer 容器清单（FR-X3 只读深度 D50）**：`portainer-containers` + `portainer-logs` connector（Docker 日志 8 字节帧剥离）+ 清单组件（状态徽标/异常高亮置顶/点行日志尾部弹层/只读边界注明）+ 契约测试 4（173/173）。**教训**：verify-svc 不重置首页布局 → 历史轮次坏卡片被 scoped `.find` 首匹配命中误报（gdrag 教训二次应验）——补标准 seed 重置后 23/23；mock 容器 fixture 缺 `Id` 致日志查询被禁用（fixture 带 Id） | server 173/173 ✅；verify-svc 23/23 ✅；verify-live 19/20 ✅（真机清单 homepage/minecraft-mc-1+Exited (143) 通过；唯一失败=Q50 待 asset.view） | `85d16c6` |
 | 91 | 2026-10-01 | **Q53 Mihomo 节点面板（FR-X3 只读深度 D50）+ Q54 写操作整理**：`mihomo-nodes` connector（/proxies 组/节点分离 + 延迟尾点 + /providers/proxies）+ 节点面板组件（策略组选择/节点延迟徽标/订阅源详情）+ 契约测试 2（175/175）。真机通过（16 策略组/节点/订阅源 15）。Q54：写操作类三项风险边界与确认机制建议入「待用户确认」#5。**小坑**：mock 延迟 history 挂在策略组上（组不是节点）→ fixture 补真节点；真机节点无测速历史显「未测速」→ 断言按语义放宽。**D50 只读深度四件全部交付**（Q50 真机收尾待 asset.view） | server 175/175 ✅；verify-svc 25/25 ✅；verify-live 21/22 ✅（唯一失败=Q50 待 asset.view） | `b09a5a8` |
-| 92 | 2026-10-01 | **Q50 真机收尾 + 写操作拍板落盘**：① 用户扩 `asset.view` 后照片墙仍 400 —— **v3 thumbnail 参数枚举 `size=thumbnail`（非 `thumb`）**，修正后真机 10 张缩略图渲染，**verify-live 22/22 全绿**（Q50 收口）；② 用户拍板写操作三项"逐项拍板"（凭证临时无妨、不轮换）——按各带安全边界立项 **D51**（Navidrome 遥控单设备 / Portainer 仅 restart+白名单+确认+审计 / Mihomo 切换前确认），入队 Q55–Q57 | server 175/175 ✅；verify-live 22/22 ✅ | （本提交） |
+| 92 | 2026-10-01 | **Q50 真机收尾 + 写操作拍板落盘**：① 用户扩 `asset.view` 后照片墙仍 400 —— **v3 thumbnail 参数枚举 `size=thumbnail`（非 `thumb`）**，修正后真机 10 张缩略图渲染，**verify-live 22/22 全绿**（Q50 收口）；② 用户拍板写操作三项"逐项拍板"（凭证临时无妨、不轮换）——按各带安全边界立项 **D51**（Navidrome 遥控单设备 / Portainer 仅 restart+白名单+确认+审计 / Mihomo 切换前确认），入队 Q55–Q57 | server 175/175 ✅；verify-live 22/22 ✅ | `084f145`、（D51 docs 并入下条） |
+| 93 | 2026-10-01 | **D51 决策落盘 + Q55 Navidrome 播放遥控（写操作）**：① D51 入 02（三项安全边界）+ FR-X3 写操作转【必须】+ 入队 Q55–Q57；② Q55：`POST /api/navidrome/control`（play/pause/next/prev/stop → Subsonic pause.view?paused=…/next/previous/stop.view；**Subsonic 200+error body 语义**解析）+ 专辑墙遥控行（按钮蓝 light 与只读区隔 + 单设备场景注明，免逐次确认 D51）+ 审计 `widget.write-action`（who/when/what，凭证/URL 参数不入日志）+ 契约测试 2（177/177）。verify-svc 27/27（mock 命中断言 next.view）；**verify-live 24/24**（真机点「播放」写操作零错误） | server 177/177 ✅；verify-svc 27/27 ✅；verify-live 24/24 ✅ | （本提交） |

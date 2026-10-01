@@ -192,6 +192,9 @@ export const api = {
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
   widgetData: (type: string, config: Record<string, unknown>, force = false) =>
     req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
+  // ── 写操作深度组件（D51：专属 REST + 服务端审计）──
+  navidromeControl: (sourceId: string, action: string) =>
+    req<{ ok: boolean }>("POST", "/api/navidrome/control", { sourceId, action }),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
   // ── 命名数据连接（D42）：monitor / opencode / http ──

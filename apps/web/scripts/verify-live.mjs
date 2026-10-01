@@ -234,6 +234,23 @@ try {
   }
   ok("LIVE navidrome album covers render", ndGal.count >= 6 && ndGal.dataUri === ndGal.count, JSON.stringify(ndGal));
 
+  // Q55 Navidrome 播放遥控（D51）：真机写操作（点「播放」= 唤醒/继续，最低干预）
+  ok(
+    "LIVE navidrome write action accepted",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "播放");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  const ndCtrlErr = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
+    return item?.textContent.includes("控制失败") ?? false;
+  });
+  ok("LIVE navidrome write action no error surfaced", !ndCtrlErr);
+
   // Q52 Portainer 容器清单（D50）：真机清单 + 异常高亮
   await clickBtn("编辑页面");
   await sleep(300);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 
-import { useNavidromeLibrary } from "./data-hooks";
+import { useNavidromeControl, useNavidromeLibrary } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert } from "./ui";
@@ -20,6 +20,7 @@ export function NavidromeLibraryWidget({
   refreshSec?: number;
 }) {
   const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec);
+  const control = useNavidromeControl(sourceId);
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
@@ -51,6 +52,37 @@ export function NavidromeLibraryWidget({
         </Text>
       )}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
+
+      {sourceId && (
+        <div className="wb-svc-notes">
+          <Group gap={6}>
+            {(
+              [
+                ["prev", "上一首"],
+                ["play", "播放"],
+                ["pause", "暂停"],
+                ["next", "下一首"],
+                ["stop", "停止"],
+              ] as const
+            ).map(([act, label]) => (
+              <Button
+                key={act}
+                size="compact-xs"
+                variant="light"
+                color="blue"
+                disabled={control.busy}
+                onClick={() => control.send(act)}
+              >
+                {label}
+              </Button>
+            ))}
+          </Group>
+          <Text size="xs" c="dimmed">
+            遥控作用于服务器当前播放会话（多设备收听会互相干扰，单设备场景为宜）
+          </Text>
+          {control.error && <WbAlert tone="error" size="sm">{control.error}</WbAlert>}
+        </div>
+      )}
 
       {(data?.nowPlaying ?? []).length > 0 && (
         <div className="wb-svc-notes">

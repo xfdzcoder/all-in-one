@@ -307,6 +307,13 @@ export const navidromeLibraryManifest: WidgetManifest = {
   capabilities: {
     data: { source: "http-connector" },
     refresh: { minRefreshSec: 60, defaultRefreshSec: 300, supportsManualRefresh: true },
+    actions: [
+      { name: "navidrome.play", label: "播放" },
+      { name: "navidrome.pause", label: "暂停" },
+      { name: "navidrome.next", label: "下一首" },
+      { name: "navidrome.prev", label: "上一首" },
+      { name: "navidrome.stop", label: "停止" },
+    ],
   },
 };
 

@@ -490,6 +490,22 @@ export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
   };
 }
 
+/** Navidrome 播放遥控（FR-X3e 写操作，D51）：作用当前播放会话，专属 REST + 服务端审计。 */
+export function useNavidromeControl(sourceId?: string) {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (action: string) => api.navidromeControl(sourceId ?? "", action),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["navidrome-library"] }),
+  });
+  return {
+    send: (action: string) => {
+      if (sourceId) mutation.mutate(action);
+    },
+    busy: mutation.isPending,
+    error: mutation.error instanceof Error ? mutation.error.message : undefined,
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];
