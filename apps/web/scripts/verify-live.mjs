@@ -291,6 +291,37 @@ try {
     return item?.textContent ?? "";
   });
   ok("LIVE mihomo nodes panel matches real instance", mnTxt.includes("策略组") && mnTxt.includes("节点（") && mnTxt.includes("订阅源"), mnTxt.slice(0, 160));
+
+  // Q57 策略组切换（D51）：真机**空切换**（选当前节点 → PUT 同名，零实际影响）验证写路径
+  ok(
+    "LIVE mihomo switch entry",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "切换");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(500);
+  const pickNoop = await page.evaluate(() => {
+    const current = document.querySelector(".mantine-Modal-root b")?.textContent ?? "";
+    const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === current || b.textContent.trim() === `${current}（当前）`);
+    btn?.click();
+    return current;
+  });
+  await sleep(300);
+  ok(
+    "LIVE mihomo noop-switch confirmed (same node)",
+    await page.evaluate(() => {
+      const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认切换");
+      btn?.click();
+      return Boolean(btn);
+    }) && Boolean(pickNoop),
+    "current=" + pickNoop,
+  );
+  await sleep(1500);
+  const switchErr = await page.evaluate(() => (document.body.textContent ?? "").includes("切换失败"));
+  ok("LIVE mihomo noop-switch no error surfaced", !switchErr);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

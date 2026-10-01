@@ -1,17 +1,21 @@
-import { IconRefresh } from "@tabler/icons-react";
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { IconArrowsExchange, IconRefresh } from "@tabler/icons-react";
+import { useState } from "react";
+import { Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
 
-import { useMihomoNodes } from "./data-hooks";
+import { useMihomoNodes, useMihomoSelect } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
- * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组选择 / 节点延迟 / 订阅源。
- * 只读 —— 代理切换/重载配置属写操作（FR-X3b 待拍板）。
+ * Mihomo 节点面板（FR-X3 只读深度 + FR-X3g 切换，**D50/D51**）：策略组选择 / 节点延迟 / 订阅源；
+ * 切换**前确认**（当前→目标，D51）+ 服务端成员校验 + 审计。
  */
 export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string; refreshSec?: number }) {
   const { data, loading, error, refresh } = useMihomoNodes(sourceId, refreshSec);
+  const select = useMihomoSelect(sourceId);
+  const [switchFor, setSwitchFor] = useState<{ group: string; now?: string; options: string[] } | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
 
@@ -56,6 +60,15 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                     <Badge size="compact-xs" variant="light" color="blue">
                       {g.members}
                     </Badge>
+                    <IconAction
+                      label="切换"
+                      onClick={() => {
+                        setSwitchFor({ group: g.name, now: g.now, options: g.options ?? [] });
+                        setPending(null);
+                      }}
+                    >
+                      <IconArrowsExchange size={14} />
+                    </IconAction>
                   </Group>
                 ))}
               </Stack>
@@ -115,6 +128,60 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
             </Text>
           ))}
         </Stack>
+      )}
+      {select.error && <WbAlert tone="error" size="sm">切换失败：{select.error}</WbAlert>}
+
+      {/* Q57（D51）：切换前确认 —— 显示 当前 → 目标，服务端校验成员 + 审计 */}
+      {switchFor && (
+        <Modal
+          opened
+          onClose={() => {
+            setSwitchFor(null);
+            setPending(null);
+          }}
+          title={`切换策略组 · ${switchFor.group}`}
+          size="sm"
+        >
+          <Stack gap="xs">
+            <Text size="xs" c="dimmed">
+              当前：<b>{switchFor.now ?? "—"}</b>
+            </Text>
+            {switchFor.options.map((o) => (
+              <Button
+                key={o}
+                size="xs"
+                variant={o === pending ? "filled" : "default"}
+                disabled={select.busy}
+                onClick={() => setPending(o)}
+              >
+                {o}
+                {o === switchFor.now ? "（当前）" : ""}
+              </Button>
+            ))}
+            {pending && (
+              <Group gap="xs">
+                <Text size="xs">
+                  确认切换：{switchFor.now ?? "—"} → <b>{pending}</b>？（影响全部代理流量）
+                </Text>
+                <Button
+                  size="xs"
+                  color="blue"
+                  disabled={select.busy}
+                  onClick={() => {
+                    select.send(switchFor.group, pending);
+                    setSwitchFor(null);
+                    setPending(null);
+                  }}
+                >
+                  确认切换
+                </Button>
+                <Button size="xs" variant="default" onClick={() => setPending(null)}>
+                  取消
+                </Button>
+              </Group>
+            )}
+          </Stack>
+        </Modal>
       )}
     </div>
   );

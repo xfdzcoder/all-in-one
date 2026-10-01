@@ -197,6 +197,8 @@ export const api = {
     req<{ ok: boolean }>("POST", "/api/navidrome/control", { sourceId, action }),
   portainerRestart: (sourceId: string, containerId: string) =>
     req<{ ok: boolean; name: string }>("POST", "/api/portainer/restart", { sourceId, containerId }),
+  mihomoSelect: (sourceId: string, group: string, name: string) =>
+    req<{ ok: boolean; from: string; to: string }>("POST", "/api/mihomo/select", { sourceId, group, name }),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
   // ── 命名数据连接（D42）：monitor / opencode / http ──

@@ -33,6 +33,11 @@ const mock = createServer((req, res) => {
     ctrlHits.push("restart:" + url);
     return res.end(json({ message: "restarted" }));
   }
+  // mihomo 策略组切换（Q57 写操作）——记录命中供断言
+  if (url.startsWith("/proxies/") && req.method === "PUT") {
+    ctrlHits.push("select:" + decodeURIComponent(url));
+    return res.end(json({ message: "ok" }));
+  }
   // mihomo
   if (url.startsWith("/version")) return res.end(json("v1.18.8"));
   if (url.startsWith("/proxies"))
@@ -335,6 +340,42 @@ try {
     return { groups: t.includes("策略组"), pick: t.includes("自动选择"), delay: t.includes("88 ms"), prov: t.includes("订阅源") };
   });
   ok("SVC mihomo nodes groups/delays/providers render", mn.groups && mn.pick && mn.delay && mn.prov, JSON.stringify(mn));
+
+  // Q57 策略组切换（D51：切换前确认 当前→目标 + 服务端成员校验 + 审计）
+  ok(
+    "SVC mihomo switch entry (D51)",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => (b.getAttribute("aria-label") || b.textContent).trim() === "切换");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(500);
+  ok(
+    "SVC mihomo switch pick member",
+    await page.evaluate(() => {
+      const btns = [...document.querySelectorAll(".mantine-Modal-root button")].filter((b) => {
+        const t = b.textContent.trim();
+        return t && !t.includes("确认切换") && t !== "取消";
+      });
+      btns[0]?.click();
+      return Boolean(btns[0]);
+    }),
+  );
+  await sleep(300);
+  const confirmShown = await page.evaluate(() => (document.body.textContent ?? "").includes("确认切换"));
+  ok("SVC mihomo switch confirm copy (current->target)", confirmShown);
+  ok(
+    "SVC mihomo switch confirmed",
+    await page.evaluate(() => {
+      const btn = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认切换");
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  ok("SVC mihomo select hit mock endpoint (audited)", ctrlHits.some((h) => String(h).startsWith("select:")), JSON.stringify(ctrlHits));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));

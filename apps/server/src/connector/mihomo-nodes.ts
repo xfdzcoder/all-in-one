@@ -22,6 +22,8 @@ export interface MihomoGroupItem {
   name: string;
   now?: string;
   members: number;
+  /** 可切换成员（Q57 切换弹层用）。 */
+  options: string[];
 }
 
 export interface MihomoProviderItem {
@@ -56,7 +58,7 @@ export function normalizeMihomoNodes(proxies: unknown, providers: unknown): Omit
   for (const [name, p] of Object.entries(px ?? {})) {
     const all = Array.isArray(p.all) ? (p.all as unknown[]) : undefined;
     if (all && p.now) {
-      groups.push({ name, now: str(p.now), members: all.length });
+      groups.push({ name, now: str(p.now), members: all.length, options: all.map(String) });
       continue;
     }
     const hist = Array.isArray(p.history) ? (p.history as Array<Record<string, unknown>>) : [];

@@ -478,7 +478,7 @@ export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
   return {
     data: query.data as
       | {
-          groups: Array<{ name: string; now?: string; members: number }>;
+          groups: Array<{ name: string; now?: string; members: number; options: string[] }>;
           nodes: Array<{ name: string; type?: string; alive?: boolean; delayMs?: number }>;
           providers: Array<{ name: string; nodes: number; updatedAt?: string }>;
           notes?: string[];
@@ -516,6 +516,22 @@ export function usePortainerRestart(sourceId?: string) {
   return {
     send: (containerId: string) => {
       if (sourceId) mutation.mutate(containerId);
+    },
+    busy: mutation.isPending,
+    error: mutation.error instanceof Error ? mutation.error.message : undefined,
+  };
+}
+
+/** Mihomo 策略组切换（FR-X3g 写操作，D51：切换前确认 + 审计）。 */
+export function useMihomoSelect(sourceId?: string) {
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (v: { group: string; name: string }) => api.mihomoSelect(sourceId ?? "", v.group, v.name),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["mihomo-nodes"] }),
+  });
+  return {
+    send: (group: string, name: string) => {
+      if (sourceId) mutation.mutate({ group, name });
     },
     busy: mutation.isPending,
     error: mutation.error instanceof Error ? mutation.error.message : undefined,

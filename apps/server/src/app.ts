@@ -28,6 +28,7 @@ import { registerKanbanRoutes } from "./kanban/routes.ts";
 import { registerMailRoutes } from "./mail/routes.ts";
 import { registerNavidromeRoutes } from "./navidrome/routes.ts";
 import { registerPortainerRoutes } from "./portainer/routes.ts";
+import { registerMihomoRoutes } from "./mihomo/routes.ts";
 import { MANTINE_BRIDGE_CSS } from "./styles-bridge.ts";
 import type { MailClientFactory } from "./mail/client.ts";
 
@@ -111,6 +112,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerMailRoutes(app, { clientFactory: deps.mailClientFactory });
   registerNavidromeRoutes(app);
   registerPortainerRoutes(app);
+  registerMihomoRoutes(app);
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;
