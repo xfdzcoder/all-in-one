@@ -2,7 +2,7 @@ import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react
 import { useState } from "react";
 import { Badge, Group, Text } from "@mantine/core";
 
-import { useDataSources, useImmichGallery, useSourceHomeUrl } from "./data-hooks";
+import { useDataSources, useImmichGallery, useSourceHomeUrl, useDynamicOptionsMap } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { WidgetTitle } from "./widget-title";
@@ -51,13 +51,21 @@ export function ImmichGalleryWidget({
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
   // Q86/D59：标题区跳转到 Immich 站点
   const homeUrl = useSourceHomeUrl(sourceId);
+  // Q94（反馈④）：标题带上**所选相册名**（配置只存 id，这里解析成名称）
+  const dynOpts = useDynamicOptionsMap(sourceId, albumId ? "immich-albums" : undefined);
+  const albumLabel = (dynOpts[`immich-albums:${sourceId ?? ""}`] ?? []).find((o) => o.value === albumId)?.label;
 
   return (
     <div className="wb-widget">
       <Group gap={6}>
         <WidgetTitle
           icon={<ServiceIcon name="immich" size={16} />}
-          title={<>照片墙{row?.name ? ` · ${row.name}` : ""}</>}
+          title={
+            <>
+              照片墙{row?.name ? ` · ${row.name}` : ""}
+              {albumLabel ? ` · ${albumLabel}` : ""}
+            </>
+          }
           href={homeUrl}
         />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
