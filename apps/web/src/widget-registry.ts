@@ -11,6 +11,7 @@ import { MailWidget } from "./mail-widget";
 import { OpencodeWidget } from "./opencode-widget";
 import { MonitorWidget } from "./monitor-widget";
 import { ServiceOverviewWidget } from "./service-overview-widget";
+import { ImmichGalleryWidget } from "./immich-gallery-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -268,6 +269,25 @@ export const serviceOverviewManifest: WidgetManifest = {
   },
 };
 
+/** Immich 照片墙（FR-X3 只读深度，D50）：最近照片网格，缩略图服务端代取。 */
+export const immichGalleryManifest: WidgetManifest = {
+  type: "immich-gallery",
+  name: "Immich 照片墙",
+  description: "最近照片网格（只读）：缩略图服务端代取，点击开 Immich 原图页",
+  icon: "immich",
+  category: "服务",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:immich", help: "在「数据源管理 · 数据连接」维护（Immich）" },
+    { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近上传优先" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 60, defaultRefreshSec: 300, supportsManualRefresh: true },
+  },
+};
+
 export const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
@@ -295,6 +315,7 @@ export const widgetComponents = {
   opencode: OpencodeWidget,
   monitor: MonitorWidget,
   "service-overview": ServiceOverviewWidget,
+  "immich-gallery": ImmichGalleryWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -315,6 +336,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   opencode: opencodeManifest,
   monitor: monitorManifest,
   "service-overview": serviceOverviewManifest,
+  "immich-gallery": immichGalleryManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -337,6 +359,7 @@ export const builtinManifests: WidgetManifest[] = [
   opencodeManifest,
   monitorManifest,
   serviceOverviewManifest,
+  immichGalleryManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

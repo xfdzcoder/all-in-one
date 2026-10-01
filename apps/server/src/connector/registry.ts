@@ -92,7 +92,7 @@ export async function outboundRequest(
     maxBytes?: number;
     allowPrivate?: boolean;
   } = {},
-): Promise<{ status: number; text: string }> {
+): Promise<{ status: number; text: string; bytes: Uint8Array }> {
   const url = await assertSafeOutboundUrl(rawUrl, opts.allowPrivate ?? config.allowPrivateOutbound);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000);
@@ -105,11 +105,11 @@ export async function outboundRequest(
       redirect: "manual", // 不跟随跳转，防 redirect 到内网绕过 SSRF 检查
     });
     const maxBytes = opts.maxBytes ?? 1_000_000;
-    const text = await res.text();
-    if (text.length > maxBytes) {
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength > maxBytes) {
       throw new Error(`response too large (> ${maxBytes} bytes)`);
     }
-    return { status: res.status, text };
+    return { status: res.status, text: new TextDecoder().decode(bytes), bytes };
   } finally {
     clearTimeout(timer);
   }

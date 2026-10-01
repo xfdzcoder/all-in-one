@@ -69,14 +69,14 @@ const selectOption = async (label, optionText) => {
   }, optionText);
 };
 
-const addOverview = async (sourceName) => {
+const addOverview = async (sourceName, cardPrefix = "服务概览") => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
-  const picked = await page.evaluate(() => {
-    const card = [...document.querySelectorAll(".wb-picker-card")].find((c) => c.textContent.trim().startsWith("服务概览"));
+  const picked = await page.evaluate((p) => {
+    const card = [...document.querySelectorAll(".wb-picker-card")].find((c) => c.textContent.trim().startsWith(p));
     card?.click();
     return Boolean(card);
-  });
+  }, cardPrefix);
   if (!picked) return false;
   await sleep(400);
   if (!(await selectOption("数据连接", sourceName))) return false;
@@ -199,6 +199,23 @@ try {
   const cl = await waitForCard(names.mihomo);
   ok("LIVE mihomo picks + connections rendered", cl.includes("出口选择") && cl.includes("活动连接") && cl.includes("自动选择"), cl.slice(0, 160));
   ok("LIVE mihomo memory metric or honest note", cl.includes("内存"), cl.slice(-120));
+
+  // Q50 Immich 照片墙（D50 只读深度）：真机缩略图网格（服务端代取 data URI）
+  await clickBtn("编辑页面");
+  await sleep(300);
+  ok("LIVE add immich gallery", await addOverview(names.immich, "Immich 照片墙"));
+  await clickBtn("完成编辑");
+  await sleep(1000);
+  // 缩略图逐张服务端代取（12 张串行），轮询等就绪
+  let gal = { count: 0, dataUri: 0 };
+  for (let i = 0; i < 40 && gal.count === 0; i++) {
+    gal = await page.evaluate(() => {
+      const imgs = [...document.querySelectorAll(".wb-gallery img")];
+      return { count: imgs.length, dataUri: imgs.filter((x) => x.src.startsWith("data:image/jpeg;base64,")).length };
+    });
+    if (gal.count === 0) await sleep(700);
+  }
+  ok("LIVE immich gallery real thumbnails render", gal.count >= 6 && gal.dataUri === gal.count, JSON.stringify(gal));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

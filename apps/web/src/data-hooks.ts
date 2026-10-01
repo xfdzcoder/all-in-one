@@ -374,6 +374,29 @@ export function useMailAccounts() {
   };
 }
 
+/** Immich 照片墙（FR-X3 只读深度，D50）：缩略图服务端代取为 data URI。 */
+export function useImmichGallery(sourceId?: string, limit?: unknown, refreshSec?: unknown) {
+  const n = typeof limit === "number" && Number.isFinite(limit) ? limit : 12;
+  const query = useQuery({
+    queryKey: ["immich-gallery", sourceId ?? "", n],
+    queryFn: () => api.widgetData("immich-gallery", { sourceId, limit: n }) as Promise<Record<string, unknown>>,
+    enabled: Boolean(sourceId),
+    staleTime: 60_000,
+    refetchInterval: refreshInterval(refreshSec, 300_000),
+  });
+  return {
+    data: query.data as
+      | {
+          items: Array<{ id: string; at: string; type: "IMAGE" | "VIDEO"; thumb: string; href: string }>;
+          notes?: string[];
+        }
+      | undefined,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];
@@ -648,6 +671,11 @@ export function useDynamicOptionsMap(): Record<string, Array<{ value: string; la
     "data-source:service": [...(svcImmich.data ?? []), ...(svcNavidrome.data ?? []), ...(svcPortainer.data ?? []), ...(svcMihomo.data ?? [])].map(
       (r: { id: string; name: string }) => ({ value: r.id, label: r.name }),
     ),
+    // Q50：按 kind 细分的选项源（FR-X3 深度组件各自只选本类连接）
+    "data-source:immich": (svcImmich.data ?? []).map((r: { id: string; name: string }) => ({ value: r.id, label: r.name })),
+    "data-source:navidrome": (svcNavidrome.data ?? []).map((r: { id: string; name: string }) => ({ value: r.id, label: r.name })),
+    "data-source:portainer": (svcPortainer.data ?? []).map((r: { id: string; name: string }) => ({ value: r.id, label: r.name })),
+    "data-source:mihomo": (svcMihomo.data ?? []).map((r: { id: string; name: string }) => ({ value: r.id, label: r.name })),
     tags: (tags.data ?? []).map((t: { id: string; name: string }) => ({ value: t.id, label: t.name })),
     "mail-accounts": mailAccounts.accounts.map((a: { id: string; name: string }) => ({ value: a.id, label: a.name })),
   };

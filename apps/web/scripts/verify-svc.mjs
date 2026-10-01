@@ -82,12 +82,16 @@ const mock = createServer((req, res) => {
           count: 2,
           nextPage: "2",
           items: [
-            { originalFileName: "shot.jpg", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
-            { originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
+            { id: "t1", originalFileName: "shot.jpg", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
+            { id: "t2", originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
           ],
         },
       }),
     );
+  if (url.startsWith("/api/assets/") && url.includes("/thumbnail")) {
+    res.setHeader("Content-Type", "image/jpeg");
+    return res.end(Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01]));
+  }
   res.writeHead(404).end();
 });
 await new Promise((r) => mock.listen(0, "127.0.0.1", r));
@@ -128,15 +132,15 @@ const selectOption = async (label, optionText) => {
   }, optionText);
 };
 
-const addOverview = async (sourceName) => {
+const addOverview = async (sourceName, cardPrefix = "服务概览") => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
   // 卡片 = name+category+desc 的 UnstyledButton —— 按 name 前缀定位（精确文本会失配）
-  const picked = await page.evaluate(() => {
-    const card = [...document.querySelectorAll(".wb-picker-card")].find((c) => c.textContent.trim().startsWith("服务概览"));
+  const picked = await page.evaluate((p) => {
+    const card = [...document.querySelectorAll(".wb-picker-card")].find((c) => c.textContent.trim().startsWith(p));
     card?.click();
     return Boolean(card);
-  });
+  }, cardPrefix);
   if (!picked) return false;
   await sleep(400);
   if (!(await selectOption("数据连接", sourceName))) return false;
@@ -198,6 +202,15 @@ try {
   body = await page.evaluate(() => document.body.textContent ?? "");
   ok("SVC immich v3 routes + per-user list", body.includes("3.2.2") && body.includes("照片") && body.includes("12") && body.includes("mock-user"), body.slice(-140));
   ok("SVC immich Q49 new-count + recent uploads", body.includes("近 7 天新增") && body.includes("最近上传") && body.includes("shot.jpg"), body.slice(-140));
+
+  // Q50 Immich 照片墙（FR-X3 只读深度 D50）：缩略图服务端代取 → data URI 网格
+  ok("SVC add immich gallery", await addOverview(`svc-immich-${uniq}`, "Immich 照片墙"));
+  await sleep(2500);
+  const gal = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll(".wb-gallery img")];
+    return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
+  });
+  ok("SVC immich gallery renders server-fetched thumbs (D50)", gal.count >= 1 && gal.dataUri, JSON.stringify(gal));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));
