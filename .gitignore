@@ -23,3 +23,6 @@ ses_*.json
 # test artifacts
 apps/web/test-results/
 apps/web/playwright-report/
+
+# 运行时数据（数据库/上传图标/插件包等，随 ./data 备份，不入库）
+apps/server/data/
