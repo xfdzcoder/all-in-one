@@ -2,13 +2,16 @@ import type { ReactNode } from "react";
 import { ActionIcon, Tooltip } from "@mantine/core";
 
 /** 图标动作按钮（Q65/D52「文字按钮尽量 icon 化」）：图标 + tooltip + aria-label + sr-only 文本。
- *  sr-only 保留可访问名与 verify 文本匹配兼容（视觉上只剩图标）。 */
+ *  sr-only 保留可访问名与 verify 文本匹配兼容（视觉上只剩图标）——
+ *  因此 `label` 必须与原文字按钮一致，verify-* 脚本的 textContent 选择器可零迁移。 */
 export function IconAction({
   label,
   tooltip,
   onClick,
   danger,
   disabled,
+  variant = "subtle",
+  size = "sm",
   children,
 }: {
   label: string;
@@ -16,14 +19,17 @@ export function IconAction({
   onClick?: () => void;
   danger?: boolean;
   disabled?: boolean;
+  /** 顶部工具栏等处用 "default" 保持与原文字按钮同观感；默认 "subtle"（卡片内动作簇）。 */
+  variant?: "subtle" | "default" | "light" | "outline" | "filled" | "transparent";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   children: ReactNode;
 }) {
   return (
     <Tooltip label={tooltip ?? label} withinPortal>
       <ActionIcon
-        variant="subtle"
+        variant={variant}
         color={danger ? "red" : "gray"}
-        size="sm"
+        size={size}
         aria-label={label}
         disabled={disabled}
         onClick={onClick}

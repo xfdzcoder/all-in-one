@@ -60,7 +60,9 @@ body {
 }
 
 /* NFR2：移动端触控目标 ≥44px（375px 核心浏览/操作路径可用）。
- * 用 !important 覆盖组件库（Mantine）按 size 变体设置的 min-height ——
+ * 用 !important 覆盖组件库（Mantine）按 size 变体设置的 min-height **与 min-width** ——
+ * Mantine ActionIcon 自设 `min-width: var(--ai-size)`（类选择器特异性高于元素选择器），
+ * 不加 !important 会让图标按钮只剩 22px 宽（实测 h:44/w:22，触控不达 NFR2）。
  * 触控可达性优先于紧凑外观（此条为可达性下限，用户如需覆盖请自行评估 NFR2）。 */
 @media (max-width: 767px) {
   button,
@@ -72,7 +74,7 @@ body {
   [role="tab"],
   [role="combobox"] {
     min-height: var(--wb-touch-min) !important;
-    min-width: var(--wb-touch-min);
+    min-width: var(--wb-touch-min) !important;
     box-sizing: border-box;
   }
 }

@@ -120,7 +120,7 @@ try {
   await sleep(1000);
   ok("GMAIL exit edit", await clickBtn("完成编辑"));
   await sleep(300);
-  ok("GMAIL open account manager", await clickBtn("管理邮箱")); // D42：管理在数据源管理页
+  ok("GMAIL open account manager", await clickBtn("数据源管理")); // D42：管理在数据源管理页
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");

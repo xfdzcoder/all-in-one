@@ -12,13 +12,14 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
+import { IconCheck, IconDatabase, IconLogout, IconPencil, IconPuzzle } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
 import { api, ApiError, type Dashboard, type Me } from "./api";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
-import { WbAlert } from "./ui";
+import { IconAction, WbAlert } from "./ui";
 import { LoginPage } from "./LoginPage";
 import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
@@ -292,24 +293,35 @@ function Workbench({
             )}
             {isDesktop && view === "workspace" && (
               // Q27b#4：数据源管理页不显示布局编辑入口；Q29d/三.3：编辑布局 → 编辑页面
-              <Button
+              // 项 7（D52/Q65 icon 化）：标签保留「编辑页面」↔「完成编辑」——
+              // IconAction 的 wb-sr-only 文本让 verify-* 的 textContent 选择器零迁移。
+              <IconAction
+                label={layoutEdit ? "完成编辑" : "编辑页面"}
+                tooltip={layoutEdit ? "完成编辑" : "编辑页面"}
                 variant={layoutEdit ? "filled" : "default"}
-                size="xs"
                 onClick={() => setLayoutEdit((v) => !v)}
               >
-                {layoutEdit ? "完成编辑" : "编辑页面"}
-              </Button>
+                {layoutEdit ? <IconCheck size={16} /> : <IconPencil size={16} />}
+              </IconAction>
             )}
             {/* Q29d/三.2：「添加组件」入口在头部（编辑页面旁）—— Board 经 Portal 注入 */}
             <span id="wb-header-edit-slot" />
             {/* D41：数据源管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
-            <Button variant="default" size="xs" onClick={() => gotoView("data")}>
-              数据源管理
-            </Button>
+            <IconAction
+              label="数据源管理"
+              variant="default"
+              onClick={() => gotoView("data")}
+            >
+              <IconDatabase size={16} />
+            </IconAction>
             {isDesktop && (
-              <Button variant="default" size="xs" onClick={() => setPluginAdminOpen(true)}>
-                插件管理
-              </Button>
+              <IconAction
+                label="插件管理"
+                variant="default"
+                onClick={() => setPluginAdminOpen(true)}
+              >
+                <IconPuzzle size={16} />
+              </IconAction>
             )}
             {/* Q63：深浅主题切换（D52 双主题） */}
             <ActionIcon
@@ -340,9 +352,13 @@ function Workbench({
                 </svg>
               )}
             </ActionIcon>
-            <Button variant="default" size="xs" onClick={() => void api.logout().then(onLogout)}>
-              退出登录
-            </Button>
+            <IconAction
+              label="退出登录"
+              variant="default"
+              onClick={() => void api.logout().then(onLogout)}
+            >
+              <IconLogout size={16} />
+            </IconAction>
           </Group>
         </Group>
       </AppShell.Header>

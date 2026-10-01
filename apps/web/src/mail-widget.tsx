@@ -11,6 +11,8 @@ import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
  * 邮件组件（二期 Q7b，只读聚合 01 FR-E3/§2.3）：多账号列表 + 正文。
  * 正文为不可信 HTML —— 以沙箱 iframe 渲染（D30/D25：deny-all + CSP 禁脚本/远程图）；
  * 账号管理在「数据源管理 · 邮箱」（D42；口令走凭证库 SEC3）；D3 只读：无发送/删除/标记端点。
+ * Q68（项 2）：卡片左上角显示本卡覆盖的邮箱（账号名 `name`，`，`连接、单行省略号），
+ * 不再有「管理邮箱」按钮 —— 管理入口统一在头部「数据源管理」。
  */
 
 export function MailWidget({
@@ -30,22 +32,29 @@ export function MailWidget({
   // Q29e/四.2：配置多选邮箱过滤（留空 = 全部）
   const allowIds = (accountIds ?? []).length > 0 ? new Set(accountIds) : null;
 
-
+  // 项 2：卡片左上角显示本卡覆盖的邮箱（多账号用「，」连接；仅允许一行，超出省略号）。
+  // 显示名取 `name`（与组件配置里多选下拉的标签同源，用户看到的就是他勾选的）。
+  const shownAccounts = allowIds ? accounts.filter((a) => allowIds.has(a.id)) : accounts;
+  const mailboxLabel = shownAccounts.map((a) => a.name).filter(Boolean).join("，") || "全部邮箱";
 
   return (
-    <div className="wb-widget">
-      <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-        {/* D42：邮箱属数据源 —— 管理统一在「数据源管理 · 邮箱」 */}
-        <Button
-          size="compact-xs"
-          variant="default"
-          onClick={() =>
-            window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "mail" } }))
-          }
+    // 语义类 wb-widget--mail（D39：类名即公共 API，可被 /custom.css 按组件覆盖）
+    <div className="wb-widget wb-widget--mail">
+      <Group gap={6} wrap="nowrap">
+        {/* 项 2：左上角邮箱信息 —— 单行 + 省略号（flex:1/minWidth:0 才能让 truncate 生效） */}
+        <Text
+          size="xs"
+          fw={600}
+          truncate
+          className="wb-mailbox-label"
+          style={{ flex: 1, minWidth: 0 }}
+          title={mailboxLabel}
         >
-          管理邮箱
-        </Button>
-        <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
+          {mailboxLabel}
+        </Text>
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
+        </Group>
       </Group>
 
       {(agg?.errors ?? []).map((e) => (
@@ -60,7 +69,7 @@ export function MailWidget({
           {loading && <WbLoading />}
           {!loading && (agg?.items ?? []).length === 0 && (
             <Text size="xs" c="dimmed">
-              {accounts.length === 0 ? "先在「管理邮箱」添加邮箱账号" : "暂无邮件"}
+              {accounts.length === 0 ? "先在「数据源管理 · 邮箱」添加邮箱账号" : "暂无邮件"}
             </Text>
           )}
           {(agg?.items ?? []).filter((item) => !allowIds || allowIds.has(item.accountId)).map((item) => (

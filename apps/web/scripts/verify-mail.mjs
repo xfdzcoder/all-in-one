@@ -165,14 +165,14 @@ try {
   await sleep(800);
   ok(
     "MAIL empty state hint",
-    await page.evaluate(() => (document.body.textContent ?? "").includes("先在「管理邮箱」添加邮箱账号")),
+    await page.evaluate(() => (document.body.textContent ?? "").includes("先在「数据源管理 · 邮箱」添加邮箱账号")),
   );
   // 编辑态组件内容惰性（FR-P8）：组件内操作在浏览模式进行
   ok("MAIL exit edit to operate widget", await clickBtn("完成编辑"));
   await sleep(400);
 
-  // 账号管理（口令 → 凭证库）
-  ok("MAIL open account manager", await clickBtn("管理邮箱")); // D42：管理在数据源管理页
+  // 账号管理（口令 → 凭证库）—— Q68：卡片内「管理邮箱」按钮已移除，入口统一在头部「数据源管理」
+  ok("MAIL open account manager", await clickBtn("数据源管理"));
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");
@@ -208,9 +208,7 @@ try {
   ok(
     "MAIL refresh list",
     await page.evaluate(() => {
-      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
-        (i.textContent ?? "").includes("管理邮箱"),
-      );
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.querySelector(".wb-widget--mail"));
       const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "刷新");
       if (!btn) return false;
       btn.click();
@@ -223,13 +221,43 @@ try {
   ok("MAIL list renders subjects", bodyText.includes(`周报汇总-${uniq}`) && bodyText.includes(`欢迎订阅-${uniq}`));
   ok("MAIL per-account error surfaced", bodyText.includes("挂掉的邮箱") && bodyText.includes("connection refused"));
 
+  // Q68（项 2）：卡片左上角显示本卡覆盖的邮箱 —— 账号名 `，`连接、**仅一行、超出省略号**；
+  // 与 /api/mail/accounts 的 name 清单逐字对齐（校验多账号连接完整）；
+  // 同时断言「管理邮箱」按钮确实已移除（管理入口统一在头部「数据源管理」）
+  const mailbox = await page.evaluate(async () => {
+    const w = document.querySelector(".wb-widget--mail");
+    const label = w?.querySelector(".wb-mailbox-label");
+    if (!label) return { found: false };
+    const cs = getComputedStyle(label);
+    const accounts = await (await fetch("/api/mail/accounts")).json();
+    return {
+      found: true,
+      text: label.textContent.trim(),
+      expected: (accounts ?? []).map((a) => a.name).filter(Boolean).join("，") || "全部邮箱",
+      css: `${cs.whiteSpace}/${cs.textOverflow}/${cs.overflow}`,
+      singleLine: cs.whiteSpace === "nowrap" && cs.textOverflow === "ellipsis" && cs.overflow === "hidden",
+    };
+  });
+  ok(
+    "MAIL header shows mailbox label, single-line ellipsis (Q68)",
+    Boolean(mailbox.found) && mailbox.text === mailbox.expected && mailbox.singleLine,
+    JSON.stringify(mailbox),
+  );
+  ok(
+    "MAIL 管理邮箱 button removed (Q68)",
+    await page.evaluate(() => {
+      const w = document.querySelector(".wb-widget--mail");
+      return ![...(w?.querySelectorAll("button") ?? [])].some((b) => (b.textContent ?? "").includes("管理邮箱"));
+    }),
+  );
+
   // Q33：配置表单「展示的邮箱」下拉须列账号（dynamic mail-accounts 选项源回归）
   ok("MAIL enter edit for config check", await clickBtn("编辑页面"));
   await sleep(300);
   ok(
     "MAIL open widget config",
     await page.evaluate(() => {
-      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes("管理邮箱"));
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.querySelector(".wb-widget--mail"));
       const chrome = item?.querySelector(".wb-chrome");
       const btn = [...(chrome?.querySelectorAll(".wb-chrome__actions button") ?? [])].find((b) => b.textContent.trim() === "配置");
       btn?.click();
@@ -305,10 +333,19 @@ try {
   );
   ok("MAIL rich text content visible", (frameState?.text ?? "").includes(`正文-${uniq}`));
 
-  // 返回列表 + 清理
+  // 返回列表 + 清理（Q68：管理入口在头部「数据源管理」，进去后需自行切到「邮箱」页签）
   ok("MAIL back to list", await clickBtn("← 返回"));
   await sleep(400);
-  ok("MAIL reopen manager for cleanup", await clickBtn("管理邮箱"));
+  ok("MAIL reopen manager for cleanup", await clickBtn("数据源管理"));
+  await sleep(500);
+  ok(
+    "MAIL switch to mailbox tab",
+    await page.evaluate(() => {
+      const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");
+      tab?.click();
+      return Boolean(tab);
+    }),
+  );
   await sleep(400);
   ok("MAIL delete account", await clickInModal("删除"));
   await sleep(400);
