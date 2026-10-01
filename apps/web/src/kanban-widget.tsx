@@ -176,7 +176,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
               <Group gap={4} wrap="nowrap" mb={4}>
                 {editingCol === col.id ? (
                   <TextInput
-                    size="compact-xs"
+                    size="xs"
                     defaultValue={col.title}
                     className="wb-grow"
                     autoFocus
@@ -289,7 +289,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                 {addingCardCol === col.id ? (
                   <div className="wb-composer">
                     <TextInput
-                      size="compact-xs"
+                      size="xs"
                       placeholder="卡片标题"
                       autoFocus
                       value={cardDrafts[col.id] ?? ""}

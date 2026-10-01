@@ -79,7 +79,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
               </Text>
               {/* Q93（项 3）：徽标不参与压缩 —— 空间紧时文字溢出底色的根因 */}
               <Badge
-                size="compact-xs"
+                size="xs"
                 variant="light"
                 color={c.state === "running" ? "green" : c.abnormal ? "red" : "gray"}
               >

@@ -90,7 +90,7 @@ export function ImmichGalleryWidget({
             height: it.height,
             badge:
               it.type === "VIDEO" ? (
-                <Badge size="compact-xs" className="wb-gallery__video" color="dark" variant="filled">
+                <Badge size="xs" className="wb-gallery__video" color="dark" variant="filled">
                   视频
                 </Badge>
               ) : undefined,

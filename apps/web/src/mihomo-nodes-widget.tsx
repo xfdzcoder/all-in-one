@@ -53,7 +53,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                     <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
                       → {g.now ?? "—"}
                     </Text>
-                    <Badge size="compact-xs" variant="light" color="blue">
+                    <Badge size="xs" variant="light" color="blue">
                       {g.members}
                     </Badge>
                   </Group>
@@ -74,7 +74,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                       {n.name}
                     </Text>
                     {n.delayMs !== undefined ? (
-                      <Badge size="compact-xs" variant="light" color={n.delayMs < 300 ? "green" : "orange"}>
+                      <Badge size="xs" variant="light" color={n.delayMs < 300 ? "green" : "orange"}>
                         {n.delayMs} ms
                       </Badge>
                     ) : (

@@ -711,18 +711,30 @@ try {
     const row = document.querySelector(".wb-container-row");
     if (!row) return null;
     const badge = row.querySelector(".mantine-Badge-root");
+    const name = row.children[0];
     const cells = [...row.children].map((c) => Math.round(c.getBoundingClientRect().left));
+    const badgeFz = badge ? parseFloat(getComputedStyle(badge).fontSize) : 0;
+    const nameFz = name ? parseFloat(getComputedStyle(name).fontSize) : 0;
     return {
       isGrid: getComputedStyle(row).display === "grid",
       badgeOverflow: badge ? badge.scrollWidth - badge.clientWidth : 0,
       leftAligned: cells.every((l) => Number.isFinite(l)),
       cols: getComputedStyle(row).gridTemplateColumns.split(" ").length,
+      // 真正的回归点：徽标字号曾因 `size="compact-xs"` 是 Mantine **无效值**而回落到继承的 16px
+      // （Badge 只有 xs/sm/md/lg/xl，`compact-*` 是 Button/ActionIcon 的特性）→ 显得巨大
+      badgeFz,
+      nameFz,
     };
   });
   ok(
     "Q93 容器行分列左对齐 + 徽标文字不溢出底色 (项 3)",
     Boolean(crow) && crow.isGrid && crow.cols >= 3 && crow.badgeOverflow <= 0,
     JSON.stringify(crow),
+  );
+  ok(
+    "Q93 徽标字号不大于正文（size 值必须被 Mantine 真正识别）(项 3)",
+    Boolean(crow) && crow.badgeFz > 0 && crow.badgeFz <= crow.nameFz,
+    JSON.stringify({ badgeFz: crow?.badgeFz, nameFz: crow?.nameFz }),
   );
 
   // Q84（项 7）：Navidrome 概览不再展示「库就绪」

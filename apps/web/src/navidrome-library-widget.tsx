@@ -70,7 +70,7 @@ export function NavidromeLibraryWidget({
         <div className="wb-svc-notes">
           {(data?.nowPlaying ?? []).map((p, i) => (
             <Text key={i} size="xs">
-              <Badge size="compact-xs" color="green" variant="light" mr={6}>
+              <Badge size="xs" color="green" variant="light" mr={6}>
                 正在播放
               </Badge>
               {p.title}
