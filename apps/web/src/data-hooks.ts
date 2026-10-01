@@ -466,6 +466,30 @@ export function usePortainerLogs(sourceId?: string, containerId?: string) {
   };
 }
 
+/** Mihomo 节点面板（FR-X3 只读深度，D50）。 */
+export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
+  const query = useQuery({
+    queryKey: ["mihomo-nodes", sourceId ?? ""],
+    queryFn: () => api.widgetData("mihomo-nodes", { sourceId }) as Promise<Record<string, unknown>>,
+    enabled: Boolean(sourceId),
+    staleTime: 30_000,
+    refetchInterval: refreshInterval(refreshSec, 120_000),
+  });
+  return {
+    data: query.data as
+      | {
+          groups: Array<{ name: string; now?: string; members: number }>;
+          nodes: Array<{ name: string; type?: string; alive?: boolean; delayMs?: number }>;
+          providers: Array<{ name: string; nodes: number; updatedAt?: string }>;
+          notes?: string[];
+        }
+      | undefined,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];

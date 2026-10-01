@@ -14,6 +14,7 @@ import { ServiceOverviewWidget } from "./service-overview-widget";
 import { ImmichGalleryWidget } from "./immich-gallery-widget";
 import { NavidromeLibraryWidget } from "./navidrome-library-widget";
 import { PortainerContainersWidget } from "./portainer-containers-widget";
+import { MihomoNodesWidget } from "./mihomo-nodes-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -327,6 +328,24 @@ export const portainerContainersManifest: WidgetManifest = {
   },
 };
 
+/** Mihomo 节点面板（FR-X3 只读深度，D50）：策略组/节点延迟/订阅源。 */
+export const mihomoNodesManifest: WidgetManifest = {
+  type: "mihomo-nodes",
+  name: "Mihomo 节点面板",
+  description: "策略组选择 / 节点延迟 / 订阅源详情（只读）：无代理切换",
+  icon: "mihomo",
+  category: "服务",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:mihomo", help: "在「数据源管理 · 数据连接」维护（Mihomo / metacubexd）" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+  },
+};
+
 export const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
@@ -357,6 +376,7 @@ export const widgetComponents = {
   "immich-gallery": ImmichGalleryWidget,
   "navidrome-library": NavidromeLibraryWidget,
   "portainer-containers": PortainerContainersWidget,
+  "mihomo-nodes": MihomoNodesWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -380,6 +400,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   "immich-gallery": immichGalleryManifest,
   "navidrome-library": navidromeLibraryManifest,
   "portainer-containers": portainerContainersManifest,
+  "mihomo-nodes": mihomoNodesManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -405,6 +426,7 @@ export const builtinManifests: WidgetManifest[] = [
   immichGalleryManifest,
   navidromeLibraryManifest,
   portainerContainersManifest,
+  mihomoNodesManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

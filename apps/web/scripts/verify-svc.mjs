@@ -30,6 +30,7 @@ const mock = createServer((req, res) => {
         proxies: {
           GLOBAL: { now: "DIRECT", all: ["DIRECT"], history: [] },
           "♻️ 自动选择": { now: "香港WAP", all: ["a", "b"], history: [{ delay: 88 }] },
+          香港WAP: { type: "Shadowsocks", alive: true, history: [{ delay: 88 }] },
           DIRECT: { history: [] },
         },
       }),
@@ -273,6 +274,16 @@ try {
   ok("SVC portainer logs tail renders", (await page.evaluate(() => document.body.textContent ?? "")).includes("hello"), "");
   await page.keyboard.press("Escape");
   await sleep(300);
+
+  // Q53 Mihomo 节点面板（D50 只读深度）：策略组/节点延迟/订阅源
+  ok("SVC add mihomo nodes panel", await addOverview(`svc-mihomo-${uniq}`, "Mihomo 节点面板"));
+  await sleep(2500);
+  const mn = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
+    const t = item?.textContent ?? "";
+    return { groups: t.includes("策略组"), pick: t.includes("自动选择"), delay: t.includes("88 ms"), prov: t.includes("订阅源") };
+  });
+  ok("SVC mihomo nodes groups/delays/providers render", mn.groups && mn.pick && mn.delay && mn.prov, JSON.stringify(mn));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));

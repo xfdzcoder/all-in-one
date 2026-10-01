@@ -139,8 +139,8 @@
 - [ ] Q50 · FR-X3a Immich 照片墙（只读，**D50**）：最近照片网格/相册轮播，缩略图服务端代取（SEC3/SEC4）；D47 流程 + 真机验证 —— **代码完成**（connector immich-gallery + 组件 + verify-svc 17/17 + 契约测试 168/168），**真机待用户给 API Key 扩 `asset.view`**（缩略图 403 实测，缺权限提示已带"怎么修"）
 - [x] Q51 · FR-X3b Navidrome 只读深度（D50）：专辑网格/最近添加/正在播放展示（封面服务端代取）**✅ 2026-10-01**——`navidrome-library` connector（getAlbumList2+getNowPlaying+getCoverArt 代取→data URI）+ 专辑墙组件；verify-svc 19/19、**真机封面网格通过**
 - [x] Q52 · FR-X3c Portainer 只读深度（D50）：容器清单（状态/端口/最近事件）+ 日志尾部只读**✅ 2026-10-01**——`portainer-containers`+`portainer-logs` connector（Docker 日志帧剥离）+ 清单组件（异常高亮/点行看日志/只读边界注明）；verify-svc 23/23、真机清单（homepage/minecraft-mc-1+Exited (143)）通过
-- [ ] Q53 · FR-X3d Mihomo 只读深度（D50）：节点列表 + 延迟 + 订阅源详情
-- [ ] Q54 · 写操作类深度组件整理入「待用户确认」（Navidrome 播放遥控 / Portainer 容器启停 / Mihomo 换节点，含各自风险边界与确认机制建议），等用户逐项拍板
+- [x] Q53 · FR-X3d Mihomo 只读深度（D50）：节点列表 + 延迟 + 订阅源详情**✅ 2026-10-01**——`mihomo-nodes` connector + 节点面板组件（策略组选择/节点延迟徽标/订阅源）；verify-svc 25/25、真机（16 策略组/节点/订阅源 15）通过
+- [x] Q54 · 写操作类深度组件整理入「待用户确认」（Navidrome 播放遥控 / Portainer 容器启停 / Mihomo 换节点，含各自风险边界与确认机制建议），等用户逐项拍板**✅ 2026-10-01**——见「待用户确认」#5（含风险边界与建议确认机制）
 
 ## 历轮记录
 
@@ -188,7 +188,7 @@
 | # | 问题 | 提出轮次 | 状态 |
 |---|---|---|---|
 | 4 | **Immich API Key 需补 `asset.view` 权限**（照片墙缩略图 403 实测；`asset.read` 已有）——扩权后我跑真机复验收尾 Q50 | 第 88 轮（Q50） | **⏳ 等用户扩权** |
-| 5 | **写操作类深度组件**（Navidrome 播放遥控 / Portainer 容器启停 / Mihomo 换节点）逐项拍板（风险边界与确认机制见 **D50**） | 第 87 轮（D50） | **⏳ 等拍板** |
+| 5 | **写操作类深度组件**逐项拍板（**D50** 已定边界：均突破"只做连接与展示"，需逐项确认）：① **Navidrome 播放遥控**（play/next/seek；风险：影响正在收听的设备，建议仅"个人单设备"场景开放）；② **Portainer 容器启停/重启**（风险：**影响生产服务**，建议仅 restart 白名单容器 + D31 二次确认 + 审计日志）；③ **Mihomo 策略组切换**（风险：改代理出口影响全网流量，建议切换前确认 + 显示当前/目标节点） | 第 87 轮（D50） | **⏳ 等拍板** |
 | 1 | 邮件 connector 是否需要 Gmail API 专项（06 待定 #3） | 第 14 轮（Q7a/D30） | **✅ 已决：需要（D37，OAuth 授权流，只读）** |
 | 2 | 服务器监控数据来源选型（06 待定 #4） | 第 18 轮 | **✅ 已决：打通第三方服务（Glances 等，D36）** |
 | 3 | 自定义 API 受限 JS/JSX 模板的安全边界（06 待定 #5） | 第 18 轮 | **✅ 已决：受限 JSX（Homarr 模式，D35）** |
@@ -253,4 +253,5 @@
 | 87 | 2026-10-01 | **决策落盘 + Q49 Immich 指标补全**：① 用户拍板四项（FR-X3 立项**只读优先** / Immich 扩权补指标 / 默认项追认 / 按拍板排期）——**D50**（只读深度【必须】+ 写操作类【待拍板】逐项另立）、D48 追认注、06 待定 #6 结案（user_id 代位）；入队 Q49–Q54。② Q49：Immich「近 7 天新增」+「最近上传」清单（POST /api/search/metadata）——**实测坑**：`assets.total` 被 size 封顶（size=1→1、size=1000→1000），计数须按 items 数组 + nextPage（1000+ 标记）；真机基线 7d=120 / 24h=0 | server 165/165 ✅；verify-svc 15/15 ✅；verify-live 14/14 ✅（真机卡：近 7 天新增 120 + 最近上传 5 条） | `9c1255a`、`b222065` |
 | 88 | 2026-10-01 | **Q50 Immich 照片墙（FR-X3 只读深度 D50，代码完成）**：`immich-gallery` connector（search/metadata 列表 + `/api/assets/:id/thumbnail` **服务端代取缩略图**→data URI，凭证不进前端 SEC3；缩略图失败逐项跳过 + 诚实降级提示）+ ImmichGalleryWidget（网格/视频徽标/预览弹层/跳 Immich Web）+ manifest（`data-source:immich` 细分选项源——**顺修** useDynamicOptionsMap 缺按 kind 键的通用缺口，Q51–53 不再踩）+ 契约测试 3。verify-svc 17/17（mock 缩略图）。**真机卡 403**：缩略图需 `asset.view`（search 只需 `asset.read`）——降级提示已带"怎么修"，扩权待用户 | server 168/168 ✅；verify-svc 17/17 ✅；typecheck ✅；真机待 asset.view | `bb2d015` |
 | 89 | 2026-10-01 | **Q51 Navidrome 专辑墙（FR-X3 只读深度 D50）**：`navidrome-library` connector（getAlbumList2 newest + getNowPlaying + **getCoverArt 封面代取**→data URI，Subsonic 认证不进前端）+ 专辑墙组件（网格+正在播放行+预览弹层注明只读边界）+ 契约测试 3（171/171）。verify-svc 19/19（mock 封面）；**verify-live 真机封面网格通过**（17/18，唯一失败=Q50 缩略图待 asset.view） | server 171/171 ✅；verify-svc 19/19 ✅；真机 Navidrome ✅ | `c8579ed` |
-| 90 | 2026-10-01 | **Q52 Portainer 容器清单（FR-X3 只读深度 D50）**：`portainer-containers` + `portainer-logs` connector（Docker 日志 8 字节帧剥离）+ 清单组件（状态徽标/异常高亮置顶/点行日志尾部弹层/只读边界注明）+ 契约测试 4（173/173）。**教训**：verify-svc 不重置首页布局 → 历史轮次坏卡片被 scoped `.find` 首匹配命中误报（gdrag 教训二次应验）——补标准 seed 重置后 23/23；mock 容器 fixture 缺 `Id` 致日志查询被禁用（fixture 带 Id） | server 173/173 ✅；verify-svc 23/23 ✅；verify-live 19/20 ✅（真机清单 homepage/minecraft-mc-1+Exited (143) 通过；唯一失败=Q50 待 asset.view） | （本提交） |
+| 90 | 2026-10-01 | **Q52 Portainer 容器清单（FR-X3 只读深度 D50）**：`portainer-containers` + `portainer-logs` connector（Docker 日志 8 字节帧剥离）+ 清单组件（状态徽标/异常高亮置顶/点行日志尾部弹层/只读边界注明）+ 契约测试 4（173/173）。**教训**：verify-svc 不重置首页布局 → 历史轮次坏卡片被 scoped `.find` 首匹配命中误报（gdrag 教训二次应验）——补标准 seed 重置后 23/23；mock 容器 fixture 缺 `Id` 致日志查询被禁用（fixture 带 Id） | server 173/173 ✅；verify-svc 23/23 ✅；verify-live 19/20 ✅（真机清单 homepage/minecraft-mc-1+Exited (143) 通过；唯一失败=Q50 待 asset.view） | `85d16c6` |
+| 91 | 2026-10-01 | **Q53 Mihomo 节点面板（FR-X3 只读深度 D50）+ Q54 写操作整理**：`mihomo-nodes` connector（/proxies 组/节点分离 + 延迟尾点 + /providers/proxies）+ 节点面板组件（策略组选择/节点延迟徽标/订阅源详情）+ 契约测试 2（175/175）。真机通过（16 策略组/节点/订阅源 15）。Q54：写操作类三项风险边界与确认机制建议入「待用户确认」#5。**小坑**：mock 延迟 history 挂在策略组上（组不是节点）→ fixture 补真节点；真机节点无测速历史显「未测速」→ 断言按语义放宽。**D50 只读深度四件全部交付**（Q50 真机收尾待 asset.view） | server 175/175 ✅；verify-svc 25/25 ✅；verify-live 21/22 ✅（唯一失败=Q50 待 asset.view） | （本提交） |

@@ -245,6 +245,18 @@ try {
     return item?.textContent ?? "";
   });
   ok("LIVE portainer container list matches real host", pcTxt.includes("homepage") && pcTxt.includes("minecraft-mc-1") && pcTxt.includes("Exited (143)"), pcTxt.slice(0, 160));
+
+  // Q53 Mihomo 节点面板（D50）：真机策略组/节点/订阅源
+  await clickBtn("编辑页面");
+  await sleep(300);
+  ok("LIVE add mihomo nodes panel", await addOverview(names.mihomo, "Mihomo 节点面板"));
+  await clickBtn("完成编辑");
+  await sleep(2500);
+  const mnTxt = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("节点面板"));
+    return item?.textContent ?? "";
+  });
+  ok("LIVE mihomo nodes panel matches real instance", mnTxt.includes("策略组") && mnTxt.includes("节点（") && mnTxt.includes("订阅源"), mnTxt.slice(0, 160));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

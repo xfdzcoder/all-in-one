@@ -24,6 +24,7 @@ import { serviceOverviewConnector } from "../connector/service.ts";
 import { immichGalleryConnector } from "../connector/gallery.ts";
 import { navidromeLibraryConnector } from "../connector/navidrome-library.ts";
 import { portainerContainersConnector, portainerLogsConnector } from "../connector/portainer-containers.ts";
+import { mihomoNodesConnector } from "../connector/mihomo-nodes.ts";
 import {
   PluginPermissionError,
   fetchPluginData,
@@ -62,6 +63,7 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(navidromeLibraryConnector);
   registry.register(portainerContainersConnector);
   registry.register(portainerLogsConnector);
+  registry.register(mihomoNodesConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),
