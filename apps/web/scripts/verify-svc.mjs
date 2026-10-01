@@ -20,10 +20,13 @@ const uniq = Date.now().toString(36).slice(-4);
 
 const json = (obj) => JSON.stringify(obj);
 
-/** 最小 JPEG（含 SOF 段头，可被服务端 `imageSize()` 解析出声明宽高，D60 §1）。 */
-function miniJpeg(width, height) {
+/** 最小 JPEG（含 SOF 段头，可被服务端 `imageSize()` 解析出声明宽高，D60 §1）。
+ *  `marker` 写进 COM 段 —— **同尺寸也不同字节**（按资产 id 掺标），Q83 的
+ *  「预览切换后内容真的变了」靠比较 src 成立；SOF 不动 ⇒ 宽高解析与 Q81 比例断言不变。 */
+function miniJpeg(width, height, marker = 0) {
   return new Uint8Array([
     0xff, 0xd8,
+    0xff, 0xfe, 0x00, 0x04, (marker >> 8) & 0xff, marker & 0xff,
     0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
     0xff, 0xc0, 0x00, 0x11, 0x08,
     (height >> 8) & 0xff, height & 0xff,
@@ -32,6 +35,12 @@ function miniJpeg(width, height) {
     0xff, 0xd9,
   ]);
 }
+/** 资产 id → 稳定标记字节（同一资产重取字节不变，不同资产必不同 —— 16 位足够夹具集）。 */
+const markerOf = (id) => {
+  let h = 7;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+  return h;
+};
 let seq = 0; // Q82：让每张缩略图字节不同，便于断言「切换到了另一张」
 const ctrlHits = [];
 const mock = createServer((req, res) => {
@@ -183,7 +192,7 @@ const mock = createServer((req, res) => {
     const byPrefix = { a: [320, 240], b: [240, 320] };
     const n = Number(id.replace(/^t/, ""));
     const wh = byPrefix[id.slice(0, 1)] ?? (Number.isFinite(n) ? shapes[n % shapes.length] : [400, 400]);
-    return res.end(Buffer.from(miniJpeg(wh[0], wh[1])));
+    return res.end(Buffer.from(miniJpeg(wh[0], wh[1], markerOf(id))));
   }
   res.writeHead(404).end();
 });
@@ -688,8 +697,10 @@ try {
     JSON.stringify(lb),
   );
   ok("Q82 lightbox has prev/next (项 8)", Boolean(lb.hasPrev && lb.hasNext), JSON.stringify(lb));
-  // 注意：mock 的缩略图字节可能重复 → 不比较内容，只验证「切换被派发且遮罩仍在」。
-  // 严格的内容切换断言需要可区分的 mock 图片，记 Q83 待补。
+  // Q83：**严格内容断言**（Q82 欠账收口）—— 夹具 JPEG 按资产 id 掺 COM 标记字节，
+  // 同尺寸也不同字节 ⇒ 「切换后内容真的变了」可以直接比较 src（原先字节重复只能验派发）。
+  const lbSrc = () => page.evaluate(() => document.querySelector(".wb-lightbox__img")?.getAttribute("src") ?? "");
+  const srcBefore = await lbSrc();
   ok(
     "Q82 next is dispatched and lightbox stays open (项 8)",
     await page.evaluate(() => {
@@ -698,6 +709,21 @@ try {
     }),
   );
   await sleep(400);
+  const srcNext = await lbSrc();
+  ok(
+    "Q83 切换后内容真的变了（next 的 src ≠ 原图）",
+    srcBefore.startsWith("data:image") && srcNext.startsWith("data:image") && srcBefore !== srcNext,
+    JSON.stringify({ head: srcBefore.slice(0, 30), before: srcBefore.slice(-12), next: srcNext.slice(-12) }),
+  );
+  ok(
+    "Q83 prev 回到原图（循环切换内容一致）",
+    await page.evaluate(() => {
+      document.querySelector(".wb-lightbox__nav--prev")?.click();
+      return Boolean(document.querySelector(".wb-lightbox__img"));
+    }),
+  );
+  await sleep(400);
+  ok("Q83 prev 后 src 复原", (await lbSrc()) === srcBefore, "prev 内容未复原");
   // Q84（项 1）：预览遮罩不再有「照片预览（只读）」标题；「在 Immich 中打开」是 icon 链接
   const lbQ84 = await page.evaluate(() => {
     const root = document.querySelector(".wb-lightbox");
