@@ -1,8 +1,18 @@
+/**
+ * Q91（D58）：网格列数档位。**服务端 `api/schemas.ts` 的同名常量才是权威校验**，这里供渲染下拉。
+ * 取 4 的倍数只为响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数（列数本身不必是 4 的倍数）。
+ */
+export const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
+
 export type Dashboard = {
   id: string;
   title: string;
   icon: string | null;
   background: string | null;
+  /** Q91（D58）：网格列数档位 12/16/20/24/28/32（页面级布局配置）。 */
+  columns: number;
+  /** Q91（D58）：行高 px（40–200）。 */
+  cellHeight: number;
   sortOrder: number;
   layoutJson: string;
   schemaVersion: number;
@@ -170,7 +180,9 @@ export const api = {
   createDashboard: (title: string) => req<Dashboard>("POST", "/api/dashboards", { title }),
   patchDashboard: (
     id: string,
-    patch: Partial<Pick<Dashboard, "title" | "icon" | "background" | "sortOrder" | "layoutJson">>,
+    patch: Partial<
+      Pick<Dashboard, "title" | "icon" | "background" | "sortOrder" | "layoutJson" | "columns" | "cellHeight">
+    >,
   ) => req<Dashboard>("PATCH", `/api/dashboards/${id}`, patch),
   saveLayout: (id: string, layoutJson: string) =>
     req<Dashboard>("PUT", `/api/dashboards/${id}/layout`, { layoutJson }),

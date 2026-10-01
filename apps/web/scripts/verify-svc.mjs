@@ -826,6 +826,61 @@ try {
     seen.albumId >= 1,
     JSON.stringify({ seen, seedRes }),
   );
+  // ── Q91（项 8）：页面级网格粒度（列数 / 行高）──
+  await page.evaluate(() =>
+    [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "编辑页面")?.click(),
+  );
+  await sleep(500);
+  ok(
+    "Q91 页面设置暴露「网格列数 / 网格行高」(项 8)",
+    await page.evaluate(
+      () => Boolean(document.querySelector('[aria-label="网格列数"]') && document.querySelector('[aria-label="网格行高"]')),
+    ),
+  );
+  const pickColumns = async (label) => {
+    await page.evaluate(() => document.querySelector('[aria-label="网格列数"]')?.click());
+    await sleep(400);
+    const clicked = await page.evaluate((l) => {
+      const opt = [...document.querySelectorAll("[role=option]")].find((o) => (o.textContent ?? "").trim() === l);
+      opt?.click();
+      return Boolean(opt);
+    }, label);
+    await sleep(1500);
+    return clicked;
+  };
+  const readGrid = async () =>
+    page.evaluate(async () => {
+      const list = await (await fetch("/api/dashboards")).json();
+      const d = list.find((x) => (x.layoutJson ?? "[]") !== "[]") ?? list[0];
+      return {
+        id: d.id,
+        columns: d.columns,
+        cellHeight: d.cellHeight,
+        widgets: JSON.parse(d.layoutJson || "[]").map((w) => ({ x: w.x, w: w.w })),
+      };
+    });
+  const before = await readGrid();
+  ok("Q91 pick 24 列 from page settings", await pickColumns("24 列"));
+  const after = await readGrid();
+  const scaled =
+    before.widgets.length > 0 &&
+    after.widgets.length === before.widgets.length &&
+    after.widgets.every((w, i) => Math.abs(w.w - (before.widgets[i].w ?? 0) * 2) <= 1 && Math.abs(w.x - (before.widgets[i].x ?? 0) * 2) <= 1);
+  ok(
+    "Q91 切列数 12→24 **按比例重算 x/w**（组件不占错位置）(项 8)",
+    before.columns === 12 && after.columns === 24 && scaled,
+    JSON.stringify({ cols: [before.columns, after.columns], before: before.widgets.slice(0, 3), after: after.widgets.slice(0, 3) }),
+  );
+  // 切回 12 列 —— 往返应精确复原（rescaleLayout 单测已证），不留改动在用户盘上
+  await pickColumns("12 列");
+  const restored = await readGrid();
+  ok(
+    "Q91 12→24→12 往返精确复原布局",
+    restored.columns === 12 &&
+      restored.widgets.length === before.widgets.length &&
+      restored.widgets.every((w, i) => w.x === before.widgets[i].x && w.w === before.widgets[i].w),
+    JSON.stringify({ before: before.widgets.slice(0, 3), restored: restored.widgets.slice(0, 3) }),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

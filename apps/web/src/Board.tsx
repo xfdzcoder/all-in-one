@@ -8,7 +8,7 @@ import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/w
 import { Group, Modal, Text } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 
-import { api } from "./api";
+import { api, DASHBOARD_COLUMNS } from "./api";
 import { randomId } from "./random-id";
 import { FALLBACK_LAYOUT, manifestForComponent, widgetComponents } from "./widget-registry";
 import { WidgetEditContext } from "./widget-edit-context";
@@ -81,6 +81,22 @@ function parseLayout(json: string): GridStackWidget[] {
   } catch {
     return FALLBACK_LAYOUT;
   }
+}
+
+/**
+ * Q91（D58）：由列数档位推导响应式断点 `N → N/2 → N/4 → 1`（阈值沿用 D39 的 1200/900/600/480）。
+ * 列数档位取 4 的倍数正是为了让取半/取四分之一都是整数。
+ */
+export function breakpointsFor(cols: number): Array<{ w: number; c: number }> {
+  const n = Math.max(1, Math.round(Number(cols) || 12));
+  const half = Math.max(1, Math.round(n / 2));
+  const quarter = Math.max(1, Math.round(n / 4));
+  return [
+    { w: 1200, c: n },
+    { w: 900, c: half },
+    { w: 600, c: quarter },
+    { w: 480, c: 1 }, // D39：手机单列全宽（2 列挤压导致标题折行破碎）
+  ];
 }
 
 /** Host UI must live inside <GridStack> (wrapper constraint — useGridStack scope).
@@ -181,12 +197,18 @@ function BoardToolbar({
 export function Board({
   dashboardId,
   layoutJson,
+  columns = 12,
+  cellHeight = 80,
   canEdit,
   editMode,
   onLayoutSaved,
 }: {
   dashboardId: string;
   layoutJson: string;
+  /** Q91（D58）：页面网格列数档位 12/16/20/24/28/32。切列数靠**重挂载**（App 侧 key 含它）。 */
+  columns?: number;
+  /** Q91（D58）：行高 px。实时改，不重挂载。 */
+  cellHeight?: number;
   canEdit: boolean;
   /** 编辑态（Q22a）：上提到 App —— 入口按钮在头部「插件管理」旁，不再在页面底部。 */
   editMode: boolean;
@@ -239,28 +261,36 @@ export function Board({
 
   const effectiveEditMode = canEdit && editMode;
 
-  // Capture layout ONCE per dashboard mount (key={dashboardId} remounts on switch).
-  // The grid is the source of truth afterwards — keeping options stable prevents the
-  // wrapper's updateOptions() from calling load(children) and resetting unsaved moves.
+  // Q91（D58）：页面级网格粒度。档位/范围做防呆（服务端 zod 才是权威校验）
+  const gridColumns = DASHBOARD_COLUMNS.includes(columns as (typeof DASHBOARD_COLUMNS)[number]) ? columns : 12;
+  const gridCellHeight = Math.min(200, Math.max(40, Math.round(Number(cellHeight) || 80)));
+
+  // Capture layout ONCE per dashboard mount (key={dashboardId-columns-cellHeight} remounts
+  // on switch or on grid-granularity change). The grid is the source of truth afterwards —
+  // keeping options stable prevents the wrapper's updateOptions() from calling
+  // load(children) and resetting unsaved moves.
   const [options] = useState(() => ({
-    column: 12,
-    cellHeight: 80,
+    column: gridColumns,
+    cellHeight: gridCellHeight,
     margin: 6,
     mode: "float" as const,
     minRow: 1,
     disableDrag: true,
     disableResize: true,
     columnOpts: {
-      breakpoints: [
-        { w: 1200, c: 12 },
-        { w: 900, c: 8 },
-        { w: 600, c: 4 },
-        { w: 480, c: 1 }, // D39：手机单列全宽（2 列挤压导致标题折行破碎）
-      ],
+      // Q91（D58）：断点按 `N → N/2 → N/4 → 1` 推导（阈值沿用既有 1200/900/600/480）
+      breakpoints: breakpointsFor(gridColumns),
       layout: "moveScale" as const,
     },
     children: parseLayout(layoutJson),
   }));
+
+  // Q91（D58）：行高**实时改**、不重挂载 —— `grid.cellHeight()`，绝不动 options
+  // （options 变了会触发 wrapper 的 updateOptions() → load(children)，重置未保存的改动）
+  useEffect(() => {
+    const g = gridRef.current?.getGrid();
+    if (g) g.cellHeight(gridCellHeight);
+  }, [gridCellHeight]);
 
   // Flush pending layout to server (debounced auto-save, FR-P4).
   // ISS-4 修复：失败按退避（5s→10s→30s 封顶）**真·自动重试**（原文案承诺"稍后自动重试"），
@@ -295,7 +325,9 @@ export function Board({
   const scheduleSave = useCallback(() => {
     const grid = gridRef.current?.getGrid();
     if (!grid) return;
-    pendingJson.current = JSON.stringify(grid.save(false, false));
+    // L2-0（Q91）：**显式传列数**存布局。gridstack 默认取 `_layouts[最高列数]`，
+    // 显式传 `gridColumns` 让坐标系与 dashboard.columns 严格对齐，不依赖「最高列数」这个隐含约定。
+    pendingJson.current = JSON.stringify(grid.save(false, false, undefined, gridColumns));
     setDirty(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => void flush(), SAVE_DEBOUNCE_MS);

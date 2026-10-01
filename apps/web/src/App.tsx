@@ -8,7 +8,9 @@ import {
   Group,
   Loader,
   MantineProvider,
+  NumberInput,
   Popover,
+  Select,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -16,7 +18,8 @@ import { IconCheck, IconDatabase, IconLogout, IconPencil, IconPuzzle } from "@ta
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { api, ApiError, type Dashboard, type Me } from "./api";
+import { api, ApiError, DASHBOARD_COLUMNS, type Dashboard, type Me } from "./api";
+import { rescaleLayout } from "./grid-rescale";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
 import { IconAction, WbAlert } from "./ui";
@@ -172,11 +175,29 @@ function Workbench({
     }
   };
 
-  // FR-P1/P9：页面设置（名称/图标/背景色）
+  // FR-P1/P9：页面设置（名称/图标/背景色 + Q91 网格粒度）
   // Q29d/三.3：内联页面设置（失焦即存，无弹窗）
-  const savePageSettingsFields = async (patch: { icon?: string | null; background?: string | null; title?: string }) => {
+  const savePageSettingsFields = async (patch: {
+    icon?: string | null;
+    background?: string | null;
+    title?: string;
+    columns?: number;
+    cellHeight?: number;
+  }) => {
     if (!active) return;
     try {
+      // Q91（D58）：切列数 = **坐标系变化**，必须按比例重算 x/w 再落盘，否则组件占错位置。
+      // （先存布局再存设置，保证任何一步失败都不会出现「列数已改、坐标没改」的中间态被刷新读到）
+      if (patch.columns !== undefined && patch.columns !== active.columns) {
+        let widgets: Array<{ id: string; x: number; y: number; w: number; h: number }> = [];
+        try {
+          const parsed: unknown = JSON.parse(active.layoutJson);
+          if (Array.isArray(parsed)) widgets = parsed as typeof widgets;
+        } catch {
+          widgets = [];
+        }
+        await api.saveLayout(active.id, JSON.stringify(rescaleLayout(widgets, active.columns, patch.columns)));
+      }
       await api.patchDashboard(active.id, patch);
       setPageError(null);
       await refresh();
@@ -409,6 +430,33 @@ function Workbench({
                     if (v !== (active?.background ?? "")) void savePageSettingsFields({ background: v.trim() || null });
                   }}
                 />
+                {/* Q91（D58）：页面级网格粒度 —— 列数 / 行高 */}
+                <Select
+                  size="xs"
+                  label="网格列数"
+                  aria-label="网格列数"
+                  data={DASHBOARD_COLUMNS.map((c) => ({ value: String(c), label: `${c} 列` }))}
+                  value={String(active?.columns ?? 12)}
+                  onChange={(v) => {
+                    const n = Number(v);
+                    if (Number.isFinite(n) && n !== active?.columns) void savePageSettingsFields({ columns: n });
+                  }}
+                />
+                <NumberInput
+                  size="xs"
+                  label="网格行高（px）"
+                  aria-label="网格行高"
+                  min={40}
+                  max={200}
+                  step={10}
+                  defaultValue={active?.cellHeight ?? 80}
+                  onBlur={(e) => {
+                    const n = Number(e.currentTarget.value);
+                    if (Number.isFinite(n) && n !== active?.cellHeight) {
+                      void savePageSettingsFields({ cellHeight: Math.min(200, Math.max(40, Math.round(n))) });
+                    }
+                  }}
+                />
               </div>
             )}
             {pageError && (
@@ -418,9 +466,11 @@ function Workbench({
             )}
             {active && (
               <Board
-                key={active.id}
+                key={`${active.id}-${active.columns}`}
                 dashboardId={active.id}
                 layoutJson={active.layoutJson}
+                columns={active.columns}
+                cellHeight={active.cellHeight}
                 canEdit={isDesktop}
                 editMode={layoutEdit}
                 onLayoutSaved={handleLayoutSaved}
