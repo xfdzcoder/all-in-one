@@ -5,6 +5,7 @@
 ## 工作方式（本项目硬约束）
 
 - **阶段门控**：需求分析 → 产品定义 → 技术方案设计 → MVP 定义 → 实施。未经用户明确确认，不得进入下一阶段；文档先行于编码。不要擅自扩大需求范围。
+- **质量门禁（D47）**：新增组件、接入第三方服务、改动卡片指标，必须过 `docs/feature-plan/08-widget-quality.md` 的推导顺序与 §5 DoD 清单（含真机验证），自检结果写入当轮记录。
 - **需求/决策变更**：更新 `docs/feature-plan/01-requirements.md`，并向 `docs/feature-plan/02-decisions.md` 追加 `D#` 条目（ADR 风格，保留历史，不静默改写）。当前决策 D1–D22；MVP 里程碑与进度见 `05-mvp.md` / `README.md`。
 - 非目标与排后组件（Kanban/邮件/监控/OpenCode、代码插件安装器、多用户/公网）见 `01-requirements.md` §1.2/§2.3，勿提前实现。新想法进 `06-roadmap.md` 待定清单。
 - 提交信息用英文 conventional commits；工作区只提交代码与文档，`.idea/`、`.mimocode/` 已 gitignore。**M2 起每个小批次（子项）完成后单独一次 commit**，勿攒大提交。
@@ -15,6 +16,13 @@
 - 每轮协议见 `.opencode/loop-prompt.md`；状态落盘 `docs/feature-plan/07-iteration-progress.md`（队列/记录/待用户确认）。
 - **硬边界**：禁止 `git push` 与任何远端外发（`opencode.jsonc` permissions 已 deny）；需要用户拍板的产品决策记入 07「待用户确认」并跳过该项。
 - 停止：会话内发「停止」指令或 `/loop-stop`、`/loop-pause`（`/loop-clear` 清除）；恢复 `/loop-resume`。
+
+## 组件/接入质量门禁（D47，硬约束）
+
+- 推导顺序（缺一不可）：**用户问题清单（3–5 条）→ 对照物（官方 UI + 成熟 dashboard）→ 指标映射表（问题/指标/来源/降级四列）→ API 落实（多接口聚合 + 多版本回落 + 权限模型意识）→ 真机验证**。方向永远是"用户想看什么 → 去 API 找答案"，禁止"API 给什么 → 展示什么"。
+- 降级文案写**原因 + 怎么修**，禁止"该服务未提供 X"式甩锅（除非确证并引用证据）。
+- **真机验证**：拿得到真实实例的接入必须连真机看卡片才算完成，否则标"待真机验证"入待办、不勾完成；凭证只落 `.opencode/.env.verify`（不入库/不入日志/不进前端）。
+- 完成定义 = `docs/feature-plan/08-widget-quality.md` §5 DoD 清单勾全，自检结果写入 07 当轮记录。
 
 ## 命令
 

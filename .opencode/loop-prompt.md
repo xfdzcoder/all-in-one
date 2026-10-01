@@ -19,7 +19,7 @@
    - 拆出小步骤与验收标准（做成什么样算完成），记入 07 当轮记录；
    - 涉及产品取舍且用户未明示的：按「需要用户拍板」处理（见边界），不要自行拍板。
 6. **实现**：遵循 AGENTS.md「架构不变量」与 Monorepo 边界；改 `apps/server/src/db/schema.ts` 必须 `pnpm --filter @all-in-one/server exec drizzle-kit generate`（D18，勿手写 DDL）；前端改动与现有组件风格保持一致。
-7. **自测**：`pnpm test` / `pnpm typecheck` / `pnpm lint`（按改动面选择，测试必须全绿）；涉及 UI 行为用 `apps/web/scripts/verify-*.mjs` 验证（可按需新增 verify 脚本）；涉及部署做本地 Docker 构建验证。
+7. **自测**：`pnpm test` / `pnpm typecheck` / `pnpm lint`（按改动面选择，测试必须全绿）；涉及 UI 行为用 `apps/web/scripts/verify-*.mjs` 验证（可按需新增 verify 脚本）；涉及部署做本地 Docker 构建验证。**涉及组件/接入/指标的改动，还必须按 `docs/feature-plan/08-widget-quality.md` §2 推导并勾全 §5 DoD 清单（含真机验证或显式"待真机验证"标注），自检结果写入当轮记录（D47 硬门禁）。**
 8. **落盘**：
    - 自测全绿后**单独一条** git commit（英文 conventional commits，**不 push**）；
    - 更新 07：完成项标 `[x]`，历轮记录追加「做了什么 / 分析结论 / 验证结果 / commit」；

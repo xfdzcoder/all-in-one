@@ -156,8 +156,9 @@ Workspace（空间/工作台）      ← 业务数据的属主
 | ID | 需求 | 优先级 |
 |---|---|---|
 | FR-X1 | 图标库：内置**官方品牌图标**（vendored 随包，来源/许可登记 SOURCES.md）+ **自定义图标库**（上传 SVG（服务端净化）/PNG/WebP，引用 `/api/icons/:id` 或 `custom:<id>`）——已接入服务用官方图标，不自绘（**D45**） | 【必须】 |
-| FR-X2 | 服务概览组件：Immich / Navidrome / Portainer / Mihomo（metacubexd 归 mihomo）命名连接 + 探活徽标/版本/关键计数（**D46**：只做连接与展示） | 【必须】 |
+| FR-X2 | 服务概览组件：Immich / Navidrome / Portainer / Mihomo（metacubexd 归 mihomo）命名连接 + 探活徽标/版本/关键指标（**D46**：只做连接与展示；指标形态按 **D48** 结构化卡片 + 迷你图表） | 【必须】 |
 | FR-X3 | 服务深度组件（Immich 照片墙、Navidrome 播放、Portainer 容器操作、Mihomo 代理切换） | 【暂不考虑】（二期另立） |
+| FR-X4 | 组件/接入质量门禁（**D47**）：指标按 `08-widget-quality.md` 推导（用户问题→对照→指标映射→API→真机验证），降级文案"原因+怎么修"不得甩锅，DoD 勾全才算完成 | 【必须】 |
 
 ## 3. 非功能需求
 
