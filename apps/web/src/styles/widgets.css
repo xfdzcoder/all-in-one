@@ -595,22 +595,35 @@ a.wb-widget__title-link:focus-visible {
 }
 
 /* ── Immich 照片墙 / Navidrome 专辑墙（FR-X3 只读深度，D50 · **Q71**）── */
+/* Q89（项 2，D60/D61）：**等高行 justified** —— 行由 `media-wall-layout.ts` 装箱，
+   每行一个 flex 行；格子宽 = 行高 × 原始宽高比 ⇒ 不裁切、不变形，卡片再高也不拉长缩略图。
+   间距走 `--wb-gallery-gap`（JS 从 computed style 读同一值参与装箱，两边不可能漂移）。 */
 .wb-gallery {
-  display: grid;
-  /* 项 6：**只限最小、不限最大** —— 列/行都用 minmax(最小值, 1fr)：
-     有空间就无上限放大填满卡片，低于最小值不压缩，放不下就滚动。 */
-  grid-template-columns: repeat(auto-fill, minmax(var(--wb-gallery-min, 72px), 1fr));
-  grid-auto-rows: minmax(var(--wb-gallery-min, 72px), 1fr);
-  gap: var(--wb-space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-gallery-gap, var(--wb-space-1));
   overflow: auto;
   flex: 1;
   min-height: 0;
-  align-content: start;
+}
+
+/* 行内**严格等高**：高度由行的 style 给定，格子 stretch 齐平 */
+.wb-gallery__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--wb-gallery-gap, var(--wb-space-1));
+  flex: 0 0 auto;
+}
+
+/* 末行：自然尺寸左对齐，**不拉伸**（不塞占位符、不 flex-grow） */
+.wb-gallery__row--last {
+  justify-content: flex-start;
 }
 
 .wb-gallery__cell {
   position: relative;
-  /* Q71：去掉固定 aspect-ratio:1 —— 行高由网格的 minmax(最小值,1fr) 决定，从而撑满卡片 */
+  /* Q89：宽/高由 JS 按原始比例精确给定，不再参与弹性分配 */
+  flex: 0 0 auto;
   padding: 0;
   border: none;
   border-radius: var(--wb-radius-sm);
@@ -654,8 +667,15 @@ a.wb-widget__title-link:focus-visible {
 .wb-gallery__cell img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Q89：框已**等于图的原始比例**（宽 = 行高 × 比例）⇒ fill 无裁切、无变形。
+     （D60 §2 的 `cover → fill` 就是为此；旧布局框与图比例不符，才需要 cover 裁切。） */
+  object-fit: fill;
   display: block;
+}
+
+/* 1:1 退化格子（占位块 / 宽高解析不出）：宁可裁切也**不变形** */
+.wb-gallery__cell--fallback img {
+  object-fit: cover;
 }
 
 /* Q70：缩略图/封面不可用时的占位块 —— 保留格子（不再跳过），弱化不喧宾夺主 */

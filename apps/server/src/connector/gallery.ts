@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { imageSize } from "./image-size.ts";
 
 /**
  * Immich 照片墙（FR-X3 只读深度，**D50**）：最近照片网格。
@@ -29,6 +30,9 @@ export interface ImmichGalleryItem {
   thumb: string;
   /** 跳转 Immich Web 的相册页（新标签打开）。 */
   href: string;
+  /** 缩略图**原始宽高**（D60 §1 字节头解析），供前端等比装箱；解析不出则缺省，前端按 1:1 退化。 */
+  width?: number;
+  height?: number;
 }
 
 export interface ImmichGalleryData {
@@ -63,12 +67,15 @@ export function normalizeImmichGallery(
     const id = str(a.id);
     if (!id) continue;
     const bytes = thumbs.get(id);
+    // D60 §1：宽高从**字节头**解析（不依赖 Immich 是否给 exif）—— 缩略图字节已抓到手，零额外请求
+    const size = imageSize(bytes);
     out.push({
       id,
       at: str(a.takenAt) ?? str(a.createdAt) ?? "",
       type: a.type === "VIDEO" ? "VIDEO" : "IMAGE",
       thumb: bytes && bytes.byteLength > 0 ? `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}` : "",
       href: `${base}/photos/${id}`,
+      ...(size ? { width: size.width, height: size.height } : {}),
     });
   }
   return out;

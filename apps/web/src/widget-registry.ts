@@ -304,7 +304,7 @@ export const immichGalleryManifest: WidgetManifest = {
       help: "Q71（项 6）：铺开 = 网格放大填满卡片；随机 = 整卡只展示一张图并定时随机刷新",
     },
     { key: "randomIntervalSec", label: "随机换图间隔（秒）", type: "number", default: 30, help: "仅「随机」模式生效，最短 3 秒" },
-    { key: "minCell", label: "格子最小边长（px）", type: "number", default: 72, help: "只限最小、不限最大：有空间就放大填满卡片，放不下则滚动" },
+    { key: "minCell", label: "目标行高（px）", type: "number", default: 72, help: "每行高度。缩略图保持原宽高比、宽度按各自比例不同；卡片更高只会显示更多行，不会把图片拉长" },
   ],
   capabilities: {
     data: { source: "http-connector" },
@@ -344,7 +344,7 @@ export const navidromeLibraryManifest: WidgetManifest = {
       help: "Q71（项 6）：铺开 = 网格放大填满卡片；随机 = 整卡只展示一张封面并定时随机刷新",
     },
     { key: "randomIntervalSec", label: "随机换封面间隔（秒）", type: "number", default: 30, help: "仅「随机」模式生效，最短 3 秒" },
-    { key: "minCell", label: "格子最小边长（px）", type: "number", default: 72, help: "只限最小、不限最大：有空间就放大填满卡片，放不下则滚动" },
+    { key: "minCell", label: "目标行高（px）", type: "number", default: 72, help: "每行高度。缩略图保持原宽高比、宽度按各自比例不同；卡片更高只会显示更多行，不会把图片拉长" },
   ],
   // D54：播放遥控（navidrome.play/pause/next/prev/stop）已移除 —— 本组件纯只读
   capabilities: {

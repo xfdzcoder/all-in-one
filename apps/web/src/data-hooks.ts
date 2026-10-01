@@ -430,7 +430,16 @@ export function useImmichGallery(
   return {
     data: query.data as
       | {
-          items: Array<{ id: string; at: string; type: "IMAGE" | "VIDEO"; thumb: string; href: string }>;
+          items: Array<{
+            id: string;
+            at: string;
+            type: "IMAGE" | "VIDEO";
+            thumb: string;
+            href: string;
+            /** D60 §1：服务端从缩略图字节头解析的原始宽高（Q89 等比装箱用）。 */
+            width?: number;
+            height?: number;
+          }>;
           notes?: string[];
         }
       | undefined,
@@ -465,7 +474,15 @@ export function useNavidromeLibrary(
   return {
     data: query.data as
       | {
-          albums: Array<{ id: string; name: string; artist?: string; cover: string }>;
+          albums: Array<{
+            id: string;
+            name: string;
+            artist?: string;
+            cover: string;
+            /** D60 §1：服务端从封面字节头解析的原始宽高（Q89 等比装箱用）。 */
+            width?: number;
+            height?: number;
+          }>;
           nowPlaying: Array<{ title: string; artist?: string; username?: string }>;
           notes?: string[];
         }

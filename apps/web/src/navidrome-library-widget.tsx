@@ -30,7 +30,8 @@ export function NavidromeLibraryWidget({
   /** Q71（项 6）：`grid` 铺开 / `random` 随机单图定时换。 */
   layout?: "grid" | "random";
   randomIntervalSec?: number;
-  /** 格子最小边长 px（只限最小、不限最大）。 */
+  /** Q89（D60 §3）：**目标行高** px（配置键仍叫 `minCell`，为兼容既有配置）。
+   *  行高由等比装箱反推，不再「只限最小、不限最大」地撑满卡片。 */
   minCell?: number;
   /** Q72/Q87：只看某个艺人（留空 = 全部）。 */
   artistId?: string;
@@ -91,11 +92,14 @@ export function NavidromeLibraryWidget({
             id: a.id,
             src: a.cover,
             title: `${a.name}${a.artist ? ` · ${a.artist}` : ""}`,
+            // D60 §1：封面原始宽高来自服务端字节头解析 → 前端据此等比装箱（Q89）
+            width: a.width,
+            height: a.height,
             placeholder: { icon: <IconDiscOff size={18} aria-hidden />, label: "封面不可用" },
           }))}
           layout={layout}
           randomIntervalSec={randomIntervalSec}
-          minCell={minCell}
+          targetRowHeight={minCell}
           onOpen={(it) => {
             const a = data.albums.find((x) => x.id === it.id);
             if (a) setPreview({ cover: a.cover, name: a.name, artist: a.artist });

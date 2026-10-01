@@ -1,0 +1,40 @@
+/**
+ * 测试夹具构造器（**仅供测试引用**，不在生产调用路径上）。
+ *
+ * 拼一个「可被 `imageSize()` 解析出声明尺寸」的最小 JPEG：SOI + APP0 + SOF0 + EOI。
+ * 它带真实的 SOF 段头，但**不含熵编码数据**（不可解码显示）—— 够用来验宽高解析与
+ * 按比例算框；真实渲染验证走 D47 真机（真 Immich / Navidrome 返回的是真图）。
+ */
+
+export function miniJpeg(width: number, height: number): Uint8Array {
+  return new Uint8Array([
+    0xff, 0xd8, // SOI
+    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, // APP0（段长 4，验「跳过非帧段」）
+    0xff,
+    0xc0, // SOF0
+    0x00,
+    0x11, // 段长 17
+    0x08, // 精度 8
+    (height >> 8) & 0xff,
+    height & 0xff,
+    (width >> 8) & 0xff,
+    width & 0xff,
+    0x03, // 3 个分量
+    0x01, 0x11, 0x00,
+    0x02, 0x11, 0x00,
+    0x03, 0x11, 0x00,
+    0xff, 0xd9, // EOI
+  ]);
+}
+
+/** 测试夹具：最小 PNG（真 IHDR）。 */
+export function miniPng(width: number, height: number): Uint8Array {
+  return new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // 签名
+    0x00, 0x00, 0x00, 0x0d, // IHDR 长度 13
+    0x49, 0x48, 0x44, 0x52, // "IHDR"
+    (width >>> 24) & 0xff, (width >>> 16) & 0xff, (width >>> 8) & 0xff, width & 0xff,
+    (height >>> 24) & 0xff, (height >>> 16) & 0xff, (height >>> 8) & 0xff, height & 0xff,
+    0x08, 0x02, 0x00, 0x00, 0x00,
+  ]);
+}

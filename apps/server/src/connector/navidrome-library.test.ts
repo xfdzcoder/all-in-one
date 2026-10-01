@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
 import { navidromeLibraryConnector, normalizeNavidromeLibrary } from "./navidrome-library.ts";
+import { miniJpeg } from "./image-size.fixture.ts";
 import type { FetchContext } from "./registry.ts";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
@@ -91,7 +92,7 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
         if (url.includes("id=al-none")) return res.writeHead(404).end();
         // al-big 在 size=600 时返回 >1MB（触发上限）→ 回落 size=300 才成功
         const payload =
-          url.includes("id=al-big") && !wantSmall ? Buffer.alloc(1_100_000, 1) : Buffer.from([0xff, 0xd8, 0xff, 0xdb]);
+          url.includes("id=al-big") && !wantSmall ? Buffer.alloc(1_100_000, 1) : Buffer.from(miniJpeg(300, 300));
         return res.end(payload);
       }
       res.writeHead(404).end();
@@ -123,12 +124,20 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
     const data = (await navidromeLibraryConnector.fetch(
       { type: "navidrome-library", config: { sourceId: id, limit: 6 } },
       ctx,
-    )) as { albums: Array<{ id: string; cover: string }>; notes?: string[] };
+    )) as {
+      albums: Array<{ id: string; cover: string; width?: number; height?: number }>;
+      notes?: string[];
+    };
     // Q70：三项全保留 —— al-big 走回落拿到封面，al-none 两级失败仍留格
     expect(data.albums.map((a) => a.id)).toEqual(["al-9", "al-big", "al-none"]);
     expect(data.albums[0].cover).toMatch(/^data:image\/jpeg;base64,/);
     expect(data.albums[1].cover).toMatch(/^data:image\/jpeg;base64,/); // 回落成功
     expect(data.albums[2].cover).toBe(""); // 仍保留 → 组件渲染占位块
+    // D60 §1（Q89）：封面字节头解析出的宽高随 item 下发（Navidrome 不提供此字段，也不依赖它）
+    expect(data.albums[0].width).toBe(300);
+    expect(data.albums[0].height).toBe(300);
+    expect(data.albums[1].width).toBe(300); // 回落拿到的字节同样解析
+    expect(data.albums[2].width).toBeUndefined(); // 无字节 → 不下发，前端按 1:1 退化
     // Q70：主取 size=600，超限回落 size=300（al-big 命中两级）
     expect(coverUrls.filter((u) => u === "size=600").length).toBe(3);
     expect(coverUrls.filter((u) => u === "size=300").length).toBe(2); // al-big 回落 + al-none 回落

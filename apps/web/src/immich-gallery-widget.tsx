@@ -29,7 +29,8 @@ export function ImmichGalleryWidget({
   /** Q71（项 6）：`grid` 铺开 / `random` 随机单图定时换。 */
   layout?: "grid" | "random";
   randomIntervalSec?: number;
-  /** 格子最小边长 px（只限最小、不限最大）。 */
+  /** Q89（D60 §3）：**目标行高** px（配置键仍叫 `minCell`，为兼容既有配置）。
+   *  行高由等比装箱反推，不再「只限最小、不限最大」地撑满卡片。 */
   minCell?: number;
   /** Q72/Q87：只看某个相册（留空 = 全部）。 */
   albumId?: string;
@@ -84,6 +85,9 @@ export function ImmichGalleryWidget({
             id: it.id,
             src: it.thumb,
             title: it.at ? new Date(it.at).toLocaleString("zh-CN") : undefined,
+            // D60 §1：原始宽高来自服务端字节头解析 → 前端据此等比装箱（Q89）
+            width: it.width,
+            height: it.height,
             badge:
               it.type === "VIDEO" ? (
                 <Badge size="compact-xs" className="wb-gallery__video" color="dark" variant="filled">
@@ -94,7 +98,7 @@ export function ImmichGalleryWidget({
           }))}
           layout={layout}
           randomIntervalSec={randomIntervalSec}
-          minCell={minCell}
+          targetRowHeight={minCell}
           onOpen={(it, i) => {
             setPreviewIdx(i);
             const src = data.items.find((x) => x.id === it.id);

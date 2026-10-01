@@ -19,6 +19,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const uniq = Date.now().toString(36).slice(-4);
 
 const json = (obj) => JSON.stringify(obj);
+
+/** 最小 JPEG（含 SOF 段头，可被服务端 `imageSize()` 解析出声明宽高，D60 §1）。 */
+function miniJpeg(width, height) {
+  return new Uint8Array([
+    0xff, 0xd8,
+    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08,
+    (height >> 8) & 0xff, height & 0xff,
+    (width >> 8) & 0xff, width & 0xff,
+    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
+    0xff, 0xd9,
+  ]);
+}
 let seq = 0; // Q82：让每张缩略图字节不同，便于断言「切换到了另一张」
 const ctrlHits = [];
 const mock = createServer((req, res) => {
@@ -91,23 +104,36 @@ const mock = createServer((req, res) => {
         usageByUser: [{ userId: "u1", userName: "mock-user", photos: 12, videos: 3, usage: 2 ** 30 }],
       }),
     );
-  if (url.startsWith("/api/search/metadata"))
-    return res.end(
-      json({
-        assets: {
-          total: 2,
-          count: 2,
-          nextPage: "2",
-          items: [
-            { id: "t1", originalFileName: "shot.jpg", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
-            { id: "t2", originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
-          ],
-        },
-      }),
-    );
+  if (url.startsWith("/api/search/metadata")) {
+    // Q89（项 2）：横/竖/方/超宽混合比例共 14 张 + 1 个视频（Q88/项 3 应被滤掉）
+    // —— 数量要够撑出**多行**，否则验不到「行内等高」与「末行不拉伸」
+    const items = [{ id: "t2", originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" }];
+    for (let i = 0; i < 14; i += 1) {
+      items.push({
+        id: `t${i}`,
+        // 第一张保持 `shot.jpg` 且时间最新 —— 另有旧断言（Q49「最近上传」）依赖它出现在最近列表里
+        originalFileName: i === 0 ? "shot.jpg" : `shot${i}.jpg`,
+        type: "IMAGE",
+        createdAt: i === 0 ? "2026-09-26T02:27:59Z" : `2026-09-26T02:27:${String(i).padStart(2, "0")}Z`,
+      });
+    }
+    return res.end(json({ assets: { total: items.length, count: items.length, nextPage: "2", items } }));
+  }
   if (url.startsWith("/api/assets/") && url.includes("/thumbnail")) {
     res.setHeader("Content-Type", "image/jpeg");
-    return res.end(Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01]));
+    // 每个资产返回**声明尺寸不同**的最小 JPEG（含 SOF）→ 服务端字节头解析出对应宽高（D60 §1）
+    const shapes = [
+      [640, 480],
+      [480, 640],
+      [500, 500],
+      [900, 300],
+      [640, 480],
+      [480, 640],
+    ];
+    const m = /\/api\/assets\/([^/]+)\//.exec(url);
+    const n = m ? Number(String(m[1]).replace(/^t/, "")) : 0;
+    const wh = Number.isFinite(n) ? shapes[n % shapes.length] : [400, 400];
+    return res.end(Buffer.from(miniJpeg(wh[0], wh[1])));
   }
   res.writeHead(404).end();
 });
@@ -463,23 +489,58 @@ try {
   await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("返回工作台"))?.click());
   await sleep(600);
 
-  // Q71（项 6）：媒体墙「填满卡片」CSS 契约 —— 列/行都用 minmax(最小值, 1fr)，
-  // 且格子不再有固定 aspect-ratio（否则卡片拉伸时格子不会跟着填满）。
+  // Q89（项 2，D60/D61）：媒体墙「等高行 justified」契约。
+  // 旧断言「grid-auto-rows 含 minmax(…,1fr) 撑满卡片」正是被本项推翻的行为，故整体替换。
   const wall = await page.evaluate(() => {
     const g = document.querySelector(".wb-gallery");
-    const c = document.querySelector(".wb-gallery__cell");
-    if (!g || !c) return null;
-    const gs = getComputedStyle(g);
-    return {
-      cols: gs.gridTemplateColumns.split(" ").length,
-      rows: gs.gridAutoRows,
-      cellAspect: getComputedStyle(c).aspectRatio,
-    };
+    if (!g) return null;
+    const rows = [...g.querySelectorAll(".wb-gallery__row")];
+    const gaps = parseFloat(getComputedStyle(g).columnGap) || 0;
+    const gw = g.clientWidth;
+    const detail = rows.map((r) => {
+      const cells = [...r.querySelectorAll(".wb-gallery__cell")].map((c) => ({
+        w: c.getBoundingClientRect().width,
+        h: c.getBoundingClientRect().height,
+      }));
+      const used = cells.reduce((s, c) => s + c.w, 0) + gaps * Math.max(0, cells.length - 1);
+      return {
+        height: r.getBoundingClientRect().height,
+        heights: [...new Set(cells.map((c) => Math.round(c.h * 100) / 100))],
+        used: Math.round(used * 100) / 100,
+        last: r.classList.contains("wb-gallery__row--last"),
+        ratios: cells.map((c) => Math.round((c.w / c.h) * 1000) / 1000),
+      };
+    });
+    return { gw: Math.round(gw), gaps, rows: detail };
   });
+  const rows = wall?.rows ?? [];
+  const nonLast = rows.filter((r) => !r.last);
+  const lastRow = rows[rows.length - 1];
+  const allRatios = [...new Set(rows.flatMap((r) => r.ratios))];
+  // 允许的原始比例（mock 夹具：640/480、480/640、500/500、900/300）
+  const shapeSet = [640 / 480, 480 / 640, 500 / 500, 900 / 300];
+  const ratiosMatchShape = allRatios.every((x) => shapeSet.some((s) => Math.abs(s - x) < 0.02));
   ok(
-    "Q71 gallery fills card: rows stretch, no fixed aspect-ratio (项 6)",
-    Boolean(wall) && wall.rows.includes("minmax") && wall.rows.includes("1fr") && wall.cellAspect === "auto",
-    JSON.stringify(wall),
+    "Q89 equal-height justified rows: 行内严格等高 + 宽度按原比例 (项 2)",
+    rows.length >= 2 &&
+      rows.every((r) => r.heights.length === 1) &&
+      allRatios.length >= 3 &&
+      ratiosMatchShape,
+    JSON.stringify({ rowCount: rows.length, distinctRatios: allRatios, rows: rows.map((r) => r.heights) }),
+  );
+  ok(
+    "Q89 non-last rows fill the width exactly; 末行不拉伸 (项 2)",
+    nonLast.length >= 1 &&
+      nonLast.every((r) => Math.abs(r.used - wall.gw) < 2) &&
+      Boolean(lastRow) &&
+      lastRow.last === true &&
+      lastRow.used <= wall.gw + 1,
+    JSON.stringify({ gw: wall?.gw, used: rows.map((r) => r.used), last: rows.map((r) => r.last) }),
+  );
+  ok(
+    "Q89 rows no longer stretch to fill the card (rows have explicit px height)",
+    rows.every((r) => Number.isFinite(r.height) && r.height > 0 && r.height < 400),
+    JSON.stringify(rows.map((r) => r.height)),
   );
 
   // Q71（项 6）：**随机模式** —— 配置表单可选「随机」，整卡只展示一张图

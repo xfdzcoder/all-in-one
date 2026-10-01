@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
 import { immichGalleryConnector, normalizeImmichGallery, IMMICH_MAX_PAGES, IMMICH_PAGE_SIZE } from "./gallery.ts";
+import { miniJpeg } from "./image-size.fixture.ts";
 import type { FetchContext } from "./registry.ts";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
@@ -25,14 +26,19 @@ describe("normalizeImmichGallery（D50）", () => {
 
   it("缩略图 → data URI；**缺缩略图的项保留（thumb 空 → 占位块，Q70）**；VIDEO 标记；href 指向 Immich Web", () => {
     const thumbs = new Map<string, Uint8Array>([
-      ["a1", new Uint8Array([1, 2, 3])],
-      ["a2", new Uint8Array([4, 5])],
+      ["a1", miniJpeg(200, 100)], // D60 §1：可解析出 200×100
+      ["a2", new Uint8Array([4, 5])], // 非图片字节 → 解析不出宽高
     ]);
     const items = normalizeImmichGallery(assets, thumbs, "https://immich.example/");
     // Q70：三项全保留（原先 a3 因缺缩略图被丢 → 网格缺格）
     expect(items.map((i) => i.id)).toEqual(["a1", "a2", "a3"]);
     expect(items[0].thumb.startsWith("data:image/jpeg;base64,")).toBe(true);
     expect(items[0].at).toBe("2026-09-26T02:27:30Z"); // takenAt 优先
+    // D60 §1（Q89）：字节头解析出的宽高随 item 下发；解析不出/无字节则**不带**（前端 1:1 退化）
+    expect(items[0].width).toBe(200);
+    expect(items[0].height).toBe(100);
+    expect(items[1].width).toBeUndefined();
+    expect(items[2].width).toBeUndefined();
     expect(items[1].type).toBe("VIDEO");
     expect(items[1].href).toBe("https://immich.example/photos/a2");
     expect(items[2].thumb).toBe(""); // Q70：缺图不丢项，组件渲染占位块
@@ -85,7 +91,8 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
           return res.end(JSON.stringify({ message: "Asset media not found" }));
         }
         res.setHeader("Content-Type", "image/jpeg");
-        return res.end(Buffer.from([0xff, 0xd8, 0xff, 0xdb]));
+        // 真 JPEG 头（含 SOF）→ `imageSize()` 能解析出 64×48（D60 §1）
+        return res.end(Buffer.from(miniJpeg(64, 48)));
       }
       if (url.startsWith("/api/search/metadata")) {
         // 按请求体的 page 分页返回 —— 用来验「翻页补足到选中数量」
@@ -136,12 +143,20 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
     const data = (await immichGalleryConnector.fetch(
       { type: "immich-gallery", config: { sourceId: id, limit: 6 } },
       ctx,
-    )) as { items: Array<{ id: string; thumb: string }>; notes?: string[] };
+    )) as {
+      items: Array<{ id: string; thumb: string; width?: number; height?: number }>;
+      notes?: string[];
+    };
     // Q70：缺缩略图的项仍保留（a3 缩略图 404 也不丢格）；
     // Q88（项 3）：v1 是 VIDEO —— 被 fetch 循环滤掉，且**不再为它浪费一次缩略图请求**
     expect(data.items.map((i) => i.id)).toEqual(["a1", "a2", "a3"]);
     expect(data.items[0].thumb).toMatch(/^data:image\/jpeg;base64,/);
     expect(data.items[2].thumb).toBe(""); // Q70：缺图不丢项 → 组件渲染占位块
+    // D60 §1（Q89）：宽高从缩略图**字节头**解析，随 item 一起下发
+    expect(data.items[0].width).toBe(64);
+    expect(data.items[0].height).toBe(48);
+    expect(data.items[1].width).toBe(64);
+    expect(data.items[2].width).toBeUndefined(); // 无字节 → 不下发，前端按 1:1 退化
     expect(thumbHits).toBe(3); // 只为 a1/a2/a3 抓图，v1 根本不抓
     const allNotes = data.notes?.join("\n") ?? "";
     // Q70：note 聚合，带真实响应体 + 怎么修（08 §5）
