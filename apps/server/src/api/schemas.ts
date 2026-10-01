@@ -19,9 +19,31 @@ export const layoutJsonSchema = z
     }
   }, "layoutJson must be a JSON array string");
 
+/**
+ * Q91（D58）：网格列数档位。
+ * **列数本身不必是 4 的倍数**（gridstack `column` 接受任意正整数）；取 4 的倍数只为
+ * 响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数。
+ * 前端 `apps/web` 有一份同值常量供渲染下拉 —— 服务端这份才是权威校验。
+ */
+export const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
+
+const dashboardColumns = z.union([
+  z.literal(DASHBOARD_COLUMNS[0]),
+  z.literal(DASHBOARD_COLUMNS[1]),
+  z.literal(DASHBOARD_COLUMNS[2]),
+  z.literal(DASHBOARD_COLUMNS[3]),
+  z.literal(DASHBOARD_COLUMNS[4]),
+  z.literal(DASHBOARD_COLUMNS[5]),
+]);
+
+/** Q91（D58）：行高 px。行数不限、纵向滚动。 */
+const dashboardCellHeight = z.number().int().min(40).max(200);
+
 export const dashboardCreateBody = z.object({
   title: z.string().min(1).max(200),
   icon: z.string().max(200).nullish(),
+  columns: dashboardColumns.optional(),
+  cellHeight: dashboardCellHeight.optional(),
 });
 
 export const dashboardPatchBody = z
@@ -32,6 +54,9 @@ export const dashboardPatchBody = z
     background: z.string().max(64).nullish(),
     sortOrder: z.number().int().min(0).optional(),
     layoutJson: layoutJsonSchema.optional(),
+    /** Q91（D58）：页面级网格粒度配置。 */
+    columns: dashboardColumns.optional(),
+    cellHeight: dashboardCellHeight.optional(),
   })
   .refine((o) => Object.keys(o).length > 0, "empty patch");
 

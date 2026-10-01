@@ -99,6 +99,13 @@
       "when": 1790795443510,
       "tag": "0013_magical_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1790877496079,
+      "tag": "0014_hot_sabretooth",
+      "breakpoints": true
     }
   ]
 }

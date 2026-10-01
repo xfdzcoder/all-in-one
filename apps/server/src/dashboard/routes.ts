@@ -41,6 +41,9 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
         userId: req.user!.id,
         title: body.title,
         icon: body.icon ?? null,
+        // Q91（D58）：缺省走 DB 默认（12 / 80），显式传入才覆盖
+        ...(body.columns !== undefined ? { columns: body.columns } : {}),
+        ...(body.cellHeight !== undefined ? { cellHeight: body.cellHeight } : {}),
         sortOrder: 0,
         layoutJson: "[]",
         schemaVersion: LAYOUT_SCHEMA_VERSION,
@@ -61,6 +64,9 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
     if (body.icon !== undefined) set.icon = body.icon;
     if (body.background !== undefined) set.background = body.background;
     if (body.sortOrder !== undefined) set.sortOrder = body.sortOrder;
+    // Q91（D58）：页面级网格粒度（列数 / 行高）
+    if (body.columns !== undefined) set.columns = body.columns;
+    if (body.cellHeight !== undefined) set.cellHeight = body.cellHeight;
     if (body.layoutJson !== undefined) {
       set.layoutJson = body.layoutJson;
       set.schemaVersion = LAYOUT_SCHEMA_VERSION;

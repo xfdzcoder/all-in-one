@@ -135,6 +135,64 @@ describe("dashboard CRUD (M1-④)", () => {
     await app.inject({ method: "DELETE", url: `/api/dashboards/${id}`, cookies: { sid } });
   });
 
+  it("Q91/D58：columns / cellHeight 落库、缺省 12/80、非法值 400", async () => {
+    // 缺省 → DB 默认 12 / 80
+    const plain = await app.inject({
+      method: "POST",
+      url: "/api/dashboards",
+      cookies: { sid },
+      payload: { title: "grid-default" },
+    });
+    expect(plain.json().columns).toBe(12);
+    expect(plain.json().cellHeight).toBe(80);
+
+    // 显式指定档位
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/dashboards",
+      cookies: { sid },
+      payload: { title: "grid-24", columns: 24, cellHeight: 140 },
+    });
+    expect(created.statusCode).toBe(201);
+    const id = created.json().id;
+    expect(created.json().columns).toBe(24);
+    expect(created.json().cellHeight).toBe(140);
+
+    // PATCH 改档位
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/api/dashboards/${id}`,
+      cookies: { sid },
+      payload: { columns: 32, cellHeight: 60 },
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json().columns).toBe(32);
+    expect(patched.json().cellHeight).toBe(60);
+
+    // 非法列数（不在 12/16/20/24/28/32 档位内）→ 400
+    for (const bad of [0, 13, 31, 40, -4]) {
+      const r = await app.inject({
+        method: "PATCH",
+        url: `/api/dashboards/${id}`,
+        cookies: { sid },
+        payload: { columns: bad },
+      });
+      expect(r.statusCode).toBe(400);
+    }
+    // 行高越界 → 400
+    for (const bad of [0, 39, 201, 1000]) {
+      const r = await app.inject({
+        method: "PATCH",
+        url: `/api/dashboards/${id}`,
+        cookies: { sid },
+        payload: { cellHeight: bad },
+      });
+      expect(r.statusCode).toBe(400);
+    }
+    await app.inject({ method: "DELETE", url: `/api/dashboards/${id}`, cookies: { sid } });
+    await app.inject({ method: "DELETE", url: `/api/dashboards/${plain.json().id}`, cookies: { sid } });
+  });
+
   it("serves OpenAPI doc generated from zod schemas (D11)", async () => {
     const res = await app.inject({ method: "GET", url: "/api/openapi.json" });
     expect(res.statusCode).toBe(200);

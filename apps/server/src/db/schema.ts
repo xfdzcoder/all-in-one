@@ -33,6 +33,10 @@ export const dashboard = sqliteTable(
     icon: text("icon"),
     /** 页面背景色（FR-P9 页面级设置；空 = 默认深色底）。 */
     background: text("background"),
+    /** Q91（D58）：网格列数档位 12/16/20/24/28/32。属**页面级布局配置**（Dashboard 只拥有布局）。 */
+    columns: integer("columns").notNull().default(12),
+    /** Q91（D58）：行高 px（40–200）。行数不限、纵向滚动。 */
+    cellHeight: integer("cell_height").notNull().default(80),
     sortOrder: integer("sort_order").notNull().default(0),
     /** gridstack widget layout + per-widget config; Dashboard owns layout only. */
     layoutJson: text("layout_json").notNull().default("[]"),
