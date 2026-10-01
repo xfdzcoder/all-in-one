@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  ActionIcon,
   AppShell,
   Button,
   createTheme,
@@ -56,7 +57,27 @@ type SessionState =
   | { kind: "anonymous" }
   | { kind: "authed"; me: Me };
 
-function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
+/** Q63（D52 双主题）：主题模式 —— 深色默认，[data-theme=light] 切浅色（localStorage 持久化）。 */
+type ThemeMode = "dark" | "light";
+const initialThemeMode = (): ThemeMode => {
+  try {
+    return localStorage.getItem("wb-theme") === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+};
+
+function Workbench({
+  me,
+  onLogout,
+  themeMode,
+  onToggleTheme,
+}: {
+  me: Me;
+  onLogout: () => void;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+}) {
   useSseInvalidation();
   const [dashboards, setDashboards] = useState<Dashboard[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -290,6 +311,35 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 插件管理
               </Button>
             )}
+            {/* Q63：深浅主题切换（D52 双主题） */}
+            <ActionIcon
+              variant="default"
+              size="sm"
+              aria-label={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
+              title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
+              onClick={onToggleTheme}
+            >
+              {themeMode === "dark" ? (
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                  <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path
+                    d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+                  <path
+                    d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5 5.8 5.8 0 1 0 13.5 9.6Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </ActionIcon>
             <Button variant="default" size="xs" onClick={() => void api.logout().then(onLogout)}>
               退出登录
             </Button>
@@ -365,6 +415,17 @@ function Workbench({ me, onLogout }: { me: Me; onLogout: () => void }) {
 
 export default function App() {
   const [session, setSession] = useState<SessionState>({ kind: "loading" });
+  const [themeMode, setThemeMode] = useState<ThemeMode>(initialThemeMode);
+
+  // Q63：data-theme 同步到 <html>（tokens.css 浅色变量组的挂载点）+ 持久化
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    try {
+      localStorage.setItem("wb-theme", themeMode);
+    } catch {
+      /* 私隐模式等场景忽略 */
+    }
+  }, [themeMode]);
 
   const check = useCallback(async () => {
     try {
@@ -387,7 +448,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Mantine 变量桥见 apps/server/src/styles-bridge.ts（经 /custom.css 末尾下发，层叠必胜） */}
-      <MantineProvider defaultColorScheme="dark" theme={theme}>
+      <MantineProvider defaultColorScheme="dark" forceColorScheme={themeMode} theme={theme}>
         {session.kind === "loading" && (
           <Center h="50vh">
             <Loader />
@@ -395,7 +456,12 @@ export default function App() {
         )}
         {session.kind === "anonymous" && <LoginPage onLoggedIn={() => void check()} />}
         {session.kind === "authed" && (
-          <Workbench me={session.me} onLogout={() => setSession({ kind: "anonymous" })} />
+          <Workbench
+            me={session.me}
+            onLogout={() => setSession({ kind: "anonymous" })}
+            themeMode={themeMode}
+            onToggleTheme={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
+          />
         )}
       </MantineProvider>
     </QueryClientProvider>

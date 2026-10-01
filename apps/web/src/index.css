@@ -2,6 +2,10 @@
 @import "./styles/widgets.css";
 
 /* 基础层（元素级，最后加载 = 可被用户 /custom.css 覆盖） */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
   font-family: var(--wb-font-sans);

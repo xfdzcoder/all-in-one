@@ -15,26 +15,38 @@ const ok = (name, pass, detail = "") => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const AUDIT_FN = `(() => {
-  const parse = (c) => (c.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
-  const lum = (c) => {
-    const [r, g, b] = parse(c).map((v) => {
+  // 颜色解析：兼容 rgb()/rgba()（0-255）与 color(srgb …)（0-1，Chrome color-mix 序列化）；alpha 逐层合成
+  const parse = (c) => {
+    const nums = (c.match(/-?[\\d.]+/g) || []).map(Number);
+    if (!nums.length) return null;
+    if (c.includes("srgb")) {
+      const [r, g, b, a = 1] = nums;
+      return [r * 255, g * 255, b * 255, a];
+    }
+    const [r, g, b, a = 1] = nums;
+    return [r, g, b, a];
+  };
+  const lum = (rgb) => {
+    const [r, g, b] = rgb.map((v) => {
       const s = v / 255;
       return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
     });
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
-  const ratio = (a, b) => {
-    const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
-    return (l1 + 0.05) / (l2 + 0.05);
-  };
+  const over = (fg, bg) => [0, 1, 2].map((i) => fg[i] * fg[3] + bg[i] * (1 - fg[3]));
   const bgOf = (el) => {
+    const layers = [];
     let n = el;
     while (n && n !== document.documentElement) {
-      const bg = getComputedStyle(n).backgroundColor;
-      if (bg && bg !== "transparent" && !/^rgba\\(0, 0, 0, 0\\)$/.test(bg)) return bg;
+      const p = parse(getComputedStyle(n).backgroundColor);
+      if (p && p[3] > 0) layers.push(p);
+      if (p && p[3] >= 1) break;
       n = n.parentElement;
     }
-    return getComputedStyle(document.body).backgroundColor || "rgb(20, 24, 31)";
+    let base = parse(getComputedStyle(document.body).backgroundColor) ?? [20, 24, 31, 1];
+    if (base[3] < 1) base = [...over(base, [255, 255, 255, 1]), 1];
+    for (let i = layers.length - 1; i >= 0; i--) base = [...over(layers[i], base), 1];
+    return base;
   };
   const failures = [];
   let checked = 0;
@@ -52,7 +64,11 @@ const AUDIT_FN = `(() => {
     const bold = Number(cs.fontWeight) >= 700;
     const large = size >= 24 || (size >= 18.66 && bold);
     const need = large ? 3 : 4.5;
-    const got = ratio(cs.color, bgOf(el));
+    const bg = bgOf(el);
+    const fg = over(parse(cs.color), bg); // 半透明文字先合成到底色
+    const l1 = lum(fg);
+    const l2 = lum(bg);
+    const got = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     checked++;
     if (got < need) {
       failures.push({
@@ -60,7 +76,7 @@ const AUDIT_FN = `(() => {
         tag: el.tagName.toLowerCase(),
         cls: String(el.className).slice(0, 40),
         color: cs.color,
-        bg: bgOf(el),
+        bg: "rgb(" + bg.map(Math.round).join(",") + ")",
         size,
         ratio: Math.round(got * 100) / 100,
         need,
@@ -112,24 +128,36 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(800);
 
-  report("DARK main surface AA", await page.evaluate(AUDIT_FN));
+  // Q63（D52 双主题）：深浅两套主题各查三种表面
+  const runThemeChecks = async (label) => {
+    report(`${label} main surface AA`, await page.evaluate(AUDIT_FN));
 
-  // 弹层表面：插件管理
-  await clickBtn("插件管理");
-  await sleep(600);
-  report("DARK modal surface AA", await page.evaluate(AUDIT_FN));
-  await page.keyboard.press("Escape");
-  await sleep(400);
+    // 弹层表面：插件管理
+    await clickBtn("插件管理");
+    await sleep(600);
+    report(`${label} modal surface AA`, await page.evaluate(AUDIT_FN));
+    await page.keyboard.press("Escape");
+    await sleep(400);
 
-  // 选择器表面：添加组件
-  await clickBtn("编辑页面");
-  await sleep(300);
-  await clickBtn("添加组件");
-  await sleep(500);
-  report("DARK picker surface AA", await page.evaluate(AUDIT_FN));
-  await page.keyboard.press("Escape");
-  await sleep(300);
-  await clickBtn("完成编辑");
+    // 选择器表面：添加组件
+    await clickBtn("编辑页面");
+    await sleep(300);
+    await clickBtn("添加组件");
+    await sleep(500);
+    report(`${label} picker surface AA`, await page.evaluate(AUDIT_FN));
+    await page.keyboard.press("Escape");
+    await sleep(300);
+    await clickBtn("完成编辑");
+    await sleep(300);
+  };
+
+  await runThemeChecks("DARK");
+
+  await page.evaluate(() => localStorage.setItem("wb-theme", "light"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(1000);
+  await runThemeChecks("LIGHT");
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
