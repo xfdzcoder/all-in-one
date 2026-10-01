@@ -259,6 +259,11 @@ export function Board({
     columnOpts: {
       // Q91（D58）：断点按 `N → N/2 → N/4 → 1` 推导（阈值沿用既有 1200/900/600/480）
       breakpoints: breakpointsFor(gridColumns),
+      // Q93（项 4）：**必须显式给 columnMax** —— gridstack 在 `columnOpts` 启用时把它默认成 12
+      // （gridstack.js: `resp.columnMax ?? (resp.columnMax = 12)`），而无断点命中时
+      // `checkDynamicColumn` 直接 `newColumn = columnMax` ⇒ 宽屏永远被压回 12 列，
+      // 这正是「选了 32 列还是 12 列」的根因（行高不走 columnOpts，所以正常生效）。
+      columnMax: gridColumns,
       layout: "moveScale" as const,
     },
     children: parseLayout(layoutJson),

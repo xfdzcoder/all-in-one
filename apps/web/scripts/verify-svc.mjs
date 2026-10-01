@@ -862,6 +862,22 @@ try {
   const before = await readGrid();
   ok("Q91 pick 24 列 from page settings", await pickColumns("24 列"));
   const after = await readGrid();
+  // Q93（项 4）：不只看落盘值 —— 从**渲染几何**反推真实列数，才能抓到 gridstack 内部钳制
+  const renderedCols = await page.evaluate(() => {
+    const gs = document.querySelector(".grid-stack");
+    const it = gs?.querySelector(".grid-stack-item");
+    if (!gs || !it) return null;
+    const gw = gs.getBoundingClientRect().width;
+    const iw = it.getBoundingClientRect().width;
+    const wUnits = Number(it.getAttribute("gs-w") ?? it.getAttribute("data-gs-w") ?? it.getAttribute("gsWidth"));
+    if (!gw || !iw || !Number.isFinite(wUnits) || wUnits <= 0) return null;
+    return Math.round(wUnits / (iw / gw));
+  });
+  ok(
+    "Q93 渲染出的列数 == 配置列数（gridstack columnMax 不再钳到 12）(项 4)",
+    renderedCols === 24,
+    JSON.stringify({ renderedCols, expected: 24 }),
+  );
   const scaled =
     before.widgets.length > 0 &&
     after.widgets.length === before.widgets.length &&
