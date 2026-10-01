@@ -62,3 +62,54 @@ describe("SSRF baseline (SEC4)", () => {
     expect(url.hostname).toBe("192.168.31.133");
   });
 });
+
+// Q97a（体检 SRV-01 + SEC-1）：内网判定补严 —— IPv4-mapped 十六进制形态曾整体漏判
+describe("内网判定补严（SRV-01 / SEC-1）", () => {
+  it("blocks IPv4-mapped IPv6 in hex-group form (SRV-01 bypass closed)", async () => {
+    for (const u of [
+      "http://[::ffff:7f00:1]/", // 127.0.0.1
+      "http://[::ffff:c0a8:1f85]/", // 192.168.31.133
+      "http://[::ffff:a00:5]/", // 10.0.0.5
+      "http://[::ffff:a9fe:a9fe]/", // 169.254.169.254（云元数据）
+    ]) {
+      await expect(assertSafeOutboundUrl(u), u).rejects.toThrow(SsrfBlockedError);
+    }
+  });
+
+  it("blocks IPv4-mapped / IPv4-compatible dotted forms", async () => {
+    for (const u of ["http://[::ffff:127.0.0.1]/", "http://[::127.0.0.1]/", "http://[::ffff:192.168.1.1]/"]) {
+      await expect(assertSafeOutboundUrl(u), u).rejects.toThrow(SsrfBlockedError);
+    }
+  });
+
+  it("allows public IPv4-mapped IPv6 (8.8.8.8)", async () => {
+    await expect(assertSafeOutboundUrl("http://[::ffff:808:808]/")).resolves.toBeTruthy();
+    await expect(assertSafeOutboundUrl("http://[::ffff:8.8.8.8]/")).resolves.toBeTruthy();
+  });
+
+  it("blocks link-local beyond the fe80 prefix (fe80::/10, SEC-1)", async () => {
+    for (const u of ["http://[fe80::1]/", "http://[fe81::1]/", "http://[febf:ffff::1]/"]) {
+      await expect(assertSafeOutboundUrl(u), u).rejects.toThrow(SsrfBlockedError);
+    }
+  });
+
+  it("blocks multicast / ULA / doc ranges and IPv4 special ranges (SEC-1)", async () => {
+    for (const u of [
+      "http://[ff02::1]/", // multicast
+      "http://[fd12:3456::1]/", // ULA
+      "http://[2001:db8::1]/", // 文档段
+      "http://100.64.0.1/", // CGNAT 100.64/10
+      "http://198.18.0.1/", // benchmark 198.18/15
+      "http://203.0.113.7/", // TEST-NET-3
+      "http://192.0.2.1/", // TEST-NET-1
+    ]) {
+      await expect(assertSafeOutboundUrl(u), u).rejects.toThrow(SsrfBlockedError);
+    }
+  });
+
+  it("DNS resolving to an IPv4-mapped private form is blocked too", async () => {
+    await expect(
+      assertSafeOutboundUrl("https://evil.example/", false, async () => [{ address: "::ffff:7f00:1" }]),
+    ).rejects.toThrow(SsrfBlockedError);
+  });
+});

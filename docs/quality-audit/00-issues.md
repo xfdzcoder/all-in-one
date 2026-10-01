@@ -18,10 +18,12 @@
 
 ## P0 · 崩溃 / 安全 / 数据
 
+> ✅ = 已修复（Q97a，2026-10-02）。SEC-1 与 SRV-01 同函数，随 Q97a 一并补严。
+
 | ID | 位置 | 问题 | 批次 | 报告 |
 |---|---|---|---|---|
-| SRV-01 | apps/server/src/connector/ssrf.ts:25-35 | SSRF 基线可绕过（IPv4-mapped IPv6 十六进制形态）。isPrivateIp 的 IPv6 分支只在 lower.startsWith("::ffff:") 时取后缀按 IPv4 复检，且后缀必须是点分十进制。::ffff:7f00:1（十六进制组）取后缀得 7f00:1 → is | Q97 | 10 |
-| SRV-02 | apps/server/src/app.ts:117-136 | 静态资源处理器路径穿越。path.join(publicDir, req.url.replace(/^\//, "")) 会把 ../ 段正常化出 publicDir 之外：curl --path-as-is http://host/../../etc/passwd（或绝对路径穿越）→ exists | Q97 | 10 |
+| SRV-01 ✅ | apps/server/src/connector/ssrf.ts:25-35 | SSRF 基线可绕过（IPv4-mapped IPv6 十六进制形态）。isPrivateIp 的 IPv6 分支只在 lower.startsWith("::ffff:") 时取后缀按 IPv4 复检，且后缀必须是点分十进制。::ffff:7f00:1（十六进制组）取后缀得 7f00:1 → is | Q97 | 10 |
+| SRV-02 ✅ | apps/server/src/app.ts:117-136 | 静态资源处理器路径穿越。path.join(publicDir, req.url.replace(/^\//, "")) 会把 ../ 段正常化出 publicDir 之外：curl --path-as-is http://host/../../etc/passwd（或绝对路径穿越）→ exists | Q97 | 10 |
 | TST-19 | 破坏性覆写「首页」布局且不恢复（成功路径外零还原）：verify-live.mjs:120-135（脚本头注释明写「用真实生产实例」）、verify-svc.mjs:304-319、verify-m1.mjs:115-1 | 对真实/用户「首页」执行 PUT /layout 覆写成固定 seed、不做原布局快照与还原——真机上跑一次即永久销毁用户布局（数据丢失/错误持久化写入）。正面样板是 verify-gallery-live.mjs:56-58,337-343（临时草稿盘自建自删、清理在 finally），全仓仅 p | Q97 | 13 |
 
 ## P1 · 缺陷 / 静默失败 / 测试盲区
@@ -46,7 +48,7 @@
 | TST-5 | apps/server/src/connector/service.ts:449-503（best() 12 个降级分支）vs apps/server/src/connector/service.test.ts | 契约测试未覆盖每条降级分支：仅 /connections 失败（service.test.ts:149）与 /memory 静默丢弃（:132,:144）有断言；immich 版本/统计双路由回落（service.ts:450-454）、navidrome 扫描状态/曲库统计/最近添加失败（:470 | Q100 | 13 |
 | TST-6 | apps/server/src/connector/opencode.test.ts:107,124、apps/server/src/connector/monitor.test.ts:129 | 弱断言 expect(data.probe.error).toBeTruthy()——只断存在不断内容。D47「原因 + 怎么修」文案被换成 "error" 也全绿，降级文案回归无守卫（对照 service.test.ts:157-160 已示范强断言） | Q100 | 13 |
 | CON-11 | apps/server/src/icon/routes.ts:82-91（GET）vs :118（DELETE） | GET /api/icons/:id 只按 id 查行、不校验 userId，而 DELETE 显式校验 row.userId !== req.user!.id —— 归属校验不一致，多用户预留（NFR5/D9）下的越权读面（当前单用户不可利用，故不入 P0） | Q98 | 12 |
-| SEC-1 | apps/server/src/connector/ssrf.ts:28-42（isPrivateIp） | 内网段判定漏项 → SSRF 基线「默认拒内网」有绕过空档：① IPv6 link-local 只判 startsWith("fe80")，而 fe80::/10 实含 fe80–febf（fe81::1/fe90::1/febf::1 均通过）；② IPv6 组播 ff00::/8、站点本地 fe | Q98 | 14 |
+| SEC-1 ✅ | apps/server/src/connector/ssrf.ts:28-42（isPrivateIp） | 内网段判定漏项 → SSRF 基线「默认拒内网」有绕过空档：① IPv6 link-local 只判 startsWith("fe80")，而 fe80::/10 实含 fe80–febf（fe81::1/fe90::1/febf::1 均通过）；② IPv6 组播 ff00::/8、站点本地 fe | Q98 | 14 |
 | SEC-2 | apps/server/src/connector/registry.ts:96-103（outboundRequest） | maxBytes 上限在 await res.arrayBuffer() 全量缓冲之后才校验（bytes.byteLength > maxBytes 才抛）——超大响应仍被完整读入内存再丢弃，体积上限对内存打爆/DoS 形同虚设；随后还全量 TextDecoder().decode | Q98 | 14 |
 | SEC-4 | apps/server/src/connector/ssrf.ts:35（SSRF blocked for ${target}）→ apps/server/src/data/routes.ts:126、apps/serv | 错误文案内嵌完整 target URL，经 502/400 响应体与日志外发。若 custom-api 配置的 URL 带 ?apikey=… 查询密钥或 user:pass@ 基本认证（常见 API 形态），密钥即进入日志/响应——与 NFR6 脱敏及 navidrome-library.ts:9 | Q98 | 14 |
 | SEC-5 | apps/server/src/connector/registry.ts:66-73（cacheKeyOf）；消费点 apps/server/src/data/routes.ts:77 | JSON.stringify(query.config, Object.keys(query.config).sort()) 传的是 replacer 数组，只序列化顶层键 → 嵌套的 SecretRef {credentialRef}（packages/widget-sdk/src/config. | Q98 | 14 |

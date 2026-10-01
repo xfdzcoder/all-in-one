@@ -21,9 +21,9 @@ import type {
 } from "./client.ts";
 import { HTML_CAP, clearMailCache } from "./service.ts";
 
-const HOST_A = "203.0.113.10"; // TEST-NET-3：合法公网 IP（免 DNS）
-const HOST_B = "203.0.113.20";
-const HOST_DOWN = "203.0.113.30";
+const HOST_A = "93.184.216.34"; // 真公网 IP（免 DNS）。注：原用 203.0.113.x（TEST-NET-3），
+const HOST_B = "93.184.216.35"; // Q97a 起 SSRF 基线把文档段也拒了（SEC-1 补严），故换真实公网段
+const HOST_DOWN = "93.184.216.36";
 const HOST_PRIV = "127.0.0.1"; // 内网 → SSRF 基线拒绝（未开逃生阀）
 const PASSWORD = "sk-mail-pass";
 

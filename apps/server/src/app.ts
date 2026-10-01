@@ -114,13 +114,24 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;
   if (publicDir && existsSync(publicDir)) {
+    const root = path.resolve(publicDir);
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith("/api/")) {
         reply.code(404).send({ error: "not found" });
         return;
       }
-      const filePath = path.join(publicDir, req.url.replace(/^\//, ""));
-      if (req.url !== "/" && existsSync(filePath)) {
+      // SRV-02（P0）：`../` / 绝对路径 / 百分号编码穿越 —— 解析后必须仍在 PUBLIC_DIR 之内，
+      // 越界一律当「不存在」走 SPA fallback（不泄漏 data/app.db、宿主任意文件）
+      let rel = req.url.split("?")[0].split("#")[0];
+      try {
+        rel = decodeURIComponent(rel);
+      } catch {
+        reply.code(400).send({ error: "bad request" });
+        return;
+      }
+      const filePath = path.resolve(root, rel.replace(/^\//, ""));
+      const inside = filePath === root || filePath.startsWith(root + path.sep);
+      if (inside && req.url !== "/" && existsSync(filePath)) {
         const ext = path.extname(filePath);
         const types: Record<string, string> = {
           ".js": "text/javascript",
@@ -132,7 +143,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         reply.type(types[ext] ?? "application/octet-stream").send(readFileSync(filePath));
         return;
       }
-      reply.type("text/html").send(readFileSync(path.join(publicDir, "index.html")));
+      reply.type("text/html").send(readFileSync(path.join(root, "index.html")));
     });
   }
   return app;
