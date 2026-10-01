@@ -165,8 +165,13 @@ const selectOption = async (label, optionText) => {
   }, optionText);
 };
 
-const addOverview = async (sourceName, cardPrefix = "服务概览") => {
-  if (!(await clickBtn("添加组件"))) return false;
+const addOverview = async (sourceName, cardPrefix = "服务概览", sourceLabel = "数据连接") => {
+  const fail = (step) => {
+    // 返回值必须是布尔 —— 诊断字符串是 truthy，会被 ok() 当成通过（静默假绿）
+    console.error(`[addOverview] failed at ${step}`);
+    return false;
+  };
+  if (!(await clickBtn("添加组件"))) return fail("open-add");
   await sleep(300);
   // 卡片 = name+category+desc 的 UnstyledButton —— 按 name 前缀定位（精确文本会失配）
   const picked = await page.evaluate((p) => {
@@ -174,11 +179,21 @@ const addOverview = async (sourceName, cardPrefix = "服务概览") => {
     card?.click();
     return Boolean(card);
   }, cardPrefix);
-  if (!picked) return false;
+  if (!picked) {
+    // 失败必须关掉 picker，否则它会挡住后续所有点击（历史级联失败的根因）
+    await page.keyboard.press("Escape").catch(() => {});
+    await sleep(200);
+    return fail(`pick(${cardPrefix})`);
+  }
   await sleep(400);
-  if (!(await selectOption("数据连接", sourceName))) return false;
+  // 各组件的 sourceId 字段标签不统一（monitor 叫「监控源」、其余叫「数据连接」）
+  if (!(await selectOption(sourceLabel, sourceName))) {
+    await page.keyboard.press("Escape").catch(() => {});
+    await sleep(200);
+    return fail(`select-source(${sourceName})`);
+  }
   await sleep(200);
-  return clickBtn("确认添加", true);
+  return (await clickBtn("确认添加", true)) ? true : fail("confirm");
 };
 
 try {
@@ -235,6 +250,7 @@ try {
         portainer: await mk("portainer", `svc-portainer-${uniq}`, { url: base, restartAllow: "bad" }),
         navidrome: await mk("navidrome", `svc-navidrome-${uniq}`, { url: base, username: "u", password: { credentialRef: "cred:none" } }),
         immich: await mk("immich", `svc-immich-${uniq}`, { url: base }),
+        monitor: await mk("monitor", `svc-monitor-${uniq}`, { url: base }),
         broken: await mk("mihomo", `svc-broken-${uniq}`, { url: "http://127.0.0.1:1" }),
       };
     },
@@ -252,6 +268,19 @@ try {
 
   // portainer / navidrome / immich
   ok("SVC add portainer overview", await addOverview(`svc-portainer-${uniq}`));
+
+  // Q85（项 11）：服务器监控卡标题 = **实际的数据源名称**（不再是硬编码「服务器监控」）
+  ok("Q85 add monitor card", await addOverview(`svc-monitor-${uniq}`, "服务器监控", "监控源"));
+  await sleep(600);
+  const monTitle = await page.evaluate((name) => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes(name));
+    return { text: (item?.textContent ?? "").replace(/\s+/g, " ").slice(0, 70) };
+  }, `svc-monitor-${uniq}`);
+  ok(
+    "Q85 monitor title shows the data source name (项 11)",
+    (monTitle.text ?? "").includes(`svc-monitor-${uniq}`),
+    JSON.stringify(monTitle),
+  );
   await sleep(2500);
   body = await page.evaluate(() => document.body.textContent ?? "");
   ok("SVC portainer abnormal container surfaced first", body.includes("2.21.4") && body.includes("1/2") && body.includes("异常容器") && body.includes("bad"), body.slice(-140));
@@ -615,6 +644,49 @@ try {
       () => ![...document.querySelectorAll(".wb-status-badge")].some((b) => (b.textContent ?? "").includes("库就绪")),
     ),
   );
+  // Q85（项 12）：信息流卡标题统一为「RSS」，不再叫「信息流」
+  const rss = await page.evaluate(() => {
+    const items = [...document.querySelectorAll(".grid-stack-item")];
+    const card = items.find((i) => (i.textContent ?? "").includes("未读"));
+    const txt = card?.textContent ?? "";
+    return { hasRSS: txt.includes("RSS"), hasOld: txt.includes("信息流") };
+  });
+  ok("Q85 rss title is RSS (项 12)", rss.hasRSS && !rss.hasOld, JSON.stringify(rss));
+
+  // Q85（项 14/15）：「添加组件」是 icon 按钮；顶栏按钮放大一档（md = 28px）
+  ok("Q85 enter edit for header checks", await clickBtn("编辑页面"));
+  await sleep(500);
+  const hdr = await page.evaluate(() => {
+    const header = document.querySelector("header");
+    const btns = [...(header?.querySelectorAll("button") ?? [])];
+    const add = btns.find((b) => (b.textContent ?? "").includes("添加组件"));
+    let addVisible = "";
+    if (add) {
+      const clone = add.cloneNode(true);
+      clone.querySelectorAll(".wb-sr-only").forEach((n) => n.remove());
+      addVisible = (clone.textContent ?? "").trim();
+    }
+    return {
+      widths: btns.map((b) => Number.parseFloat(getComputedStyle(b).width)),
+      addFound: Boolean(add),
+      addVisible,
+      addHasSvg: Boolean(add?.querySelector("svg")),
+      labels: btns.map((b) => b.getAttribute("aria-label")),
+    };
+  });
+  ok(
+    "Q85 add-widget button is an icon (项 14)",
+    hdr.addFound && hdr.addVisible === "" && hdr.addHasSvg,
+    JSON.stringify(hdr),
+  );
+  ok(
+    "Q85 header buttons enlarged (项 15)",
+    hdr.widths.length > 0 && hdr.widths.every((w) => w >= 26),
+    JSON.stringify(hdr),
+  );
+  ok("Q85 exit edit", await clickBtn("完成编辑"));
+  await sleep(300);
+
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

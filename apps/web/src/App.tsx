@@ -299,9 +299,10 @@ function Workbench({
                 label={layoutEdit ? "完成编辑" : "编辑页面"}
                 tooltip={layoutEdit ? "完成编辑" : "编辑页面"}
                 variant={layoutEdit ? "filled" : "default"}
+                size="md"
                 onClick={() => setLayoutEdit((v) => !v)}
               >
-                {layoutEdit ? <IconCheck size={16} /> : <IconPencil size={16} />}
+                {layoutEdit ? <IconCheck size={18} /> : <IconPencil size={18} />}
               </IconAction>
             )}
             {/* Q29d/三.2：「添加组件」入口在头部（编辑页面旁）—— Board 经 Portal 注入 */}
@@ -310,23 +311,25 @@ function Workbench({
             <IconAction
               label="数据源管理"
               variant="default"
+              size="md"
               onClick={() => gotoView("data")}
             >
-              <IconDatabase size={16} />
+              <IconDatabase size={18} />
             </IconAction>
             {isDesktop && (
               <IconAction
                 label="插件管理"
                 variant="default"
+                size="md"
                 onClick={() => setPluginAdminOpen(true)}
               >
-                <IconPuzzle size={16} />
+                <IconPuzzle size={18} />
               </IconAction>
             )}
             {/* Q63：深浅主题切换（D52 双主题） */}
             <ActionIcon
               variant="default"
-              size="sm"
+              size="md"
               aria-label={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
               title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
               onClick={onToggleTheme}
@@ -355,9 +358,10 @@ function Workbench({
             <IconAction
               label="退出登录"
               variant="default"
+              size="md"
               onClick={() => void api.logout().then(onLogout)}
             >
-              <IconLogout size={16} />
+              <IconLogout size={18} />
             </IconAction>
           </Group>
         </Group>

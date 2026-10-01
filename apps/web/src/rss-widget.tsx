@@ -31,8 +31,9 @@ export function RssWidget({
   return (
     <div className="wb-widget">
       <Group gap={6}>
+        {/* Q85（项 12）：标题统一为「RSS」 */}
         <Text size="xs" fw={600} style={{ flex: 1 }}>
-          信息流
+          RSS
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>

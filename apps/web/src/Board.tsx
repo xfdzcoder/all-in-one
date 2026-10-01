@@ -5,7 +5,8 @@ import { GridStack, useGridStack } from "gridstack/dist/react";
 import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/dist/react";
 import { Utils } from "gridstack";
 import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/widget-sdk";
-import { Button, Group, Modal, Text } from "@mantine/core";
+import { Group, Modal, Text } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 
 import { api } from "./api";
 import { randomId } from "./random-id";
@@ -17,7 +18,7 @@ import { ConfigForm } from "./ConfigForm";
 import { PluginFrame } from "./plugin-frame";
 import { usePlugins } from "./data-hooks";
 import { propsWithSecretRefs } from "./config-form-utils";
-import { WbAlert } from "./ui";
+import { IconAction, WbAlert } from "./ui";
 
 const SAVE_DEBOUNCE_MS = 800;
 
@@ -111,10 +112,18 @@ function BoardToolbar({
         <>
           {(() => {
             // Q29d/三.2：「添加组件」入口移到头部（编辑页面旁）—— Portal 注入头部槽位
+            // Q85（项 14）：「添加组件」由文字按钮改 icon；它经 Portal 落在顶栏，
+            // 故同批按项 15 用顶栏尺寸（md），卡片内动作簇仍保持默认 sm。
             const btn = (
-              <Button size="xs" variant="light" onClick={() => setPickerOpen(true)}>
-                添加组件
-              </Button>
+              <IconAction
+                label="添加组件"
+                tooltip="添加组件"
+                variant="default"
+                size="md"
+                onClick={() => setPickerOpen(true)}
+              >
+                <IconPlus size={18} />
+              </IconAction>
             );
             const slot = typeof document !== "undefined" ? document.getElementById("wb-header-edit-slot") : null;
             return slot ? createPortal(btn, slot) : btn;

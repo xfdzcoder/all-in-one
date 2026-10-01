@@ -2,7 +2,7 @@ import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
-import { useMonitorData, useResolvedSourceConfig } from "./data-hooks";
+import { useDataSources, useMonitorData, useResolvedSourceConfig } from "./data-hooks";
 import { copyText } from "./clipboard";
 import { WbAlert, IconAction } from "./ui";
 
@@ -60,12 +60,16 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const [copied, setCopied] = useState(false);
   // Q36：按解析后配置判定空态（sourceId 命中连接 / 旧内联均算已配置）
   const url = (resolved as { url?: string }).url;
+  // Q85（项 11）：标题显示**实际的数据源名称**（未绑定连接时回落组件名）
+  const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
+  const sources = useDataSources("monitor");
+  const sourceName = (sources.data ?? []).find((r) => r.id === sourceId)?.name;
 
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="xs" fw={600} style={{ flex: 1 }}>
-          服务器监控
+        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
+          {sourceName ?? "服务器监控"}
         </Text>
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data?.probe?.ok && (
