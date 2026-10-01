@@ -710,6 +710,68 @@ try {
     JSON.stringify(t13),
   );
   ok("Q86 sourceless card title is not a link (项 13)", t13.rssHasLink === false, JSON.stringify(t13));
+
+  // Q87（项 4）：手动刷新必须带 `force` —— 否则服务端 DataCache TTL 60s 直接回旧数据
+  const seen = { force: 0, albumId: 0 };
+  const onReq = (req) => {
+    if (req.method() !== "POST" || !req.url().includes("/api/widgets/data")) return;
+    try {
+      const body = JSON.parse(req.postData() ?? "{}");
+      if (body.force === true) seen.force += 1;
+      if (body.config && body.config.albumId) seen.albumId += 1;
+    } catch {
+      /* 非 JSON 请求体 */
+    }
+  };
+  page.on("request", onReq);
+
+  ok(
+    "Q87 click refresh on a card",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) =>
+        (i.textContent ?? "").includes("svc-monitor-"),
+      );
+      const btn = [...(item?.querySelectorAll("button") ?? [])].find(
+        (b) => (b.getAttribute("aria-label") || b.textContent || "").trim() === "刷新",
+      );
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(1500);
+  ok("Q87 manual refresh sends force (项 4)", seen.force >= 1, JSON.stringify(seen));
+
+  // Q87（项 4）：配置里的 albumId 必须真的发给后端 —— 此前前端把它整条丢了
+  const seedRes = await page.evaluate(async () => {
+    const list = await (await fetch("/api/dashboards")).json();
+    const home = list.find((d) => d.title === "首页") ?? list[0];
+    // 布局随 GET /api/dashboards 的行返回（无独立 GET layout 端点），
+    // 契约是 layoutJson = gridstack widget 数组的 JSON 字符串
+    const items = JSON.parse(home?.layoutJson ?? "[]");
+    const gal = items.find((i) => i.component === "immich-gallery");
+    let put = 0;
+    if (gal) {
+      gal.props = { ...(gal.props ?? {}), albumId: "album-should-be-sent" };
+      const resp = await fetch(`/api/dashboards/${home.id}/layout`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
+      });
+      put = resp.status;
+    }
+    return { found: Boolean(gal), put, comps: items.map((i) => i.component) };
+  });
+  // 改的是 DB 里的布局 —— 运行中的组件不会自己换 props，必须重载页面才生效。
+  // 注意不能用 networkidle0：应用持有 /api/events SSE 长连接，网络永不空闲。
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 20000 });
+  await sleep(3000);
+  page.off("request", onReq);
+  ok(
+    "Q87 albumId from config reaches the request (项 4)",
+    seen.albumId >= 1,
+    JSON.stringify({ seen, seedRes }),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

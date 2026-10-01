@@ -22,6 +22,7 @@ export function NavidromeLibraryWidget({
   layout = "grid",
   randomIntervalSec = 30,
   minCell = 72,
+  artistId,
 }: {
   sourceId?: string;
   limit?: number;
@@ -31,8 +32,10 @@ export function NavidromeLibraryWidget({
   randomIntervalSec?: number;
   /** 格子最小边长 px（只限最小、不限最大）。 */
   minCell?: number;
+  /** Q72/Q87：只看某个艺人（留空 = 全部）。 */
+  artistId?: string;
 }) {
-  const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec);
+  const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec, artistId);
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);

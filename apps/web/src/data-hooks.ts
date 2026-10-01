@@ -24,6 +24,31 @@ function refreshInterval(refreshSec: unknown, defaultMs: number): number {
 const POLL_INTERVAL_MS = 30_000;
 const SSE_RETRY_MS = 60_000;
 
+/**
+ * 手动刷新（FR-I3 / **Q87 项 4**）：**必须穿透缓存**。
+ *
+ * `query.refetch()` 复用同一个 queryFn、无法临时带上 `force`，而服务端 `DataCache`
+ * TTL 60s 会直接回旧数据 —— 表现为「点刷新按钮没反应」。因此手动刷新直接以 `force`
+ * 回源并写回缓存（与 custom-api / monitor 等既有范式一致）。
+ *
+ * 只对走 `/api/widgets/data` 的查询必要：REST 端点（todos / kanban / mail / plugins）
+ * 没有服务端 TTL 缓存，`refetch()` 本身就是回源。
+ */
+function forceRefetch(
+  qc: ReturnType<typeof useQueryClient>,
+  key: readonly unknown[],
+  type: string,
+  config: Record<string, unknown>,
+): () => void {
+  return () => {
+    void (api.widgetData(type, config, true) as Promise<unknown>)
+      .then((d) => qc.setQueryData(key, d))
+      .catch(() => {
+        /* 回源失败保留旧数据；错误态由下一次常规查询反映 */
+      });
+  };
+}
+
 /** 兜底轮询：失效全部数据查询（与 SSE 通知同效，仅在 SSE 不可用时启用）。 */
 function invalidateAllData(qc: ReturnType<typeof useQueryClient>): void {
   for (const key of [
@@ -37,6 +62,15 @@ function invalidateAllData(qc: ReturnType<typeof useQueryClient>): void {
     ["custom-api"],
     ["launcher"],
     ["plugin-data"],
+    // Q87（项 4）：补齐服务类组件 —— 此前这些 key 缺失，SSE 失效/轮询兜底都通知不到它们
+    ["immich-gallery"],
+    ["navidrome-library"],
+    ["portainer-containers"],
+    ["portainer-logs"],
+    ["mihomo-nodes"],
+    ["service-overview"],
+    ["monitor"],
+    ["media-options"],
   ]) {
     void qc.invalidateQueries({ queryKey: key });
   }
@@ -374,12 +408,21 @@ export function useMailAccounts() {
   };
 }
 
-/** Immich 照片墙（FR-X3 只读深度，D50）：缩略图服务端代取为 data URI。 */
-export function useImmichGallery(sourceId?: string, limit?: unknown, refreshSec?: unknown) {
+/** Immich 照片墙（FR-X3 只读深度，D50）：缩略图服务端代取为 data URI。
+ *  `albumId`（Q87 项 4）= 「只看相册」——**必须进 queryKey 与请求体**，此前前端把它丢了，
+ *  导致改配置不生效、点刷新也只是一遍遍重发同一请求。 */
+export function useImmichGallery(
+  sourceId?: string,
+  limit?: unknown,
+  refreshSec?: unknown,
+  albumId?: unknown,
+) {
   const n = typeof limit === "number" && Number.isFinite(limit) ? limit : 12;
+  const album = typeof albumId === "string" && albumId ? albumId : undefined;
+  const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["immich-gallery", sourceId ?? "", n],
-    queryFn: () => api.widgetData("immich-gallery", { sourceId, limit: n }) as Promise<Record<string, unknown>>,
+    queryKey: ["immich-gallery", sourceId ?? "", n, album ?? ""],
+    queryFn: () => api.widgetData("immich-gallery", { sourceId, limit: n, albumId: album }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
@@ -393,16 +436,28 @@ export function useImmichGallery(sourceId?: string, limit?: unknown, refreshSec?
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    refresh: forceRefetch(qc, ["immich-gallery", sourceId ?? "", n, album ?? ""], "immich-gallery", {
+      sourceId,
+      limit: n,
+      albumId: album,
+    }),
   };
 }
 
-/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加 + 正在播放，封面服务端代取。 */
-export function useNavidromeLibrary(sourceId?: string, limit?: unknown, refreshSec?: unknown) {
+/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加 + 正在播放，封面服务端代取。
+ *  `artistId`（Q87 项 4）= 「只看艺人」——同上，必须进 queryKey 与请求体。 */
+export function useNavidromeLibrary(
+  sourceId?: string,
+  limit?: unknown,
+  refreshSec?: unknown,
+  artistId?: unknown,
+) {
   const n = typeof limit === "number" && Number.isFinite(limit) ? limit : 12;
+  const artist = typeof artistId === "string" && artistId ? artistId : undefined;
+  const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["navidrome-library", sourceId ?? "", n],
-    queryFn: () => api.widgetData("navidrome-library", { sourceId, limit: n }) as Promise<Record<string, unknown>>,
+    queryKey: ["navidrome-library", sourceId ?? "", n, artist ?? ""],
+    queryFn: () => api.widgetData("navidrome-library", { sourceId, limit: n, artistId: artist }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
@@ -417,12 +472,17 @@ export function useNavidromeLibrary(sourceId?: string, limit?: unknown, refreshS
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    refresh: forceRefetch(qc, ["navidrome-library", sourceId ?? "", n, artist ?? ""], "navidrome-library", {
+      sourceId,
+      limit: n,
+      artistId: artist,
+    }),
   };
 }
 
 /** Portainer 容器清单（FR-X3 只读深度，D50）。 */
 export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) {
+  const qc = useQueryClient();
   const query = useQuery({
     queryKey: ["portainer-containers", sourceId ?? ""],
     queryFn: () => api.widgetData("portainer-containers", { sourceId }) as Promise<Record<string, unknown>>,
@@ -447,7 +507,7 @@ export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) 
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    refresh: forceRefetch(qc, ["portainer-containers", sourceId ?? ""], "portainer-containers", { sourceId }),
   };
 }
 
@@ -468,6 +528,7 @@ export function usePortainerLogs(sourceId?: string, containerId?: string) {
 
 /** Mihomo 节点面板（FR-X3 只读深度，D50）。 */
 export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
+  const qc = useQueryClient();
   const query = useQuery({
     queryKey: ["mihomo-nodes", sourceId ?? ""],
     queryFn: () => api.widgetData("mihomo-nodes", { sourceId }) as Promise<Record<string, unknown>>,
@@ -486,7 +547,7 @@ export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    refresh: forceRefetch(qc, ["mihomo-nodes", sourceId ?? ""], "mihomo-nodes", { sourceId }),
   };
 }
 
@@ -509,6 +570,7 @@ export function usePortainerRestart(sourceId?: string) {
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];
+  const qc = useQueryClient();
   const query = useQuery({
     queryKey: key,
     queryFn: () => api.widgetData("service-overview", { sourceId }) as Promise<Record<string, unknown>>,
@@ -522,7 +584,7 @@ export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: () => void query.refetch(),
+    refresh: forceRefetch(qc, key, "service-overview", { sourceId }),
   };
 }
 

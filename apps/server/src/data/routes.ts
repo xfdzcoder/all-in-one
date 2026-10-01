@@ -95,7 +95,9 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
     if (cached && !parsed.data.force) {
       return { data: cached.data, fetchedAt: cached.fetchedAt, cached: true };
     }
-    if (!deps.cache.allowFetch(key)) {
+    // Q87（项 4）：手动刷新要**真的回源** —— force 除了跳过缓存读，也必须跳过
+    // `minIntervalSec` 限流，否则连点两次刷新仍会被挡回旧数据（表现为「刷新没用」）。
+    if (!parsed.data.force && !deps.cache.allowFetch(key)) {
       // 限流：返回过期缓存（若有）或 429
       if (cached) return { data: cached.data, fetchedAt: cached.fetchedAt, cached: true };
       return reply.code(429).send({ error: "rate limited" });

@@ -1,7 +1,12 @@
 /**
  * 数据通道缓存 + 限流（NFR4：防打爆第三方 API）。
  * - TTL 缓存：同 key 在 ttl 内直接回缓存
- * - 最小刷新间隔：即使强刷也受 minIntervalSec 约束（按 key 计）
+ * - 最小刷新间隔：**自动轮询**受 minIntervalSec 约束（按 key 计）
+ *
+ * Q87（项 4）契约变更：**用户显式刷新（force）同时绕过 TTL 读与 minIntervalSec**。
+ * 原先「即使强刷也受 minIntervalSec 约束」会让用户连点两次刷新时第二次静默返回旧数据，
+ * 表现为「刷新按钮没反应」。限流的目的是防**轮询**打爆上游，而不是拦用户的明确意图；
+ * 而自动轮询从不带 force，因此仍然受控。
  */
 
 interface CacheEntry {

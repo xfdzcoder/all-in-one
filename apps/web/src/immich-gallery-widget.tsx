@@ -21,6 +21,7 @@ export function ImmichGalleryWidget({
   layout = "grid",
   randomIntervalSec = 30,
   minCell = 72,
+  albumId,
 }: {
   sourceId?: string;
   limit?: number;
@@ -30,8 +31,10 @@ export function ImmichGalleryWidget({
   randomIntervalSec?: number;
   /** 格子最小边长 px（只限最小、不限最大）。 */
   minCell?: number;
+  /** Q72/Q87：只看某个相册（留空 = 全部）。 */
+  albumId?: string;
 }) {
-  const { data, loading, error, refresh } = useImmichGallery(sourceId, limit, refreshSec);
+  const { data, loading, error, refresh } = useImmichGallery(sourceId, limit, refreshSec, albumId);
   const [preview, setPreview] = useState<{ thumb: string; href: string; at: string } | null>(null);
   // Q73（项 8）：铺开模式预览支持左右切换（循环）
   const [previewIdx, setPreviewIdx] = useState(0);
