@@ -5,6 +5,7 @@ import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 import type { MailListEntry } from "./api";
 import { HtmlSandbox } from "./html-sandbox";
 import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 import { useMailAccounts, useMailMessage, useMailMessages } from "./data-hooks";
 
 /**
@@ -41,17 +42,8 @@ export function MailWidget({
     // 语义类 wb-widget--mail（D39：类名即公共 API，可被 /custom.css 按组件覆盖）
     <div className="wb-widget wb-widget--mail">
       <Group gap={6} wrap="nowrap">
-        {/* 项 2：左上角邮箱信息 —— 单行 + 省略号（flex:1/minWidth:0 才能让 truncate 生效） */}
-        <Text
-          size="xs"
-          fw={600}
-          truncate
-          className="wb-mailbox-label"
-          style={{ flex: 1, minWidth: 0 }}
-          title={mailboxLabel}
-        >
-          {mailboxLabel}
-        </Text>
+        {/* 项 2：左上角邮箱信息 —— 单行 + 省略号（tooltip 可看全名） */}
+        <WidgetTitle title={mailboxLabel} className="wb-mailbox-label" tip={mailboxLabel} />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>

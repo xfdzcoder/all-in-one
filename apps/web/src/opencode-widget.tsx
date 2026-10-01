@@ -4,6 +4,7 @@ import { Badge, Card, Group, Modal, Stack, Text } from "@mantine/core";
 
 import { useOpencodeData, useResolvedSourceConfig, type OpencodeSession } from "./data-hooks";
 import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 
 /**
  * OpenCode 组件（FR-E4/06 §1）：会话列表 / 状态 / 耗时 + API 版本探测。
@@ -31,9 +32,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="xs" fw={600} style={{ flex: 1 }}>
-          OpenCode 会话
-        </Text>
+        <WidgetTitle title="OpenCode 会话" truncate={false} />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data?.probe?.ok && (
             <Badge size="xs" color="green" variant="light">

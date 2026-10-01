@@ -6,6 +6,7 @@ import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
 import { copyText } from "./clipboard";
 import { WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
 /**
@@ -57,9 +58,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          自定义 API
-        </Text>
+        <WidgetTitle title="自定义 API" />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data !== undefined && data !== null && (
             <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>

@@ -3,6 +3,7 @@ import { Badge, Group, Text } from "@mantine/core";
 
 import { useAppLauncher } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 
 /**
  * 应用入口 + 服务状态组件（FR：图标网格、HTTP/TCP 存活探测、点击跳转）。
@@ -33,9 +34,7 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="xs" fw={600} style={{ flex: 1 }}>
-          应用入口
-        </Text>
+        <WidgetTitle title="应用入口" truncate={false} />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data && (
             <Badge size="xs" variant="light" color={(data.up ?? 0) === data.total ? "green" : "orange"}>

@@ -5,6 +5,7 @@ import { useMihomoNodes } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 
 /**
  * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组 / 节点延迟 / 订阅源。
@@ -18,10 +19,10 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <ServiceIcon name="mihomo" size={16} />
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          节点面板{row?.name ? ` · ${row.name}` : ""}
-        </Text>
+        <WidgetTitle
+          icon={<ServiceIcon name="mihomo" size={16} />}
+          title={<>节点面板{row?.name ? ` · ${row.name}` : ""}</>}
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>

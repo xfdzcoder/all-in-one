@@ -6,6 +6,7 @@ import type { TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useDraft, useTodoMutations, useTodos } from "./data-hooks";
 import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
+import { WidgetTitle } from "./widget-title";
 
 /** Todo 组件配置（configSchema 元数据见 widget-manifests.ts）。
  *  gridstack 直接把布局 JSON 的 props 展开传入，即扁平 config 形态。 */
@@ -50,9 +51,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="sm" fw={600} style={{ flex: 1 }}>
-          Todo · {group}
-        </Text>
+        <WidgetTitle title={<>Todo · {group}</>} size="sm" truncate={false} />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
         </Group>

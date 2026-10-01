@@ -16,6 +16,7 @@ import type { KanbanCardRow } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks";
 import { WidgetEditContext } from "./widget-edit-context";
+import { WidgetTitle } from "./widget-title";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
@@ -82,9 +83,10 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   return (
     <div className="wb-widget">
       <Group gap={6} wrap="nowrap">
-        <Text size="xs" fw={600} className="wb-grow wb-kanban__board-title" truncate>
-          {boards.find((b) => b.id === boardId)?.title ?? "看板"}
-        </Text>
+        <WidgetTitle
+          title={boards.find((b) => b.id === boardId)?.title ?? "看板"}
+          className="wb-grow wb-kanban__board-title"
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <Button
             size="compact-xs"

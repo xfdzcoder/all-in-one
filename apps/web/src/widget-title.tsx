@@ -12,12 +12,20 @@ import type { ReactNode } from "react";
  *
  * `href` 缺省时只渲染文本（Mihomo 纯 API、信息流、ToDo、看板等无站点）。
  * 样式走 `.wb-widget__head` / `.wb-widget__title-link` 语义类（D39：类名即公共 API）。
+ *
+ * Q92：其余 7 个组件的手写标题头也迁到本组件（视觉不变，纯去重复）。
+ * 少量历史差异用可选参数保留（`className` 保住语义类、`size`/`truncate`
+ * 保住字号与省略行为、`tip` 保住 tooltip），不在迁移里偷偷改观感。
  */
 export function WidgetTitle({
   icon,
   title,
   href,
   actions,
+  className,
+  tip,
+  size = "xs",
+  truncate = true,
 }: {
   /** 左侧 logo（通常 `<ServiceIcon …/>`）。 */
   icon?: ReactNode;
@@ -26,11 +34,19 @@ export function WidgetTitle({
   href?: string;
   /** 右侧动作簇（刷新/配置等 icon 按钮）。传了才渲染整行头部，否则只渲染左段。 */
   actions?: ReactNode;
+  /** 追加到标题文本的语义类（D39 公共 API，如 `wb-kanban__board-title` / `wb-mailbox-label`）。 */
+  className?: string;
+  /** 标题 tooltip（单行省略时可看全名）。 */
+  tip?: string;
+  /** 标题字号，默认 xs（todo 历史为 sm）。 */
+  size?: "xs" | "sm";
+  /** 单行省略，默认 true；历史未省略的组件（launcher/opencode/todo）传 false 保持原行为。 */
+  truncate?: boolean;
 }) {
   const inner = (
     <>
       {icon}
-      <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
+      <Text size={size} fw={600} style={{ flex: 1, minWidth: 0 }} truncate={truncate} className={className} title={tip}>
         {title}
       </Text>
     </>
