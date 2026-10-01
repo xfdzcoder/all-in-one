@@ -203,10 +203,10 @@ try {
   // ③ 自定义 API 详情（完整响应）
   ok("I4 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
-  // Q34：编辑态隐藏「未读」徽标（与外框「配置/移除」重叠被遮挡）
+  // Q34/Q41：编辑态隐藏「未读」徽标（与外框「配置/移除」重叠被遮挡；Q41 起随头部动作簇统一 CSS 隐藏）
   ok(
     "I4 unread badge hidden in edit mode",
-    await page.evaluate(() => ![...document.querySelectorAll(".wb-widget .mantine-Badge-root")].some((b) => b.offsetParent !== null && b.textContent.includes("未读"))),
+    await page.evaluate(() => ![...document.querySelectorAll(".wb-widget .mantine-Badge-root")].some((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && b.textContent.includes("未读"))),
   );
   ok("I4 add custom-api", await clickBtn("添加组件"));
   await sleep(300);
@@ -226,10 +226,10 @@ try {
   await sleep(1500);
   ok("I4 exit edit", await clickBtn("完成编辑"));
   await sleep(400);
-  // Q34：退出编辑后徽标恢复
+  // Q34/Q41：退出编辑后徽标恢复
   ok(
     "I4 unread badge restored in browse mode",
-    await page.evaluate(() => [...document.querySelectorAll(".wb-widget .mantine-Badge-root")].some((b) => b.offsetParent !== null && b.textContent.includes("未读"))),
+    await page.evaluate(() => [...document.querySelectorAll(".wb-widget .mantine-Badge-root")].some((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden" && b.textContent.includes("未读"))),
   );
   await sleep(400);
 

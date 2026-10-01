@@ -117,11 +117,15 @@ try {
   ok("P8 enter edit", await clickBtn("编辑页面"));
   await sleep(400);
   // Q32：编辑态内容保持可见（撤销按钮隐藏方案）—— 可辨认，但交互仍被 inert 禁用
+  // Q41：右上角动作簇（刷新/徽标/详情）例外 —— 统一隐藏，不被外框「配置/移除」遮挡
   const contentVisible = await page.evaluate(() => {
     const input = [...document.querySelectorAll("input")].find((i) => i.placeholder === "新任务…");
-    const btn = [...document.querySelectorAll(".wb-chrome__content--inert button")].find((b) => b.offsetParent !== null || getComputedStyle(b).visibility !== "hidden");
+    const inActions = (b) => Boolean(b.closest(".wb-widget__actions"));
+    const btn = [...document.querySelectorAll(".wb-chrome__content--inert button")].find(
+      (b) => !inActions(b) && (b.offsetParent !== null || getComputedStyle(b).visibility !== "hidden"),
+    );
     const btnHidden = [...document.querySelectorAll(".wb-chrome__content--inert button")].filter(
-      (b) => getComputedStyle(b).visibility === "hidden",
+      (b) => !inActions(b) && getComputedStyle(b).visibility === "hidden",
     ).length;
     return {
       inputVisible: Boolean(input) && input.offsetParent !== null,
@@ -133,6 +137,19 @@ try {
     "P8 edit mode: content stays visible (no hiding)",
     contentVisible.inputVisible && contentVisible.anyButtonVisible && contentVisible.hiddenButtons === 0,
     JSON.stringify(contentVisible),
+  );
+  // Q41：编辑态头部动作簇全部隐藏（用户反馈⑫一.1「刷新未隐藏」统一收口）
+  const actionsState = await page.evaluate(() => {
+    const clusters = [...document.querySelectorAll(".wb-widget__actions")];
+    return {
+      total: clusters.length,
+      hidden: clusters.filter((c) => getComputedStyle(c).visibility === "hidden").length,
+    };
+  });
+  ok(
+    "Q41 edit mode: header actions clusters hidden",
+    actionsState.total > 0 && actionsState.hidden === actionsState.total,
+    JSON.stringify(actionsState),
   );
   const afterEditClick = await toggleTask(taskTitle);
   await sleep(600);
@@ -175,9 +192,21 @@ try {
   await page.keyboard.press("Escape");
   await sleep(400);
 
-  // ④ 回到浏览模式：操作恢复
+  // ④ 回到浏览模式：操作恢复 + 动作簇恢复可见
   ok("P8 exit edit", await clickBtn("完成编辑"));
   await sleep(400);
+  const actionsRestored = await page.evaluate(() => {
+    const clusters = [...document.querySelectorAll(".wb-widget__actions")];
+    return {
+      total: clusters.length,
+      visible: clusters.filter((c) => getComputedStyle(c).visibility !== "hidden").length,
+    };
+  });
+  ok(
+    "Q41 browse mode: header actions visible again",
+    actionsRestored.total > 0 && actionsRestored.visible === actionsRestored.total,
+    JSON.stringify(actionsRestored),
+  );
   const afterRestore = await toggleTask(taskTitle);
   await sleep(600);
   const restoreChecked = await taskChecked(taskTitle);

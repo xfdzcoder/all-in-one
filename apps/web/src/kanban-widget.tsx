@@ -84,22 +84,24 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         <Text size="xs" fw={600} className="wb-grow wb-kanban__board-title" truncate>
           {boards.find((b) => b.id === boardId)?.title ?? "看板"}
         </Text>
-        <Button
-          size="compact-xs"
-          variant="subtle"
-          onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "kanban" } }))}
-        >
-          管理
-        </Button>
-        <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-          刷新
-        </Button>
-        {archivedCount > 0 && (
-          // ISS-13 修复：计数可点 —— 打开归档列表（恢复/删除），打通归档恢复路径
-          <Button size="compact-xs" variant="subtle" onClick={() => setArchiveOpen(true)}>
-            已归档 {archivedCount}
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "kanban" } }))}
+          >
+            管理
           </Button>
-        )}
+          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
+            刷新
+          </Button>
+          {archivedCount > 0 && (
+            // ISS-13 修复：计数可点 —— 打开归档列表（恢复/删除），打通归档恢复路径
+            <Button size="compact-xs" variant="subtle" onClick={() => setArchiveOpen(true)}>
+              已归档 {archivedCount}
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {!boardId && (

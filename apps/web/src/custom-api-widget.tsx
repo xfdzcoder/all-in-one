@@ -58,14 +58,16 @@ export function CustomApiWidget(props: CustomApiConfig) {
         <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
           自定义 API
         </Text>
-        {data !== undefined && data !== null && (
-          <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
-            详情
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          {data !== undefined && data !== null && (
+            <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
+              详情
+            </Button>
+          )}
+          <Button size="compact-xs" variant="subtle" onClick={refresh}>
+            刷新
           </Button>
-        )}
-        <Button size="compact-xs" variant="subtle" onClick={refresh}>
-          刷新
-        </Button>
+        </Group>
       </Group>
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}

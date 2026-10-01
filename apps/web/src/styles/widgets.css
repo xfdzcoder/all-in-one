@@ -506,6 +506,12 @@
   gap: var(--wb-space-1);
 }
 
+/* Q41：编辑态外框「配置/移除」覆盖卡片右上角 —— 组件自身头部动作簇（刷新/徽标/详情）
+   统一隐藏（D39 语义类收口，替代逐组件 editMode 条件渲染） */
+.wb-chrome__content--inert .wb-widget__actions {
+  visibility: hidden;
+}
+
 /* ── 撤销条（ISS-14）：完成任务后的短暂可撤销提示 ── */
 .wb-undo {
   display: flex;

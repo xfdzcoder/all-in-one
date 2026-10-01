@@ -1,7 +1,4 @@
 import { Badge, Button, Group, Text } from "@mantine/core";
-import { useContext } from "react";
-
-import { WidgetEditContext } from "./widget-edit-context";
 
 import type { FeedItem } from "./api";
 import { useFeeds, useFeedMutations } from "./data-hooks";
@@ -27,8 +24,6 @@ export function RssWidget({
 }: RssConfig & { refreshSec?: number }) {
   const { data, loading, error, refresh } = useFeeds(limit, refreshSec, filter, tagIds);
   const { markRead } = useFeedMutations();
-  // Q34：编辑态隐藏「未读」徽标（右上角与外框「配置/移除」重叠被遮挡）
-  const { editMode } = useContext(WidgetEditContext);
 
   const items = (data?.items ?? []).filter((i: FeedItem) => (filter === "unread" ? !i.read : true));
 
@@ -38,14 +33,14 @@ export function RssWidget({
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           信息流
         </Text>
-        <Button size="compact-xs" variant="subtle" onClick={refresh}>
-          刷新
-        </Button>
-        {!editMode && (
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          <Button size="compact-xs" variant="subtle" onClick={refresh}>
+            刷新
+          </Button>
           <Badge size="xs" variant="light">
             未读 {data?.unread ?? 0}
           </Badge>
-        )}
+        </Group>
       </Group>
 
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}

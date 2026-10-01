@@ -35,14 +35,16 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
         <Text size="xs" fw={600} style={{ flex: 1 }}>
           应用入口
         </Text>
-        {data && (
-          <Badge size="xs" variant="light" color={(data.up ?? 0) === data.total ? "green" : "orange"}>
-            {data.up}/{data.total} 在线
-          </Badge>
-        )}
-        <Button size="compact-xs" variant="subtle" onClick={refresh}>
-          刷新
-        </Button>
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          {data && (
+            <Badge size="xs" variant="light" color={(data.up ?? 0) === data.total ? "green" : "orange"}>
+              {data.up}/{data.total} 在线
+            </Badge>
+          )}
+          <Button size="compact-xs" variant="subtle" onClick={refresh}>
+            刷新
+          </Button>
+        </Group>
       </Group>
       {loading && <Text size="xs" c="dimmed" className="wb-loading">加载中…</Text>}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}

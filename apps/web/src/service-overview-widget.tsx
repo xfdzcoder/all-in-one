@@ -33,24 +33,26 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
         <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
           {row?.name ?? "服务概览"}
         </Text>
-        {data?.probe?.ok && (
-          <Badge size="xs" color="green" variant="light">
-            {data.probe.version ? `v${data.probe.version}` : "已连接"}
-          </Badge>
-        )}
-        {data && !data.probe?.ok && (
-          <Badge size="xs" color="red" variant="light">
-            探测失败
-          </Badge>
-        )}
-        {data && (
-          <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
-            详情
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          {data?.probe?.ok && (
+            <Badge size="xs" color="green" variant="light">
+              {data.probe.version ? `v${data.probe.version}` : "已连接"}
+            </Badge>
+          )}
+          {data && !data.probe?.ok && (
+            <Badge size="xs" color="red" variant="light">
+              探测失败
+            </Badge>
+          )}
+          {data && (
+            <Button size="compact-xs" variant="subtle" onClick={() => setDetailOpen(true)}>
+              详情
+            </Button>
+          )}
+          <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
+            刷新
           </Button>
-        )}
-        <Button size="compact-xs" variant="subtle" onClick={() => void refresh()}>
-          刷新
-        </Button>
+        </Group>
       </Group>
 
       {!sourceId && (

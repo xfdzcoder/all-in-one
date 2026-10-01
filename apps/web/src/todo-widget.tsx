@@ -52,9 +52,11 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
         <Text size="sm" fw={600} style={{ flex: 1 }}>
           Todo · {group}
         </Text>
-        <Button size="compact-xs" variant="subtle" onClick={refresh}>
-          刷新
-        </Button>
+        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
+          <Button size="compact-xs" variant="subtle" onClick={refresh}>
+            刷新
+          </Button>
+        </Group>
       </Group>
       <Group gap="xs">
         <TextInput

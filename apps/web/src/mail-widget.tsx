@@ -33,8 +33,7 @@ export function MailWidget({
 
   return (
     <div className="wb-widget">
-      <Group gap={6} wrap="nowrap">
-
+      <Group gap={6} wrap="nowrap" className="wb-widget__actions">
         {/* D42：邮箱属数据源 —— 管理统一在「数据源管理 · 邮箱」 */}
         <Button
           size="compact-xs"
