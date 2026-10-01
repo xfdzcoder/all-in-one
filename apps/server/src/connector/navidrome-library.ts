@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
-import { imageSize } from "./image-size.ts";
+import { imageMimeOf, imageSize } from "./image-size.ts";
 
 /**
  * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑（网格）。
@@ -23,7 +23,7 @@ export interface NavidromeAlbumItem {
   id: string;
   name: string;
   artist?: string;
-  /** 封面 data URI（image/jpeg;base64,…）；**空字符串 = 封面不可用**（组件渲染占位块，不丢格子）。 */
+  /** 封面 data URI（mime 按字节头，QA-001）；**空字符串 = 封面不可用**（组件渲染占位块，不丢格子）。 */
   cover: string;
   /** 封面**原始宽高**（D60 §1 字节头解析），供前端等比装箱；解析不出则缺省，前端按 1:1 退化。 */
   width?: number;
@@ -88,7 +88,7 @@ export function normalizeNavidromeLibrary(
       id,
       name: str(a.name) ?? "(未命名专辑)",
       artist: str(a.artist),
-      cover: bytes && bytes.byteLength > 0 ? `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}` : "",
+      cover: bytes && bytes.byteLength > 0 ? `data:${imageMimeOf(bytes)};base64,${Buffer.from(bytes).toString("base64")}` : "",
       ...(size ? { width: size.width, height: size.height } : {}),
     });
   }

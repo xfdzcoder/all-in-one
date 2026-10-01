@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
-import { imageSize } from "./image-size.ts";
+import { imageMimeOf, imageSize } from "./image-size.ts";
 
 /**
  * Immich 照片墙（FR-X3 只读深度，**D50**）：最近照片网格。
@@ -26,7 +26,7 @@ export interface ImmichGalleryItem {
   /** 拍摄/创建时间（ISO），组件相对化展示。 */
   at: string;
   type: "IMAGE" | "VIDEO";
-  /** 缩略图 data URI（image/jpeg;base64,…）；**空字符串 = 缩略图不可用**（组件渲染占位块，不丢格子）。 */
+  /** 缩略图 data URI（mime 按字节头，QA-001）；**空字符串 = 缩略图不可用**（组件渲染占位块，不丢格子）。 */
   thumb: string;
   /** 跳转 Immich Web 的相册页（新标签打开）。 */
   href: string;
@@ -73,7 +73,7 @@ export function normalizeImmichGallery(
       id,
       at: str(a.takenAt) ?? str(a.createdAt) ?? "",
       type: a.type === "VIDEO" ? "VIDEO" : "IMAGE",
-      thumb: bytes && bytes.byteLength > 0 ? `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}` : "",
+      thumb: bytes && bytes.byteLength > 0 ? `data:${imageMimeOf(bytes)};base64,${Buffer.from(bytes).toString("base64")}` : "",
       href: `${base}/photos/${id}`,
       ...(size ? { width: size.width, height: size.height } : {}),
     });

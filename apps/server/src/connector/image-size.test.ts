@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { imageSize } from "./image-size.ts";
+import { imageMimeOf, imageSize } from "./image-size.ts";
+import { miniJpeg } from "./image-size.fixture.ts";
 
 /** 拼一段字节。 */
 function bytes(...parts: Array<number | number[] | Uint8Array>): Uint8Array {
@@ -153,5 +154,20 @@ describe("imageSize（D60 §1 字节头解析宽高，Q89）", () => {
     expect(imageSize(new Uint8Array([1, 2]))).toBe(null);
     expect(imageSize(new Uint8Array([0xde, 0xad, 0xbe, 0xef, 0, 0, 0, 0]))).toBe(null); // 未知容器
     expect(imageSize(bytes("RIFF".split("").map((c) => c.charCodeAt(0)), [0, 0, 0, 0], "WEBP".split("").map((c) => c.charCodeAt(0)), "VP8X".split("").map((c) => c.charCodeAt(0))))).toBe(null); // WebP 头被截断
+  });
+});
+
+describe("imageMimeOf（QA-001/⑭：data URI mime 按字节头）", () => {
+  it("识别 jpeg/png/gif/webp，识别不了退回 octet-stream", () => {
+    expect(imageMimeOf(miniJpeg(10, 10))).toBe("image/jpeg");
+    expect(imageMimeOf(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]))).toBe("image/png");
+    expect(imageMimeOf(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0]))).toBe("image/gif");
+    expect(
+      imageMimeOf(new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])),
+    ).toBe("image/webp");
+    expect(imageMimeOf(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))).toBe("application/octet-stream");
+    expect(imageMimeOf(undefined)).toBe("application/octet-stream");
+    // 短 JPEG 头（verify 夹具常见 6 字节 stub）不得被误判（曾把封面判成 octet-stream）
+    expect(imageMimeOf(new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01]))).toBe("image/jpeg");
   });
 });

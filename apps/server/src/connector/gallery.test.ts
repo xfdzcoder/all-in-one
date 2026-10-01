@@ -222,3 +222,11 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
     expect(data.notes ?? []).toHaveLength(0); // 补满了，不需要「补不满」说明
   });
 });
+
+describe("QA-001：data URI mime 按字节头（不再硬编码 image/jpeg）", () => {
+  it("PNG 缩略图标 image/png", () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const items = normalizeImmichGallery([{ id: "p1", type: "IMAGE" }], new Map([["p1", png]]), "https://immich.example/");
+    expect(items[0].thumb.startsWith("data:image/png;base64,")).toBe(true);
+  });
+});

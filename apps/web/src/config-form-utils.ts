@@ -87,3 +87,23 @@ export function fieldOf(schema: ConfigSchema, key: string): ConfigField | undefi
 export function secretRefOf(v: unknown): SecretRef | null {
   return isSecretRef(v) ? (v as SecretRef) : null;
 }
+
+/** WEB-2（Q98c）：提交前的配置清洗。
+ *  - `undefined` 一律剔除（未改动的字段不发）；
+ *  - **secret 字段**的空串仍剔除 —— 维持「口令留空 = 不改」（Q27a）语义；
+ *  - **文本/数字/下拉字段**的空串**保留** —— 服务端 PATCH 是合并语义，丢掉空串就永远清不空
+ *    （最危险是 Portainer `restartAllow`：清空「重启白名单」想禁重启，旧白名单却还在，D51 失效）。 */
+export function configForSubmit(
+  schema: Array<{ key: string; type?: string }>,
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const secretKeys = new Set(schema.filter((f) => f.type === "secret").map((f) => f.key));
+  return Object.fromEntries(
+    Object.entries(config).filter(([k, v]) => v !== undefined && (secretKeys.has(k) ? v !== "" : true)),
+  );
+}
+
+/** WEB-5（Q98c）：`tagIds` 入参防呆（配置可能存过空串/非数组畸形值）——查询与手动刷新必须用同一份清洗结果。 */
+export function normalizeTagIds(tagIds: unknown): string[] {
+  return Array.isArray(tagIds) ? tagIds.filter((x): x is string => typeof x === "string") : [];
+}

@@ -15,7 +15,7 @@ import {
 
 import type { DataSourceRow, FeedSource, TagRow, TodoItem } from "./api";
 import { ConfirmAction } from "./confirm";
-import { propsWithSecretRefs } from "./config-form-utils";
+import { configForSubmit, propsWithSecretRefs } from "./config-form-utils";
 import { api } from "./api";
 import {
   useDashboards,
@@ -181,9 +181,8 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
         { ...dsConfig } as Record<string, unknown>,
         (name, secret) => api.createCredential(name, secret),
       );
-      const clean = Object.fromEntries(
-        Object.entries(config as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== ""),
-      );
+      // WEB-2：文本字段空串**保留**（= 显式清空），secret 空串仍剔除（= 不改）——见 configForSubmit
+      const clean = configForSubmit(schema, config as Record<string, unknown>);
       if (dsEditing) await dsMut.update.mutateAsync({ id: dsEditing, name: dsName.trim(), config: clean });
       else await dsMut.create.mutateAsync({ kind: dsKind, name: dsName.trim(), config: clean });
       resetDsForm();

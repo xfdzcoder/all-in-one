@@ -8,6 +8,7 @@ import {
 
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
 import { api, type TodoItem } from "./api";
+import { normalizeTagIds } from "./config-form-utils";
 
 /** TanStack Query 单例（04-tech-stack：TanStack Query + SSE）。 */
 export const queryClient = new QueryClient({
@@ -717,7 +718,7 @@ export function useFeeds(
   // Q93（项 1）：**入参防呆**。`tagIds` 来自组件配置，可能是空串/非数组（存过畸形值）——
   // 原来直接 `(tagIds ?? []).join()`，一旦是 `""` 就是 `"".join is not a function`，而且是在
   // **render 期**抛错 → 整棵 React 树卸载（白屏）、每次渲染都抛 → 永远无法恢复。
-  const tags: string[] = Array.isArray(tagIds) ? tagIds.filter((x): x is string => typeof x === "string") : [];
+  const tags = normalizeTagIds(tagIds);
   const key = ["feeds", limit, filter ?? "all", tags.join(",") || "all"];
   const query = useQuery({
     queryKey: key,
@@ -731,7 +732,8 @@ export function useFeeds(
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("rss", { limit, filter, tagIds }, true) as Promise<unknown>).then((d) =>
+      // WEB-5：手动刷新必须复用**同一份清洗结果**（原先发原始 tagIds，畸形配置下「查询正常、点刷新报错」）
+      void (api.widgetData("rss", { limit, filter, tagIds: tags }, true) as Promise<unknown>).then((d) =>
         qc.setQueryData(key, d),
       );
     },

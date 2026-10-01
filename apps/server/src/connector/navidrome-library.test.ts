@@ -27,7 +27,7 @@ describe("normalizeNavidromeLibrary（D50）", () => {
         },
       },
     };
-    const covers = new Map<string, Uint8Array>([["al-1", new Uint8Array([1, 2])]]);
+    const covers = new Map<string, Uint8Array>([["al-1", miniJpeg(64, 64)]]); // 真 JPEG 头（QA-001 按字节头判 mime）
     const out = normalizeNavidromeLibrary(newest, covers);
     // Q70：两张都保留（原先 al-2 因缺封面被丢 → 网格缺格）
     expect(out.albums.map((a) => a.name)).toEqual(["CHIN UP!", "无封面"]);
@@ -229,5 +229,17 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
         ctx,
       ),
     ).rejects.toThrow(/artist not found/);
+  });
+});
+
+describe("QA-001：封面 data URI mime 按字节头（不再硬编码 image/jpeg）", () => {
+  it("WebP 封面标 image/webp", async () => {
+    const { normalizeNavidromeLibrary } = await import("./navidrome-library.ts");
+    const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0, 0, 0, 0]);
+    const out = normalizeNavidromeLibrary(
+      { "subsonic-response": { albumList2: { album: [{ id: "al-1", name: "专辑", artist: "艺人", coverArt: "al-1" }] } } },
+      new Map([["al-1", webp]]),
+    );
+    expect(out.albums[0].cover.startsWith("data:image/webp;base64,")).toBe(true);
   });
 });

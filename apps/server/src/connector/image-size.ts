@@ -144,3 +144,26 @@ export function imageSize(bytes: Uint8Array | undefined | null): ImageSize | nul
   if (head === "GIF87a" || head === "GIF89a") return gifSize(b);
   return null;
 }
+
+/** QA-001（⑭）：**按字节头给真实 mime** —— data URI 不再硬编码 `image/jpeg`。
+ *  Navidrome 封面常见 PNG/WebP，误标后靠浏览器嗅探侥幸显示；识别不了退回
+ *  `application/octet-stream`（`<img>` 解码走内容嗅探，不受声明 mime 影响）。 */
+export function imageMimeOf(bytes: Uint8Array | undefined | null): string {
+  if (!bytes || bytes.length < 2) return "application/octet-stream";
+  // 各格式按**各自最小魔数长度**判（不能一刀切 12 字节 —— 短 JPEG 头会被误判成 octet-stream）
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
+  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return "image/gif";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return "application/octet-stream";
+}

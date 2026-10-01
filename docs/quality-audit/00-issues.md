@@ -58,8 +58,8 @@
 | SRV-08 ✅ | apps/server/src/connector/service.ts:80（genericHint ?? "该项暂缺"）、connector/mihomo-nodes.ts:124 | 降级文案违反 D47「原因 + 怎么修」：degradeNote 兜底 hint「该项暂缺」与 mihomo 订阅源失败的「—— 该项暂缺」只给结论不给修法，接近 08 §5 明令禁止的「该服务未提供 X」式甩锅（Navidrome 族无 permissionHint，全部走这个兜底）。对照同文件  | Q98 | 10 |
 | SRV-09 ✅ | apps/server/src/icon/routes.ts:85-91 | GET /api/icons/:id 缺归属校验（越权读）：只按 customIcon.id 查询即回文件，未比对 row.userId !== req.user!.id（同文件 DELETE 在 :118 有比对）。当前单用户无实际越权，但违背 NFR5/D9「schema 带归属字段为多用户预留 | Q98 | 10 |
 | SRV-10 ✅ | apps/server/src/todo/connector.ts:15-22 | todo connector 不排除归档项，与 REST/文档语义不一致。REST GET /api/todos 默认 eq(todo.archived,false)（todo/routes.ts:39），schema 注释明言「归档项不在组件显示，仅数据源管理可见/可恢复」（db/schema.t | Q98 | 10 |
-| WEB-2 | apps/web/src/data-admin.tsx:184-188 + apps/server/src/data-source/routes.ts:121-128 | 编辑数据连接时 clean 把空串/undefined 字段整体剔除，而服务端 PATCH 是「合并保留旧值」→ 任何文本字段都无法清空。最危险是 Portainer restartAllow：用户清空「重启白名单」想禁重启，保存后旧白名单仍在（D51「留空=禁止重启」失效），UI 看起来已清空 | Q98 | 11 |
-| WEB-5 | data-hooks.ts:724 vs :734 | useFeeds：queryFn 发送清洗后的 tags，refresh（force）却发送原始 tagIds（Q93 注释明言可能是 ""/非数组畸形值）→ 畸形配置下「查询正常、点刷新报错」的不一致行为 | Q98 | 11 |
+| WEB-2 ✅ | apps/web/src/data-admin.tsx:184-188 + apps/server/src/data-source/routes.ts:121-128 | 编辑数据连接时 clean 把空串/undefined 字段整体剔除，而服务端 PATCH 是「合并保留旧值」→ 任何文本字段都无法清空。最危险是 Portainer restartAllow：用户清空「重启白名单」想禁重启，保存后旧白名单仍在（D51「留空=禁止重启」失效），UI 看起来已清空 | Q98 | 11 |
+| WEB-5 ✅ | data-hooks.ts:724 vs :734 | useFeeds：queryFn 发送清洗后的 tags，refresh（force）却发送原始 tagIds（Q93 注释明言可能是 ""/非数组畸形值）→ 畸形配置下「查询正常、点刷新报错」的不一致行为 | Q98 | 11 |
 | SDK-1 | packages/widget-sdk/src/manifest.ts:56；plugin.ts:57；触发点 apps/server/src/plugin/package.ts:99 | validateManifest/validatePluginManifest 入参为 null 时 m.type 直接 TypeError（JSON.parse("null") 合法 JSON）；服务端安装插件时 manifest.json 为 null → 未捕获异常 → 500 而非 400（ | Q99 | 12 |
 | SRV-05 | apps/server/src/data/cache.ts:31-35,54-68 + apps/server/src/connector/gallery.ts:197-238、connector/navidrome-l | 缓存按条目数封顶、不按字节封顶 → base64 缩略图常驻内存可达 GB 级。gallery/navidrome-library 的返回值是内联 base64 data URI（单缩略图上限 500KB/1MB，最多 120 项 → 单条数据 80MB 级，实测典型 ~5MB），DataCache | Q99 | 10 |
 | SRV-29 | apps/server/src/connector/gallery.ts:202-224、connector/navidrome-library.ts:220-249 | 缩略图/封面串行抓取，无并发上限也无总超时：for ... await 逐张抓，gallery 最多 120 张 × TIMEOUT_MS=8000，navidrome 最多 120 张 × 2 次（主取+回落）——上游普遍超时时单个 /api/widgets/data 请求最坏可挂 16～32 分 | Q99 | 10 |
@@ -88,7 +88,7 @@
 
 | ID | 位置 | 问题 | 级别 | 批次 | 状态 |
 |---|---|---|---|---|---|
-| QA-001 | `apps/server/src/connector/gallery.ts` / `navidrome-library.ts`（data URI 组装） | ⑭ data URI mime 硬编码 `image/jpeg`，Navidrome PNG/WebP 封面被误标（现靠浏览器嗅探侥幸显示） | P1 | Q98 | ⏳ |
+| QA-001 ✅ | `apps/server/src/connector/gallery.ts` / `navidrome-library.ts`（data URI 组装） | ⑭ data URI mime 硬编码 `image/jpeg`，Navidrome PNG/WebP 封面被误标（现靠浏览器嗅探侥幸显示） | P1 | Q98 | ⏳ |
 | QA-002 | `apps/web/src/widget-registry.ts`（`minCell` 键） | ⑮ 键名与语义不符（语义已是「目标行高」），迁 `rowHeight` + 一次性配置迁移 | P2 | Q101 | ⏳ |
 
 ## 备查（历轮挂起项，已并入上表所属批次）
