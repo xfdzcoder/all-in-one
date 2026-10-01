@@ -161,7 +161,8 @@ export const navidromeLibraryConnector: WidgetConnector = {
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");
     const auth = await subsonicAuth(config);
-    const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 24);
+    // Q88（项 10）：不再封顶 24（原先选 30/50 也只给 24）
+    const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 120);
     // Q72：只看某个艺人（配置项 artistId → getAlbumList2 的 type=byArtist&artist=<ID3 艺人 id>）
     const artistId = str(query.config.artistId);
     const notes: string[] = [];
@@ -201,6 +202,12 @@ export const navidromeLibraryConnector: WidgetConnector = {
     const covers = new Map<string, Uint8Array>();
     // Q70：失败按原因聚合（原先每项一条刷屏）+ 二级回落 size=300
     const wanted = list.slice(0, limit);
+    // Q88（项 10）：补不满要**说明原因**（而不是让用户以为是我们漏取）
+    if (wanted.length < limit) {
+      notes.push(
+        `只取到 ${wanted.length} 张专辑封面，少于选中的 ${limit} —— ${artistId ? "所选艺人" : "曲库"}里没有更多了。若确应更多，检查艺人筛选或 Navidrome 的曲库扫描是否完成。`,
+      );
+    }
     const reasons = new Map<string, number>();
     let failCount = 0;
     for (const a of wanted) {

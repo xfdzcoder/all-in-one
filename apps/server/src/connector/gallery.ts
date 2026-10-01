@@ -40,24 +40,26 @@ export interface ImmichGalleryData {
 const TIMEOUT_MS = 8000;
 const THUMB_MAX_BYTES = 500_000; // 缩略图（thumb 尺寸）通常 < 50KB
 
+/** Q88（项 10）：翻页取数的单页条数与页数上限。
+ *  页数封顶（≈360 候选）是**防打爆上游**的闸门，不是精度参数；导出供契约测试共用，避免两边漂移。 */
+export const IMMICH_PAGE_SIZE = 60;
+export const IMMICH_MAX_PAGES = 6;
+
 function str(v: unknown): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
-/** 归一：search/metadata 条目 + 缩略图字节 → 网格项（可单测）。
- *  **Q70**：缩略图缺失的项仍保留（`thumb: ""`），由组件渲染占位 —— 避免网格缺格。 */
+/** 归一：search/metadata 的**已筛选条目** + 缩略图字节 → 网格项（可单测）。
+ *  **Q70**：缩略图缺失的项仍保留（`thumb: ""`），由组件渲染占位 —— 避免网格缺格。
+ *  **Q88（项 3）**：调用方已滤掉视频，故此处不再保留 `type === "VIDEO"` 的项。 */
 export function normalizeImmichGallery(
-  search: unknown,
+  assets: Array<Record<string, unknown>>,
   thumbs: Map<string, Uint8Array>,
   webBase: string,
 ): ImmichGalleryItem[] {
-  const assets = ((search ?? {}) as Record<string, unknown>).assets as Record<string, unknown> | undefined;
-  const items: Array<Record<string, unknown>> = Array.isArray(assets?.items)
-    ? (assets.items as Array<Record<string, unknown>>)
-    : [];
   const base = webBase.replace(/\/+$/, "");
   const out: ImmichGalleryItem[] = [];
-  for (const a of items) {
+  for (const a of assets) {
     const id = str(a.id);
     if (!id) continue;
     const bytes = thumbs.get(id);
@@ -132,41 +134,61 @@ export const immichGalleryConnector: WidgetConnector = {
     if (!base) throw new Error("连接缺少地址");
     const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
 
-    const limit = Math.min(Math.max(Number(query.config.limit) || 12, 1), 24);
+    // Q88（项 3/10）：目标张数不再封顶 24（原先选 30/50 也只给 24）。
+    // 因为要**滤掉视频后仍补足**，必须按页累加，故上限放宽到 120。
+    const want = Math.min(Math.max(Number(query.config.limit) || 12, 1), 120);
     // Q72：只看某个相册（配置项 albumId → search/metadata 的 albumIds 过滤）
     const albumId = str(query.config.albumId);
     const notes: string[] = [];
 
-    let search: unknown;
+    // 按页累加直到够数。单页 60、最多 6 页（≈360 候选）—— 页数封顶防止打爆上游。
+    // 项 3 的视频过滤**只在本地做**：不同 Immich 版本对 `type` 过滤参数支持不一致，
+    // 传错字段可能被 400；本地过滤是唯一跨版本可靠的口径。
+    const picked: Array<Record<string, unknown>> = [];
     try {
-      const res = await outboundRequest(`${base}/api/search/metadata`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...apiKey },
-        body: JSON.stringify({
-          page: 1,
-          size: limit,
-          sortField: "recent",
-          sortOrder: "desc",
-          ...(albumId ? { albumIds: [albumId] } : {}),
-        }),
-        timeoutMs: TIMEOUT_MS,
-        maxBytes: 1_000_000,
-        allowPrivate: true,
-      });
-      if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
-      search = JSON.parse(res.text);
+      for (let page = 1; page <= IMMICH_MAX_PAGES && picked.length < want; page += 1) {
+        const res = await outboundRequest(`${base}/api/search/metadata`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...apiKey },
+          body: JSON.stringify({
+            page,
+            size: IMMICH_PAGE_SIZE,
+            sortField: "recent",
+            sortOrder: "desc",
+            ...(albumId ? { albumIds: [albumId] } : {}),
+          }),
+          timeoutMs: TIMEOUT_MS,
+          maxBytes: 1_500_000,
+          allowPrivate: true,
+        });
+        if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
+        const parsed = JSON.parse(res.text) as Record<string, unknown>;
+        const pageAssets = parsed.assets as Record<string, unknown> | undefined;
+        const pageItems: Array<Record<string, unknown>> = Array.isArray(pageAssets?.items)
+          ? (pageAssets.items as Array<Record<string, unknown>>)
+          : [];
+        for (const a of pageItems) {
+          if (a.type === "VIDEO") continue; // 项 3：不展示视频
+          if (str(a.id)) picked.push(a);
+          if (picked.length >= want) break;
+        }
+        if (pageItems.length < IMMICH_PAGE_SIZE) break; // 没有下一页了
+      }
     } catch (err) {
       // 列表失败 = 整卡失败（probe 语义由组件按 error 呈现）
       throw new Error(err instanceof Error ? err.message : "Immich 列表获取失败");
     }
 
-    const assets = ((search ?? {}) as Record<string, unknown>).assets as Record<string, unknown> | undefined;
-    const list: Array<Record<string, unknown>> = Array.isArray(assets?.items)
-      ? (assets.items as Array<Record<string, unknown>>)
-      : [];
+    const wanted = picked.slice(0, want);
+    // 项 10：补不满要**说明原因**（而不是让用户以为是我们漏取）
+    if (wanted.length < want) {
+      notes.push(
+        `只取到 ${wanted.length} 张照片，少于选中的 ${want} —— ${albumId ? "所选相册" : "整个图库"}里没有更多了（已翻 ${IMMICH_MAX_PAGES} 页）。若确应更多，检查相册筛选或该账号的资产可见性。`,
+      );
+    }
+
     const thumbs = new Map<string, Uint8Array>();
     // Q70：失败按**原因聚合**成一条 note（原先每项一条刷屏），并统计视频占比
-    const wanted = list.slice(0, limit);
     const reasons = new Map<string, number>();
     let failCount = 0;
     let failVideo = 0;
@@ -206,7 +228,7 @@ export const immichGalleryConnector: WidgetConnector = {
     }
 
     return {
-      items: normalizeImmichGallery(search, thumbs, base),
+      items: normalizeImmichGallery(wanted, thumbs, base),
       ...(notes.length > 0 ? { notes } : {}),
     };
   },

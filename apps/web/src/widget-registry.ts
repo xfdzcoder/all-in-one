@@ -283,7 +283,7 @@ export const immichGalleryManifest: WidgetManifest = {
   minSize: { w: 3, h: 2 },
   configSchema: [
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:immich", help: "在「数据源管理 · 数据连接」维护（Immich）" },
-    { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近上传优先" },
+    { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–120，最近上传优先；视频不展示" },
     {
       key: "albumId",
       label: "只看相册",
@@ -323,7 +323,7 @@ export const navidromeLibraryManifest: WidgetManifest = {
   minSize: { w: 3, h: 2 },
   configSchema: [
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:navidrome", help: "在「数据源管理 · 数据连接」维护（Navidrome）" },
-    { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近添加优先" },
+    { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–120，最近添加优先" },
     {
       key: "artistId",
       label: "只看艺人",

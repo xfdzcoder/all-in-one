@@ -132,10 +132,14 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
     // Q70：主取 size=600，超限回落 size=300（al-big 命中两级）
     expect(coverUrls.filter((u) => u === "size=600").length).toBe(3);
     expect(coverUrls.filter((u) => u === "size=300").length).toBe(2); // al-big 回落 + al-none 回落
-    // Q70：note 聚合成一条，带真实原因 + 怎么修（08 §5）
-    expect(data.notes).toHaveLength(1);
-    expect(data.notes?.[0]).toContain("1/3 个封面不可用");
-    expect(data.notes?.[0]).toContain("占位块");
+    // Q70：封面失败 note 聚合成一条，带真实原因 + 怎么修（08 §5）
+    // Q88（项 10）：mock 只有 3 张专辑而选了 6 → 另有一条「补不满」说明（原因 + 怎么修），
+    // 不再让用户以为是我们漏取
+    expect(data.notes).toHaveLength(2);
+    const allNotes = data.notes?.join("\n") ?? "";
+    expect(allNotes).toContain("1/3 个封面不可用");
+    expect(allNotes).toContain("占位块");
+    expect(allNotes).toContain("只取到 3 张专辑封面，少于选中的 6");
 
     const wrongKind = crypto.randomUUID();
     await db.insert(dataSource).values({
