@@ -23,9 +23,24 @@ import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
 
-/** Q19b：主题令牌（theme 字段在同一规则内无竞争，值全部引用 --wb-* 令牌）。 */
+/** Q19b：主题令牌（theme 字段在同一规则内无竞争，值全部引用 --wb-* 令牌）。
+ *  D52 批1：蓝色阶对齐 --wb-color-accent 家族（Mantine 组件与令牌同源）。 */
 const theme = createTheme({
   primaryColor: "blue",
+  colors: {
+    blue: [
+      "#e9eeff",
+      "#cad7ff",
+      "#a4bbff",
+      "#7d9aff",
+      "#5b86ff",
+      "#4f7dff",
+      "#3f63e8",
+      "#3450c2",
+      "#2a3f96",
+      "#21316f",
+    ],
+  },
   fontFamily: "var(--wb-font-sans)",
   defaultRadius: "sm",
   radius: {
