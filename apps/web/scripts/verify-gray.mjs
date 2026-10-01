@@ -15,6 +15,7 @@
  * Run: node scripts/verify-gray.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -127,6 +128,8 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 15000 });
+// TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
+await installLayoutGuard(page);
   await sleep(500);
 
   // 铺一组覆盖 Input / Card / Button / Checkbox 的组件
@@ -168,6 +171,7 @@ try {
   ok("flow completed", false, String(e).slice(0, 200));
 }
 
+await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);

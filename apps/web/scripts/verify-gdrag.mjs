@@ -6,6 +6,7 @@
  * Run: node scripts/verify-gdrag.mjs (server :3001, preview :4173)
  */
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let pass = 0;
@@ -78,6 +79,8 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
+// TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
+await installLayoutGuard(page);
 
   // 前置：首页 5 卡布局（错落尺寸，制造碰撞与空白落点）
   await page.evaluate(async () => {
@@ -182,6 +185,7 @@ try {
   ok(false, "flow completed", String(e).slice(0, 200));
 }
 
+await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

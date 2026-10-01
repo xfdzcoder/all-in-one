@@ -3,6 +3,7 @@
  * Run: node scripts/verify-m1.mjs  (server on :3000, web preview on :4173)
  */
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -91,11 +92,15 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
+// TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
+await installLayoutGuard(page);
+// TST-10 同款：首屏未必叫「首页」（用户可改名）——后续用真实标题定位
+const homeTitle = await page.evaluate(async () => (await (await fetch("/api/dashboards")).json())[0]?.title ?? "首页");
   // 显式选中「首页」（J1 默认页）——不依赖 tab 顺序
-  await page.evaluate(() => {
-    const tab = [...document.querySelectorAll("[data-page-item]")].find((t) => t.getAttribute("data-page-item") === "首页");
+  await page.evaluate((t) => {
+    const tab = [...document.querySelectorAll("[data-page-item]")].find((x) => x.getAttribute("data-page-item") === t);
     tab?.click();
-  });
+  }, homeTitle);
   await sleep(400);
   ok("J1 login lands on default dashboard", true);
 
@@ -113,7 +118,7 @@ try {
       { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
     ];
     const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页");
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -192,7 +197,7 @@ try {
 
   // multi-dashboard: new page is empty (no seed), switch back to 首页 keeps widgets
   const countHome = await page.$$eval(".grid-stack-item", (els) => els.length);
-  await switchPage("首页");
+  await switchPage(homeTitle);
   await sleep(600);
   const countHome2 = await page.$$eval(".grid-stack-item", (els) => els.length);
   ok("multi-dashboard switch keeps widgets", countHome2 >= countBefore, `new page=${countHome} home=${countHome2}`);
@@ -380,13 +385,14 @@ try {
     "P1 首页 fixture untouched",
     await (async () => {
       await openSwitcher();
-      return page.evaluate(() => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes("首页")));
+      return page.evaluate((t) => [...document.querySelectorAll("[data-page-item]")].some((x) => (x.textContent ?? "").includes(t)), homeTitle);
     })(),
   );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
 
+await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);

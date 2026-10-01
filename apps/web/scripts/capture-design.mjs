@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { createServer } from "node:http";
 
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 
 const WEB = "http://localhost:4173/";
 const OUT = process.env.DESIGN_OUT
@@ -207,6 +208,8 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
+// TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
+await installLayoutGuard(page);
 
   // 写入审计布局（真实 API）
   await page.evaluate(async (layout) => {
@@ -316,6 +319,7 @@ try {
   console.log("FLOW ERROR:", String(e).slice(0, 300));
 }
 
+await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 frameServer.close();
 console.log("baseline captured ->", OUT);

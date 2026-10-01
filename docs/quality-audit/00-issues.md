@@ -24,7 +24,7 @@
 |---|---|---|---|---|
 | SRV-01 ✅ | apps/server/src/connector/ssrf.ts:25-35 | SSRF 基线可绕过（IPv4-mapped IPv6 十六进制形态）。isPrivateIp 的 IPv6 分支只在 lower.startsWith("::ffff:") 时取后缀按 IPv4 复检，且后缀必须是点分十进制。::ffff:7f00:1（十六进制组）取后缀得 7f00:1 → is | Q97 | 10 |
 | SRV-02 ✅ | apps/server/src/app.ts:117-136 | 静态资源处理器路径穿越。path.join(publicDir, req.url.replace(/^\//, "")) 会把 ../ 段正常化出 publicDir 之外：curl --path-as-is http://host/../../etc/passwd（或绝对路径穿越）→ exists | Q97 | 10 |
-| TST-19 | 破坏性覆写「首页」布局且不恢复（成功路径外零还原）：verify-live.mjs:120-135（脚本头注释明写「用真实生产实例」）、verify-svc.mjs:304-319、verify-m1.mjs:115-1 | 对真实/用户「首页」执行 PUT /layout 覆写成固定 seed、不做原布局快照与还原——真机上跑一次即永久销毁用户布局（数据丢失/错误持久化写入）。正面样板是 verify-gallery-live.mjs:56-58,337-343（临时草稿盘自建自删、清理在 finally），全仓仅 p | Q97 | 13 |
+| TST-19 ✅ | 破坏性覆写「首页」布局且不恢复（成功路径外零还原）：verify-live.mjs:120-135（脚本头注释明写「用真实生产实例」）、verify-svc.mjs:304-319、verify-m1.mjs:115-1 | 对真实/用户「首页」执行 PUT /layout 覆写成固定 seed、不做原布局快照与还原——真机上跑一次即永久销毁用户布局（数据丢失/错误持久化写入）。正面样板是 verify-gallery-live.mjs:56-58,337-343（临时草稿盘自建自删、清理在 finally），全仓仅 p | Q97 | 13 |
 
 ## P1 · 缺陷 / 静默失败 / 测试盲区
 
