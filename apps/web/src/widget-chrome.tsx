@@ -4,6 +4,7 @@ import { IconSettings, IconTrash } from "@tabler/icons-react";
 import { useGridStack, useGridStackItem } from "gridstack/dist/react";
 
 import { WidgetEditContext } from "./widget-edit-context";
+import { WidgetErrorBoundary } from "./error-boundary";
 import { IconAction } from "./ui";
 
 /**
@@ -54,10 +55,14 @@ export function WidgetChrome({ children }: { children: ReactNode }) {
 /** 给任意组件包上编辑态外框（注册表统一套用，组件本身零改动）。 */
 // oxlint-disable-next-line react/only-export-components -- HOC 与组件同文件便于维护
 export function withWidgetChrome<P extends Record<string, unknown>>(Comp: ComponentType<P>): ComponentType<P> {
+  const label = Comp.displayName ?? Comp.name ?? "组件";
   function Wrapped(props: P) {
     return (
       <WidgetChrome>
-        <Comp {...props} />
+        {/* Q93（项 1）：边界在 chrome **内**、组件**外** —— 崩了也保留标题栏与「移除」按钮 */}
+        <WidgetErrorBoundary name={label}>
+          <Comp {...props} />
+        </WidgetErrorBoundary>
       </WidgetChrome>
     );
   }

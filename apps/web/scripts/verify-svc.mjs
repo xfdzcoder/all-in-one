@@ -881,6 +881,43 @@ try {
       restored.widgets.every((w, i) => w.x === before.widgets[i].x && w.w === before.widgets[i].w),
     JSON.stringify({ before: before.widgets.slice(0, 3), restored: restored.widgets.slice(0, 3) }),
   );
+  // ── Q93（项 1）：畸形配置不得白屏 ──
+  // 入参防呆（useFeeds 把非数组 tagIds 归一）+ 组件级 ErrorBoundary 双保险。
+  // 原来 `("" ?? []).join()` 在 render 期抛 TypeError → 整树卸载白屏且每次渲染都抛、无法恢复。
+  const crashSeed = await page.evaluate(async () => {
+    const list = await (await fetch("/api/dashboards")).json();
+    const d = list.find((x) => (x.layoutJson ?? "[]") !== "[]") ?? list[0];
+    const widgets = JSON.parse(d.layoutJson || "[]");
+    const snapshot = JSON.stringify(widgets);
+    widgets.push({ id: "crash-rss", component: "rss", x: 0, y: 99, w: 4, h: 4, props: { tagIds: "", limit: 5 } });
+    await fetch(`/api/dashboards/${d.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(widgets) }),
+    });
+    return { id: d.id, snapshot };
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 20000 }).catch(() => null);
+  await sleep(2500);
+  const crashState = await page.evaluate(() => ({
+    gridAlive: Boolean(document.querySelector(".grid-stack")),
+    bodyText: (document.body.innerText || "").length,
+    crashCard: Boolean(document.querySelector(".wb-widget__crash")),
+  }));
+  ok(
+    "Q93 畸形 tagIds 不白屏：页面仍在、该卡进错误态/正常态 (项 1)",
+    crashState.gridAlive && crashState.bodyText > 200,
+    JSON.stringify(crashState),
+  );
+  // 还原布局 —— 不把测试卡片留在用户盘上
+  await page.evaluate(async (seed) => {
+    await fetch(`/api/dashboards/${seed.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: seed.snapshot }),
+    });
+  }, crashSeed);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

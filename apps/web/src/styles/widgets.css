@@ -101,6 +101,28 @@ a.wb-widget__title-link:focus-visible {
   gap: var(--wb-space-2);
 }
 
+/* Q93（项 1）：组件级错误边界兜底 —— 只有该卡停摆，页面不白、标题栏与「移除」仍在 */
+.wb-widget__crash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-1);
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border: 1px dashed var(--wb-color-border-strong);
+  border-radius: var(--wb-radius-sm);
+  background: var(--wb-color-surface);
+  text-align: left;
+}
+.wb-widget__crash-title {
+  font-size: var(--wb-text-sm);
+  font-weight: var(--wb-weight-semibold);
+  color: var(--wb-color-text);
+}
+.wb-widget__crash-msg {
+  font-size: var(--wb-text-xs);
+  color: var(--wb-color-text-muted);
+  word-break: break-word;
+}
+
 .wb-widget__hint {
   color: var(--wb-color-text-muted);
   font-size: var(--wb-text-sm);

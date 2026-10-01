@@ -714,10 +714,14 @@ export function useFeeds(
   tagIds?: string[],
 ) {
   const qc = useQueryClient();
-  const key = ["feeds", limit, filter ?? "all", (tagIds ?? []).join(",") || "all"];
+  // Q93（项 1）：**入参防呆**。`tagIds` 来自组件配置，可能是空串/非数组（存过畸形值）——
+  // 原来直接 `(tagIds ?? []).join()`，一旦是 `""` 就是 `"".join is not a function`，而且是在
+  // **render 期**抛错 → 整棵 React 树卸载（白屏）、每次渲染都抛 → 永远无法恢复。
+  const tags: string[] = Array.isArray(tagIds) ? tagIds.filter((x): x is string => typeof x === "string") : [];
+  const key = ["feeds", limit, filter ?? "all", tags.join(",") || "all"];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("rss", { limit, filter, tagIds }) as Promise<import("./api").FeedAgg>,
+    queryFn: () => api.widgetData("rss", { limit, filter, tagIds: tags }) as Promise<import("./api").FeedAgg>,
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });
