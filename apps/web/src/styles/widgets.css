@@ -607,17 +607,13 @@ a.wb-widget__title-link:focus-visible {
   min-height: 0;
 }
 
-/* 行内**严格等高**：高度由行的 style 给定，格子 stretch 齐平 */
+/* 行内**严格等高**：高度由行的 style 给定，格子 stretch 齐平。
+   D62：所有行高度完全相同，行尾**允许右侧留白**（放不下的项换行，绝不改比例或改行高）。 */
 .wb-gallery__row {
   display: flex;
   align-items: stretch;
   gap: var(--wb-gallery-gap, var(--wb-space-1));
   flex: 0 0 auto;
-}
-
-/* 末行：自然尺寸左对齐，**不拉伸**（不塞占位符、不 flex-grow） */
-.wb-gallery__row--last {
-  justify-content: flex-start;
 }
 
 .wb-gallery__cell {

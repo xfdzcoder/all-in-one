@@ -9,36 +9,42 @@ function photos(n: number): Array<{ id: string; ratio: number }> {
   return Array.from({ length: n }, (_, i) => ({ id: `p${i}`, ratio: ratios[i % ratios.length] as number }));
 }
 
-describe("packRows（D61 等高行 justified 装箱，Q89）", () => {
-  it("行内**严格等高**；宽度**严格正比于原始比例**（不裁切不变形）", () => {
+describe("packRows（D62 全局等高行装箱，Q89）", () => {
+  it("**每一行高度完全相同**（不只是行内等高）；宽度**严格正比于原始比例**", () => {
     const rows = packRows(photos(40), 800, 150, 4);
     expect(rows.length).toBeGreaterThan(1);
+    // 行间等高：所有行的 height 是同一个值
+    expect(new Set(rows.map((r) => r.height)).size).toBe(1);
     for (const row of rows) {
-      const heights = new Set(row.cells.map((c) => c.height));
-      expect(heights.size).toBe(1); // 同一行内高度完全一致
+      // 行内等高（同一值的自然推论，仍显式断言）
+      expect(new Set(row.cells.map((c) => c.height)).size).toBe(1);
       for (const c of row.cells) {
         expect(c.width / c.ratio).toBeCloseTo(c.height, 6); // 宽 = 高 × 比例 ⇒ 等比
+        expect(c.height).toBeCloseTo(rows[0]?.height as number, 6);
       }
     }
   });
 
-  it("非末行**恰好铺满容器宽度**（含间隙），末行为自然尺寸左对齐**不拉伸**", () => {
+  it("无超宽图时行高 **== 目标行高**（与卡片高度无关，卡片再高也不拉长）", () => {
+    for (const containerHeight of [200, 600, 2000]) {
+      void containerHeight; // 行高根本不接收卡片高度 —— 这正是「不拉长」的来源
+      const rows = packRows(photos(30), 800, 150, 4);
+      expect(rows[0]?.height).toBeCloseTo(150, 6);
+    }
+  });
+
+  it("任何一行都**不溢出**容器宽度；行尾允许右侧留白（D62 明确接受）", () => {
     const W = 800;
-    const gap = 4;
-    const H0 = 150;
-    const rows = packRows(photos(40), W, H0, gap);
-    rows.forEach((row, i) => {
-      const gaps = gap * (row.cells.length - 1);
+    const rows = packRows(photos(40), W, 150, 4);
+    let raggedSeen = 0;
+    for (const row of rows) {
+      const gaps = 4 * (row.cells.length - 1);
       const used = row.cells.reduce((s, c) => s + c.width, 0) + gaps;
-      if (i < rows.length - 1) {
-        expect(row.filled).toBe(true);
-        expect(used).toBeCloseTo(W, 6); // 铺满
-      } else {
-        expect(row.filled).toBe(false);
-        expect(used).toBeLessThanOrEqual(W + EPS); // 不溢出
-        expect(row.height).toBeLessThanOrEqual(H0 + EPS); // 不拉伸到目标以上
-      }
-    });
+      expect(used).toBeLessThanOrEqual(W + EPS);
+      if (used < W - 1) raggedSeen += 1;
+    }
+    // 留白确实会出现 —— 这就是「严格等高」的代价，别当 bug 修
+    expect(raggedSeen).toBeGreaterThan(0);
   });
 
   it("不丢任何一项（顺序保持）", () => {
@@ -48,21 +54,16 @@ describe("packRows（D61 等高行 justified 装箱，Q89）", () => {
     expect(rows.flatMap((r) => r.cells.map((c) => c.id))).toEqual(items.map((i) => i.id));
   });
 
-  it("行高在目标行高附近（断行取「更贴近目标」，把浮动压到最小）", () => {
-    const rows = packRows(photos(60), 800, 150, 4).filter((r) => r.filled);
+  it("超宽图会收窄**全局**行高，但所有行仍严格等高、且不溢出", () => {
+    // 800 / 150 ≈ 5.33：插入一个 ratio=10 的全景，行高被迫降到 800/10 = 80
+    const rows = packRows([{ id: "a", ratio: 1 }, { id: "pano", ratio: 10 }, { id: "b", ratio: 1 }], 800, 150, 4);
+    expect(new Set(rows.map((r) => r.height)).size).toBe(1); // 仍然全等
+    expect(rows[0]?.height).toBeCloseTo(80, 6);
     for (const row of rows) {
-      // 容差：比例混合下不可能行行精确 150（见模块文档的数学说明），但应受控
-      expect(row.height).toBeGreaterThan(150 * 0.7);
-      expect(row.height).toBeLessThan(150 * 1.5);
+      const used = row.cells.reduce((s, c) => s + c.width, 0) + 4 * (row.cells.length - 1);
+      expect(used).toBeLessThanOrEqual(800 + EPS);
     }
-  });
-
-  it("末行只有一项也不溢出容器（超宽图压到刚好放下）", () => {
-    const rows = packRows([{ id: "wide", ratio: 20 }], 800, 150, 4);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.filled).toBe(false);
-    expect(rows[0]?.cells[0]?.width).toBeCloseTo(800, 6);
-    expect(rows[0]?.height).toBeCloseTo(40, 6); // 800/20 —— 自然尺寸，不拉伸到 150
+    expect(countCells(rows)).toBe(3);
   });
 
   it("目标行高越大 → 每行项数越少；越小 → 越多（响应式正确）", () => {
@@ -71,16 +72,15 @@ describe("packRows（D61 等高行 justified 装箱，Q89）", () => {
     expect(wide[0]?.cells.length).toBeLessThan(narrow[0]?.cells.length as number);
   });
 
-  it("容器宽度变化（ResizeObserver 触发重算）结果自洽", () => {
+  it("容器宽度变化（ResizeObserver 触发重算）结果自洽：全等高 + 不溢出 + 不丢项", () => {
     for (const w of [320, 500, 800, 1200, 1600]) {
       const rows = packRows(photos(24), w, 120, 4);
       expect(countCells(rows)).toBe(24);
-      rows.forEach((row, i) => {
-        const gaps = 4 * (row.cells.length - 1);
-        const used = row.cells.reduce((s, c) => s + c.width, 0) + gaps;
+      expect(new Set(rows.map((r) => r.height)).size).toBe(1);
+      for (const row of rows) {
+        const used = row.cells.reduce((s, c) => s + c.width, 0) + 4 * (row.cells.length - 1);
         expect(used).toBeLessThanOrEqual(w + EPS);
-        if (i < rows.length - 1) expect(used).toBeCloseTo(w, 6);
-      });
+      }
     }
   });
 
@@ -98,6 +98,7 @@ describe("packRows（D61 等高行 justified 装箱，Q89）", () => {
       4,
     );
     expect(countCells(rows)).toBe(5);
+    expect(new Set(rows.map((r) => r.height)).size).toBe(1);
     for (const row of rows) {
       for (const c of row.cells) {
         expect(Number.isFinite(c.width)).toBe(true);
@@ -114,13 +115,10 @@ describe("packRows（D61 等高行 justified 装箱，Q89）", () => {
     expect(packRows(photos(3), Number.NaN, 150, 4)).toEqual([]);
   });
 
-  it("单张图独占一行时按容器宽度收窄（不溢出）", () => {
+  it("单张图独占一行时刚好铺满容器宽（全局行高 = 宽/比例）", () => {
     const rows = packRows([{ id: "only", ratio: 3 }], 300, 150, 4);
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.cells[0]?.width).toBeLessThanOrEqual(300 + EPS);
-    expect(rows[0]?.cells[0]?.width / (rows[0]?.cells[0]?.ratio as number)).toBeCloseTo(
-      rows[0]?.height as number,
-      6,
-    );
+    expect(rows[0]?.height).toBeCloseTo(100, 6); // 300/3 —— 目标 150 会溢出，故收窄
+    expect(rows[0]?.cells[0]?.width).toBeCloseTo(300, 6);
   });
 });

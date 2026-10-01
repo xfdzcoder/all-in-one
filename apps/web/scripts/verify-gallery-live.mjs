@@ -130,7 +130,6 @@ try {
         height: r.getBoundingClientRect().height,
         distinctHeights: [...new Set(cells.map((c) => Math.round(c.h * 100) / 100))],
         used: cells.reduce((s, c) => s + c.w, 0) + gaps * Math.max(0, cells.length - 1),
-        last: r.classList.contains("wb-gallery__row--last"),
         ratios: cells.map((c) => Math.round((c.w / c.h) * 1000) / 1000),
       };
     });
@@ -141,11 +140,11 @@ try {
     ok("LIVE gallery renders rows", false, JSON.stringify(wall));
   } else {
     const rows = wall.rows;
-    const nonLast = rows.filter((r) => !r.last);
     ok(
-      "LIVE 行内严格等高（每行只有一个高度值）",
-      rows.every((r) => r.distinctHeights.length === 1),
-      JSON.stringify(rows.map((r) => r.distinctHeights)),
+      "LIVE 所有行高度**完全相同**（D62 全局等高，不只是行内）",
+      new Set(rows.map((r) => Math.round(r.height * 100) / 100)).size === 1 &&
+        rows.every((r) => r.distinctHeights.length === 1),
+      JSON.stringify(rows.map((r) => Math.round(r.height * 100) / 100)),
     );
     ok(
       "LIVE 宽度按原比例（不裁切不变形）",
@@ -153,16 +152,15 @@ try {
       `ratios=${JSON.stringify([...new Set(rows.flatMap((r) => r.ratios))].sort((a, b) => a - b))}`,
     );
     ok(
-      "LIVE 非末行恰好铺满宽度",
-      nonLast.length >= 1 && nonLast.every((r) => Math.abs(r.used - wall.gw) < 2),
+      "LIVE 任何行都不溢出容器宽度（行尾允许留白，D62 明确接受）",
+      rows.every((r) => r.used <= wall.gw + 1),
       `gw=${Math.round(wall.gw)} used=${JSON.stringify(rows.map((r) => Math.round(r.used)))}`,
     );
-    const lastRow = rows[rows.length - 1];
-    // 「不拉伸」的严格定义：末行行高 <= 目标行高（110）—— 若被拉伸会高于目标去撑满卡片
+    // 「不拉长」的严格定义：行高 == 配置的目标行高（110），与卡片高度无关
     ok(
-      "LIVE 末行不拉伸",
-      lastRow.last === true && lastRow.used <= wall.gw + 1 && lastRow.height <= 110 + 1,
-      `used=${Math.round(lastRow.used)} height=${Math.round(lastRow.height * 100) / 100} (target 110)`,
+      "LIVE 行高 == 目标行高（110px），卡片再高也不拉长",
+      rows.every((r) => Math.abs(r.height - 110) < 0.5),
+      JSON.stringify(rows.map((r) => Math.round(r.height * 100) / 100)),
     );
   }
 } finally {

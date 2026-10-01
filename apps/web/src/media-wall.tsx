@@ -5,11 +5,12 @@ import { packRows } from "./media-wall-layout.ts";
 /**
  * 媒体墙（Q71，Immich 照片墙 / Navidrome 专辑墙共用）。
  *
- * Q89（项 2，D60/D61）三条要求：
+ * Q89（项 2，D60/D61/**D62**）三条要求：
  *  1. **始终等比缩放**：每格宽 = 行高 × 原始宽高比 —— 不裁切、不变形。
- *  2. **每行高度一致**（行内严格等高）；宽度按各自原比例不同，不必等宽。
- *     卡片再高也不拉长缩略图（行高由装箱反推，不再 `grid-auto-rows: 1fr` 撑满）。
- *  3. **末行按自然尺寸左对齐、绝不拉伸**。
+ *  2. **每行高度一致**：D62 起是**全局统一行高**（不是只有行内等高）。宽度按各自
+ *     原比例不同、不必等宽；行尾**允许右侧留白**（这是「严格等高」的几何代价）。
+ *     卡片再高也不拉长缩略图（行高由配置的目标行高决定，与卡片高度无关）。
+ *  3. 任何一行都不超出容器宽度。
  *
  * 布局算法在 `media-wall-layout.ts`（纯函数，可单测）；本组件只负责**量宽 + 渲染**。
  * 容器宽度经 `ResizeObserver` 实测，变化即重算（响应式）。
@@ -162,15 +163,11 @@ export function MediaWall({
     );
   }
 
-  // ── 铺开模式（等高行 justified）──
+  // ── 铺开模式（D62：全局等高行，行尾允许留白）──
   return (
     <div className="wb-gallery" style={style} ref={hostRef}>
       {rows.map((row, ri) => (
-        <div
-          key={ri}
-          className={`wb-gallery__row${row.filled ? "" : " wb-gallery__row--last"}`}
-          style={{ height: `${row.height}px` }}
-        >
+        <div key={ri} className="wb-gallery__row" style={{ height: `${row.height}px` }}>
           {row.cells.map((cell) => {
             const it = byId.get(cell.id);
             if (!it) return null;
