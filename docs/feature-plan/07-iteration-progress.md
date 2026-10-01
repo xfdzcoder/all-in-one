@@ -1,4 +1,4 @@
-# 07 · 自主迭代进度（loop 状态文件）
+| 136 | 2026-10-02 | **Q98a · 修复批②a（P1：数据通道正确性）三件**：① **SRV-03/SEC-5 缓存键碰撞**：`cacheKeyOf` 用 `JSON.stringify(config, Object.keys(config).sort())` 的 **replacer 数组**——它只认顶层键，嵌套对象（SecretRef `{type,credentialId}`、app-launcher `items[]`）被序列化成 `{}` ⇒ 只差嵌套字段的两个 widget 算出同键，60s TTL 内把 A 配置的数据回给 B（两个分区独立报出，互证）。改**稳定递归序列化** `stableStringify`（键排序+嵌套递归+数组保序），回归测试 4 条（嵌套 SecretRef/嵌套数组区分、顶层键序无关、type 隔离）。② **SEC-2/SRV-04 maxBytes 形同虚设**：`await res.arrayBuffer()` **先整包缓冲**再判大小——恶意/异常上游回 2GB 先把内存打爆，上限只影响报错。改**流式边读边判**（`body.getReader()` 逐块累计、超限 `reader.cancel()` 立即抛错；无 body 的回退旧路径），测试用 10×100KB 逐块推流 mock 实证拒绝。③ **SRV-06 无 single-flight**：并发同 key 请求都会穿过后台限流（`lastFetch` 只在 `set()` 写入）→ 重复打上游（放大抓取与缩略图流量）。`DataCache` 加 `coalesce(key, fn)`（in-flight Map，完成后释放、失败不缓存共享值），`/api/widgets/data` 的 fetch 块整体收进去（插件与内建同享），测试 3 条（同 key 三并发只打一次、不同 key 不合并、失败后释放可重取）。 | `pnpm test` **262/262**（server 212 含新增 9）✅；typecheck 0（修一处测试类型）/lint 0 ✅；**verify-svc 91/91**（数据通道重载新代码冒烟，Q81 相册筛选断言恰是缓存键正确性的回归）✅ | （本提交，**本次推送 origin/main**） |# 07 · 自主迭代进度（loop 状态文件）
 
 > 本文件是自主迭代 loop 的**状态落盘**（`/loop --progress-file` 指向此处），也是人工审计入口。授权与边界见 [02-decisions.md](02-decisions.md) **D22**，每轮协议见仓库根 `.opencode/loop-prompt.md`。随迭代更新。
 
@@ -8,7 +8,7 @@
 |---|---|
 | 模式 | 自主迭代 loop（D22；**D53 起 commit 后自动 `git push origin main`**） |
 | 循环状态 | **运行中**（Q95 体检**执行中**：6 分区子代理并行评估，报告回收后汇总；随后 Q96 lint 落地 → Q97+ 修复批次） |
-| 最近更新 | 2026-10-02（第 140 轮 · **Q97 ✅ 修复批①（P0）全清**：SRV-01/02/SEC-1 + TST-19；下一项 Q98 修复批②（P1 安全/数据）） |
+| 最近更新 | 2026-10-02（第 141 轮 · **Q98a ✅** 数据通道三件（缓存键/maxBytes/single-flight）；下一项 Q98b（越权与文案）） |
 
 ## 迭代队列
 
@@ -195,7 +195,9 @@
 - [ ] Q96 · **lint 落地收口**（体检「引入 lint 工具」交付物 + 维度①②）：**已落地**（记录 138）oxlint 规则开足（correctness/suspicious/perf + 7 插件，1100+ warning 分类入册 [01-static-scan.md](../quality-audit/01-static-scan.md)）+ `pnpm audit` + gridstack patch 复查；**余下** = 存量 warning 清零（真问题优先）+ 豁免细化升 error + 引入 knip；**不引入 ESLint**
 - [x] Q97b · **修复批① 收尾（P0：TST-19）**：verify/capture 脚本覆写布局且不还原 → 19 个脚本统一接 `scripts/lib/fixture-guard.mjs`（测前快照/测后还原 + **崩溃钩子**；`verify-gallery-live`/`probe-container-badge` 本就自建自删跳过）**✅ 2026-10-02**（见记录 135）；**余量入 Q100**：Playwright e2e 的 seed 也覆写首页（同款）、TST-10 剩余「硬找首页」引用
 - [x] Q97a · **修复批①（P0：安全）**：SRV-01 SSRF 判定绕过（IPv4-mapped IPv6 十六进制形态 + 嵌入 IPv4 多写法 + hostname 方括号）+ SEC-1 同函数漏段（fe80::/10、ff00::/8、CGNAT、TEST-NET、benchmark）+ SRV-02 PUBLIC_DIR 静态伺服路径穿越 **✅ 2026-10-02**（见记录 134）
-- [ ] Q98 · **修复批②（P1：安全/数据正确性）**：SRV-03+SEC-5（缓存键碰撞）、SRV-09+CON-11（icons GET 越权）、SEC-1（isPrivateIp 漏项）、SEC-2+SRV-04（maxBytes 先缓冲后判）、SEC-4（报错文案泄漏内网 URL）、SRV-06（single-flight）、SRV-08（D47 兜底「该项暂缺」违规）、SRV-10（todo 归档语义）、WEB-2（空串字段无法清空 + `restartAllow` 残留）、WEB-5（useFeeds force 畸形 tagIds）、QA-001（⑭ mime 按字节头）、孤儿 credential 核查
+- [ ] Q98b · **修复批②b（P1：越权与文案）**：SRV-09+CON-11（icons GET 归属校验）、SEC-4（报错文案泄漏完整内网 URL）、SRV-08（D47 兜底「该项暂缺」违规）、SRV-10（todo connector 归档语义）、孤儿 credential 核查
+- [ ] Q98c · **修复批②c（P1：前端/契约）**：WEB-2（空串字段无法清空 + `restartAllow` 残留）、WEB-5（useFeeds force 畸形 tagIds）、QA-001（⑭ data URI mime 按字节头）
+- [x] Q98a · **修复批②a（P1：数据通道正确性）**：SRV-03+SEC-5 缓存键碰撞（replacer 数组丢嵌套键 → 稳定递归序列化）、SEC-2+SRV-04 maxBytes 先缓冲后判（→ 流式边读边判+cancel）、SRV-06 无 single-flight（→ `DataCache.coalesce`）**✅ 2026-10-02**（见记录 136；SEC-1 已随 Q97a 补严）
 - [ ] Q99 · **修复批③（P1：稳定性/内存）**：SRV-05（缓存按条目→按字节封顶）、SRV-29（缩略图抓取并发上限+总超时）、WEB-1（邮件多选客户端过滤语义）、WEB-3（button 嵌套）、WEB-4/WEB-6（无 catch/onError）、WEB-7（ErrorBoundary 覆盖面）、WEB-8（缩略图缓存 churn）、WEB-9（RelativeTime 非法时间崩卡）、WEB-10（单名称解析触发 12+ 查询）、SDK-1（validateManifest `null` 崩溃）
 - [ ] Q100 · **修复批④（P1：契约/测试/文档）**：CON-1（OpenAPI 补全 55+ 路由）、CON-2（login zod 未接线）、CON-3（uid 类型对齐）、CON-4（widget-sdk dist 重建守卫）、TST-1/2/5/6（盲区+弱断言）、TST-10（「硬找首页」残留）、TST-11（写死快照→对账）、TST-20/21（清理只走成功路径/创建零清理）、SRV-07/11（异常分类/迁移回滚说明）、DOC-1（D55 补记不实）、DOC-2（compose 透传）、DEP-2（gridstack 版本锁/补丁失效检测）
 - [ ] Q101 · **修复批⑤（P2 清理，按域分小批）**：P2×102 + QA-002（`minCell`→`rowHeight` 一次性迁移）——重复/文案/命名/文档过时/风格，明细见 [00-issues.md](../quality-audit/00-issues.md)

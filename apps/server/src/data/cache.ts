@@ -24,6 +24,7 @@ export interface DataCacheOptions {
 export class DataCache {
   private entries = new Map<string, CacheEntry>();
   private lastFetch = new Map<string, number>();
+  private inflight = new Map<string, Promise<unknown>>();
   private readonly defaultTtlMs: number;
   private readonly minIntervalMs: number;
   private readonly maxEntries: number;
@@ -43,6 +44,17 @@ export class DataCache {
       return null;
     }
     return e;
+  }
+
+  /** SRV-06：**single-flight** —— 同 key 并发取数合并成一次上游调用。
+   *  此前两个并发请求都会穿过后台限流（`lastFetch` 只在 `set()` 时写入）→ 重复打上游
+   *  （放大抓取、也放大缩略图流量）。返回值是共享的那一次调用。 */
+  async coalesce<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    const running = this.inflight.get(key);
+    if (running) return running as Promise<T>;
+    const p = fn().finally(() => this.inflight.delete(key));
+    this.inflight.set(key, p);
+    return p;
   }
 
   /** true = 允许现在取数；false = 距上次取数太近（限流）。 */

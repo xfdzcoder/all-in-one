@@ -111,12 +111,12 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
     };
     try {
       // 插件查询不在此预解析 SecretRef —— fetchPluginData 先按 credentialKinds 把关再解密
-      const data = isBuiltin
-        ? await (async () => {
-            const config = await resolveSecretRefs(query.config, ctx);
-            return deps.registry.get(query.type).fetch({ ...query, config }, ctx);
-          })()
-        : await fetchPluginData(app.db, req.user!.id, query, ctx);
+      // SRV-06：同 key 并发取数合并为一次上游调用（single-flight）
+      const data = await deps.cache.coalesce(key, async () => {
+        if (!isBuiltin) return fetchPluginData(app.db, req.user!.id, query, ctx);
+        const config = await resolveSecretRefs(query.config, ctx);
+        return deps.registry.get(query.type).fetch({ ...query, config }, ctx);
+      });
       const entry = deps.cache.set(key, data);
       return { data: entry.data, fetchedAt: entry.fetchedAt, cached: false };
     } catch (err) {

@@ -71,12 +71,26 @@ export function createConnectorRegistry() {
 
 export type ConnectorRegistry = ReturnType<typeof createConnectorRegistry>;
 
+/** 稳定序列化：对象键排序 + **递归嵌套**。
+ *  原实现用 `JSON.stringify(config, Object.keys(config).sort())` 的 replacer 数组 ——
+ *  它只认**顶层**键，嵌套对象（SecretRef `{type,credentialRef}`、app-launcher `items[]`…）
+ *  全被序列化成 `{}` ⇒ 只差嵌套字段的两个配置算出同一个缓存键（SRV-03/SEC-5：60s 内把
+ *  A 配置的数据回给 B）。 */
+function stableStringify(v: unknown): string {
+  if (v === undefined) return "null";
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`).join(",")}}`;
+}
+
 /** 缓存 key：type + config 的稳定哈希（config 含 SecretRef 不含明文，安全）。 */
 export function cacheKeyOf(query: WidgetDataQuery): string {
   return createHash("sha256")
     .update(query.type)
     .update("\u0000")
-    .update(JSON.stringify(query.config, Object.keys(query.config).sort()))
+    .update(stableStringify(query.config))
     .digest("hex");
 }
 
@@ -105,9 +119,34 @@ export async function outboundRequest(
       redirect: "manual", // 不跟随跳转，防 redirect 到内网绕过 SSRF 检查
     });
     const maxBytes = opts.maxBytes ?? 1_000_000;
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength > maxBytes) {
-      throw new Error(`response too large (> ${maxBytes} bytes)`);
+    // SEC-2/SRV-04：**边读边判** —— 先 `arrayBuffer()` 整包进内存再判大小等于没限
+    // （恶意/异常上游回 2GB 会先把进程内存打爆；maxBytes 各处只给 1–5MB）
+    const reader = res.body?.getReader();
+    let bytes: Uint8Array;
+    if (reader) {
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => undefined);
+          throw new Error(`response too large (> ${maxBytes} bytes)`);
+        }
+        chunks.push(value);
+      }
+      bytes = new Uint8Array(total);
+      let off = 0;
+      for (const c of chunks) {
+        bytes.set(c, off);
+        off += c.byteLength;
+      }
+    } else {
+      bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.byteLength > maxBytes) {
+        throw new Error(`response too large (> ${maxBytes} bytes)`);
+      }
     }
     return { status: res.status, text: new TextDecoder().decode(bytes), bytes };
   } finally {
