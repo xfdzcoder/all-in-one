@@ -687,6 +687,29 @@ try {
   ok("Q85 exit edit", await clickBtn("完成编辑"));
   await sleep(300);
 
+  // Q86（项 13）：标题区可跳转到数据源站点 —— **仅标题区**（logo+文本），整卡不可点
+  const t13 = await page.evaluate(() => {
+    const items = [...document.querySelectorAll(".grid-stack-item")];
+    const mon = items.find((i) => (i.textContent ?? "").includes("svc-monitor-"));
+    const a = mon?.querySelector("a.wb-widget__title-link");
+    const card = mon?.querySelector(".wb-widget");
+    const rssCard = items.find((i) => (i.textContent ?? "").includes("未读"));
+    return {
+      href: a?.getAttribute("href") ?? null,
+      target: a?.getAttribute("target") ?? null,
+      rel: a?.getAttribute("rel") ?? null,
+      // 整卡不可点：卡片本身不能是 <a>，也不能被 <a> 包住
+      cardIsLink: card ? card.tagName === "A" || Boolean(card.closest("a")) : null,
+      // 无站点的组件（信息流）不渲染成链接
+      rssHasLink: Boolean(rssCard?.querySelector("a.wb-widget__title-link")),
+    };
+  });
+  ok(
+    "Q86 title links to the data source site (项 13)",
+    Boolean(t13.href) && t13.target === "_blank" && (t13.rel ?? "").includes("noopener") && t13.cardIsLink === false,
+    JSON.stringify(t13),
+  );
+  ok("Q86 sourceless card title is not a link (项 13)", t13.rssHasLink === false, JSON.stringify(t13));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

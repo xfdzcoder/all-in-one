@@ -4,7 +4,8 @@ import { Badge, Button, Card, Group, JsonInput, Modal, Stack, Text } from "@mant
 
 import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-one/widget-sdk";
 
-import { useServiceOverview } from "./data-hooks";
+import { useServiceOverview, useSourceHomeUrl } from "./data-hooks";
+import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
@@ -133,6 +134,8 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
   // 连接 kind → 官方图标（画廊同款）
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
+  // Q86/D59：标题区跳转到该数据源站点
+  const homeUrl = useSourceHomeUrl(sourceId);
   const kindIcon: Record<string, string> = {
     immich: "immich",
     navidrome: "navidrome",
@@ -159,10 +162,11 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        {row && kindIcon[row.kind] ? <ServiceIcon name={kindIcon[row.kind]} size={16} /> : null}
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          {row?.name ?? "服务概览"}
-        </Text>
+        <WidgetTitle
+          icon={row && kindIcon[row.kind] ? <ServiceIcon name={kindIcon[row.kind]} size={16} /> : null}
+          title={row?.name ?? "服务概览"}
+          href={homeUrl}
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {ov?.probe?.ok && (
             <Badge size="xs" color="green" variant="light">

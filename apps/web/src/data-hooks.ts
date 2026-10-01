@@ -833,6 +833,18 @@ export function useResolvedSourceConfig<T extends Record<string, unknown>>(
   }, [config, source, pick]);
 }
 
+/**
+ * 卡片标题跳转地址（Q86 / **D59**）= 绑定数据源的 `config.url`。
+ * 未绑定连接 / 连接无 url / url 不是 http(s) → `undefined`（标题不渲染成链接）。
+ */
+export function useSourceHomeUrl(sourceId: unknown): string | undefined {
+  const all = useDataSources();
+  const sid = typeof sourceId === "string" ? sourceId : "";
+  const row = (all.data ?? []).find((r) => r.id === sid);
+  const url = (row?.config as Record<string, unknown> | undefined)?.url;
+  return typeof url === "string" && /^https?:\/\//i.test(url) ? url : undefined;
+}
+
 /** 页面列表（Q29b：任务页签标注所在 Dashboard）。 */
 export function useDashboards() {
   const query = useQuery({ queryKey: ["dashboards"], queryFn: () => api.listDashboards() });

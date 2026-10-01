@@ -43,6 +43,37 @@
   flex-shrink: 0;
 }
 
+/* Q86/D59：卡片标题区。**只有标题区可点**（logo+文本），整卡不可点 ——
+   卡内已有行点击/按钮/复选框等交互，整卡链接会与之冲突并造成误触。 */
+.wb-widget__head {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+}
+.wb-widget__title-link {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--wb-radius-sm);
+  cursor: default;
+}
+a.wb-widget__title-link {
+  cursor: pointer;
+}
+a.wb-widget__title-link:hover .wb-widget__title-link-text,
+a.wb-widget__title-link:hover p {
+  color: var(--wb-color-primary);
+  text-decoration: underline;
+}
+a.wb-widget__title-link:focus-visible {
+  outline: 2px solid var(--wb-color-primary);
+  outline-offset: 2px;
+}
+
 .wb-widget__title {
   font-size: var(--wb-text-md);
   font-weight: var(--wb-weight-semibold);

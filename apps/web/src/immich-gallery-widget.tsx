@@ -2,11 +2,11 @@ import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react
 import { useState } from "react";
 import { Badge, Group, Text } from "@mantine/core";
 
-import { useImmichGallery } from "./data-hooks";
+import { useDataSources, useImmichGallery, useSourceHomeUrl } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
+import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
-import { useDataSources } from "./data-hooks";
 import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
@@ -45,14 +45,17 @@ export function ImmichGalleryWidget({
   };
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
+  // Q86/D59：标题区跳转到 Immich 站点
+  const homeUrl = useSourceHomeUrl(sourceId);
 
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <ServiceIcon name="immich" size={16} />
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          照片墙{row?.name ? ` · ${row.name}` : ""}
-        </Text>
+        <WidgetTitle
+          icon={<ServiceIcon name="immich" size={16} />}
+          title={<>照片墙{row?.name ? ` · ${row.name}` : ""}</>}
+          href={homeUrl}
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>

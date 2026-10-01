@@ -2,7 +2,8 @@ import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
-import { useDataSources, useMonitorData, useResolvedSourceConfig } from "./data-hooks";
+import { useDataSources, useMonitorData, useResolvedSourceConfig, useSourceHomeUrl } from "./data-hooks";
+import { WidgetTitle } from "./widget-title";
 import { copyText } from "./clipboard";
 import { WbAlert, IconAction } from "./ui";
 
@@ -64,13 +65,13 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
   const sources = useDataSources("monitor");
   const sourceName = (sources.data ?? []).find((r) => r.id === sourceId)?.name;
+  // Q86/D59：标题区跳转到该数据源站点
+  const homeUrl = useSourceHomeUrl(sourceId);
 
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          {sourceName ?? "服务器监控"}
-        </Text>
+        <WidgetTitle title={sourceName ?? "服务器监控"} href={homeUrl} />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {data?.probe?.ok && (
             <Badge size="xs" color="green" variant="light">

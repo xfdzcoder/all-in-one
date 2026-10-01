@@ -2,7 +2,8 @@ import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Group, Text } from "@mantine/core";
 
-import { useNavidromeLibrary } from "./data-hooks";
+import { useNavidromeLibrary, useSourceHomeUrl } from "./data-hooks";
+import { WidgetTitle } from "./widget-title";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
@@ -35,14 +36,17 @@ export function NavidromeLibraryWidget({
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
+  // Q86/D59：标题区跳转到该数据源站点
+  const homeUrl = useSourceHomeUrl(sourceId);
 
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <ServiceIcon name="navidrome" size={16} />
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          专辑墙{row?.name ? ` · ${row.name}` : ""}
-        </Text>
+        <WidgetTitle
+          icon={<ServiceIcon name="navidrome" size={16} />}
+          title={<>专辑墙{row?.name ? ` · ${row.name}` : ""}</>}
+          href={homeUrl}
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
         </Group>

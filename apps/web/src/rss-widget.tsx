@@ -2,7 +2,8 @@ import { IconRefresh } from "@tabler/icons-react";
 import { Badge, Group, Text } from "@mantine/core";
 
 import type { FeedItem } from "./api";
-import { useFeeds, useFeedMutations } from "./data-hooks";
+import { useFeedMutations, useFeeds } from "./data-hooks";
+import { WidgetTitle } from "./widget-title";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
@@ -31,10 +32,8 @@ export function RssWidget({
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        {/* Q85（项 12）：标题统一为「RSS」 */}
-        <Text size="xs" fw={600} style={{ flex: 1 }}>
-          RSS
-        </Text>
+        {/* Q85（项 12）：标题统一为「RSS」；Q86/D59：信息流无站点，不渲染成链接 */}
+        <WidgetTitle title="RSS" />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           <IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>
           <Badge size="xs" variant="light">

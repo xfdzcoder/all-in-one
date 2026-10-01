@@ -2,7 +2,8 @@ import { IconRefresh, IconRotateClockwise } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Code, Group, Modal, Stack, Text } from "@mantine/core";
 
-import { usePortainerContainers, usePortainerLogs, usePortainerRestart } from "./data-hooks";
+import { usePortainerContainers, usePortainerLogs, usePortainerRestart, useSourceHomeUrl } from "./data-hooks";
+import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { ConfirmAction } from "./confirm";
@@ -18,6 +19,8 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
+  // Q86/D59：标题区跳转到该数据源站点
+  const homeUrl = useSourceHomeUrl(sourceId);
   const logs = usePortainerLogs(logsFor ? sourceId : undefined, logsFor?.id);
 
   // Q56/D51：重启白名单（连接配置 restartAllow；空 = 不显示重启入口，服务端同样拒绝）
@@ -34,10 +37,11 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
   return (
     <div className="wb-widget">
       <Group gap={6}>
-        <ServiceIcon name="portainer" size={16} />
-        <Text size="xs" fw={600} style={{ flex: 1 }} truncate>
-          容器清单{row?.name ? ` · ${row.name}` : ""}
-        </Text>
+        <WidgetTitle
+          icon={<ServiceIcon name="portainer" size={16} />}
+          title={<>容器清单{row?.name ? ` · ${row.name}` : ""}</>}
+          href={homeUrl}
+        />
         <Group gap={6} wrap="nowrap" className="wb-widget__actions">
           {containers.length > 0 && (
             <Badge size="xs" variant="light" color={abnormal.length > 0 ? "red" : "green"}>
