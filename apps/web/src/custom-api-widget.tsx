@@ -4,6 +4,7 @@ import { Badge, Button, Group, JsonInput, Modal, Stack, Table, Text } from "@man
 import { parseJsxTemplate } from "@all-in-one/widget-sdk";
 
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
+import { copyText } from "./clipboard";
 import { WbAlert, WbLoading, IconAction } from "./ui";
 import { ALLOWED_TAGS, JsxTemplateView } from "./jsx-template";
 
@@ -84,14 +85,13 @@ export function CustomApiWidget(props: CustomApiConfig) {
               size="compact-xs"
               variant="subtle"
               onClick={() => {
-                // ISS-25：2s 复位 + 失败显式提示（clipboard 在非安全上下文不可用）
-                navigator.clipboard
-                  .writeText(JSON.stringify(data, null, 2))
-                  .then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  })
-                  .catch(() => setCopied(false));
+                // ISS-25：2s 复位 + 失败显式提示。
+                // Q80：改用 copyText —— 直接调 navigator.clipboard 在 HTTP（非安全上下文）
+                // 下会同步抛（clipboard 是 undefined），`.catch()` 接不住。
+                void copyText(JSON.stringify(data, null, 2)).then((ok) => {
+                  setCopied(ok);
+                  if (ok) setTimeout(() => setCopied(false), 2000);
+                });
               }}
             >
               {copied ? "已复制" : "复制 JSON"}

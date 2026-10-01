@@ -119,6 +119,22 @@ const browser = await puppeteer.launch({
   args: ["--no-sandbox", "--window-size=1400,900"],
 });
 const page = await browser.newPage();
+// Q80 回归守卫：`crypto.randomUUID` / `navigator.clipboard` **只在安全上下文可用**
+// （HTTPS 或 localhost）。用户用 HTTP 访问时是 undefined，调用即抛。
+// 而本脚本跑在 http://localhost —— **localhost 属安全上下文**，这个 bug 复现不了，
+// 故**整个会话显式摘掉这两个 API**，让下面 40+ 条断言同时充当「HTTP 可用」回归。
+await page.evaluateOnNewDocument(() => {
+  try {
+    Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined, configurable: true });
+  } catch {
+    /* 忽略 */
+  }
+  try {
+    Object.defineProperty(globalThis.navigator, "clipboard", { value: undefined, configurable: true });
+  } catch {
+    /* 忽略 */
+  }
+});
 await page.setViewport({ width: 1400, height: 900 });
 
 const clickBtn = (label, exact = false) =>
@@ -166,6 +182,16 @@ const addOverview = async (sourceName, cardPrefix = "服务概览") => {
 
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
+  // 自证守卫生效：若这两个 API 仍在，下面的「HTTP 可用」回归就是平凡通过
+  ok(
+    "Q80 insecure-context APIs stripped (guard active)",
+    await page.evaluate(
+      () => typeof globalThis.crypto.randomUUID !== "function" && globalThis.navigator.clipboard === undefined,
+    ),
+    await page.evaluate(
+      () => `randomUUID=${typeof globalThis.crypto.randomUUID} clipboard=${typeof globalThis.navigator.clipboard}`,
+    ),
+  );
   await page.waitForSelector("input[autocomplete=username]", { timeout: 8000 });
   await page.type("input[autocomplete=username]", "admin");
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");

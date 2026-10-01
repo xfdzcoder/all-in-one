@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Group, Stack, Text, TextInput } from "@mantine/core";
 
 import { api, type IconRow } from "./api";
+import { copyText } from "./clipboard";
 import { ConfirmAction } from "./confirm";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ServiceIcon } from "./service-icon";
@@ -118,7 +119,9 @@ export function IconLibrary() {
               size="compact-xs"
               variant="subtle"
               onClick={() => {
-                void navigator.clipboard.writeText(`/api/icons/${r.id}`).then(() => {
+                // Q80：copyText 自带降级（HTTP 下 navigator.clipboard 不可用）
+                void copyText(`/api/icons/${r.id}`).then((ok) => {
+                  if (!ok) return;
                   setCopied(r.id);
                   setTimeout(() => setCopied(null), 2000);
                 });

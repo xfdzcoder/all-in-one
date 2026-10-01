@@ -8,6 +8,7 @@ import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/w
 import { Button, Group, Modal, Text } from "@mantine/core";
 
 import { api } from "./api";
+import { randomId } from "./random-id";
 import { FALLBACK_LAYOUT, manifestForComponent, widgetComponents } from "./widget-registry";
 import { WidgetEditContext } from "./widget-edit-context";
 import { withWidgetChrome } from "./widget-chrome";
@@ -100,7 +101,9 @@ function BoardToolbar({
 
   // ids must be unique across sessions — persisted layouts may already contain
   // t100/n100 from earlier runs; collisions leave the new portal empty (M2-④ 实测).
-  const nextId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+  // Q80：用 randomId() 而非 crypto.randomUUID() —— 后者**只在安全上下文可用**，
+  // HTTP 访问（内网 IP / 未启用 TLS）时是 undefined，添加组件即抛 TypeError。
+  const nextId = (prefix: string) => `${prefix}-${randomId().slice(0, 8)}`;
 
   return (
     <Group mb="sm" gap="xs" style={{ position: "relative", zIndex: 2 }}>

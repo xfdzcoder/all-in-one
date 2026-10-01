@@ -3,6 +3,7 @@ import { Alert, Text } from "@mantine/core";
 import type { ConfigValues, PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api } from "./api";
+import { randomNonce } from "./random-id";
 import { queryClient, usePluginData } from "./data-hooks";
 
 /**
@@ -104,7 +105,8 @@ export function PluginFrame({
   const propsRef = useRef<PluginRuntimeProps>({ config, data });
   propsRef.current = { config, data };
   // 每次挂载一个随机 nonce —— 框内脚本仅限 bootstrap（插件代码经 data: 模块导入）
-  const nonce = useMemo(() => crypto.randomUUID().replace(/-/g, ""), []);
+  // Q80：randomNonce() 自带降级，HTTP 下 crypto.randomUUID 不可用
+  const nonce = useMemo(() => randomNonce(), []);
   const srcDoc = useMemo(() => (code === null ? "" : buildSrcDoc(nonce, code)), [nonce, code]);
 
   useEffect(() => {
