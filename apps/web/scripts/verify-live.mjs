@@ -236,6 +236,18 @@ try {
     if (gal.count === 0) await sleep(700);
   }
   ok("LIVE immich gallery real thumbnails render", gal.count >= 6 && gal.dataUri === gal.count, JSON.stringify(gal));
+  // Q70：缩略图失败的项**不再丢格子** → 渲染占位块；note 聚合成一条（真机：视频缩略图任务未生成会 404）
+  const galQ70 = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("照片墙"));
+    const cells = [...(item?.querySelectorAll(".wb-gallery__cell") ?? [])];
+    const notes = [...(item?.querySelectorAll(".wb-svc-notes > *") ?? [])].map((n) => n.textContent ?? "");
+    return { cells: cells.length, placeholders: item?.querySelectorAll(".wb-gallery__cell--empty").length ?? 0, notes };
+  });
+  ok(
+    "LIVE immich gallery keeps cells + aggregates note (Q70)",
+    galQ70.cells >= 10 && galQ70.notes.filter((n) => n.includes("缩略图不可用")).length === 1,
+    JSON.stringify(galQ70).slice(0, 220),
+  );
 
   // Q51 Navidrome 专辑墙（D50）：真机封面网格
   await clickBtn("编辑页面");
@@ -253,6 +265,12 @@ try {
     if (ndGal.count === 0) await sleep(700);
   }
   ok("LIVE navidrome album covers render", ndGal.count >= 6 && ndGal.dataUri === ndGal.count, JSON.stringify(ndGal));
+  // Q70：封面改取 size=600 + 超限回落 size=300 → 原先被 300KB 上限丢掉的封面现在能显示（真机 7 → 应接近 limit）
+  ok(
+    "LIVE navidrome covers no longer dropped by size cap (Q70)",
+    ndGal.count >= 10,
+    JSON.stringify(ndGal),
+  );
 
   // D54：播放遥控写操作已移除 —— 真机专辑墙应为纯只读（无播放/暂停等入口）
   ok(

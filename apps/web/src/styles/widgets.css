@@ -591,6 +591,36 @@
   display: block;
 }
 
+/* Q70：缩略图/封面不可用时的占位块 —— 保留格子（不再跳过），弱化不喧宾夺主 */
+.wb-gallery__cell--empty {
+  cursor: pointer;
+}
+
+.wb-gallery__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wb-space-1);
+  width: 100%;
+  height: 100%;
+  min-height: 56px;
+  color: var(--wb-color-text-muted);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 6px,
+      color-mix(in srgb, var(--wb-color-border) 70%, transparent) 6px 7px
+    ),
+    color-mix(in srgb, var(--wb-color-surface-hover) 60%, transparent);
+}
+
+.wb-gallery__placeholder--wide {
+  min-height: 140px;
+  border-radius: var(--wb-radius-sm);
+  border: var(--wb-border);
+}
+
 .wb-gallery__video {
   position: absolute;
   right: 4px;

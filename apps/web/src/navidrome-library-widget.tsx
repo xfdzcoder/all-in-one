@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Group, Modal, Text } from "@mantine/core";
 
@@ -74,11 +74,19 @@ export function NavidromeLibraryWidget({
             <button
               key={a.id}
               type="button"
-              className="wb-gallery__cell"
+              className={`wb-gallery__cell${a.cover ? "" : " wb-gallery__cell--empty"}`}
               title={`${a.name}${a.artist ? ` · ${a.artist}` : ""}`}
               onClick={() => setPreview({ cover: a.cover, name: a.name, artist: a.artist })}
             >
-              <img src={a.cover} alt="" loading="lazy" />
+              {/* Q70：封面不可用时渲染**占位块**，不再丢格子（真机：封面原图过大被上限丢弃） */}
+              {a.cover ? (
+                <img src={a.cover} alt="" loading="lazy" />
+              ) : (
+                <span className="wb-gallery__placeholder">
+                  <IconDiscOff size={18} aria-hidden />
+                  <span className="wb-sr-only">封面不可用</span>
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -95,11 +103,21 @@ export function NavidromeLibraryWidget({
 
       {preview && (
         <Modal opened onClose={() => setPreview(null)} title={`${preview.name}${preview.artist ? ` · ${preview.artist}` : ""}`} size="md">
-          <img
-            src={preview.cover}
-            alt=""
-            style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }}
-          />
+          {preview.cover ? (
+            <img
+              src={preview.cover}
+              alt=""
+              style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }}
+            />
+          ) : (
+            /* Q70：封面不可用（真机常见：封面原图过大）—— 明说原因 */
+            <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
+              <IconDiscOff size={28} aria-hidden />
+              <Text size="xs" c="dimmed" ta="center">
+                封面不可用
+              </Text>
+            </div>
+          )}
           <Text size="xs" c="dimmed" mt="sm" ta="center">
             只读展示 —— 播放控制属写操作，已于 D54 移除
           </Text>

@@ -11,6 +11,13 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
  * - 列表来源 `/api/search/metadata`（asset.read）：注意 `assets.total` 被 size 封顶（Q49 实测），
  *   本组件按 items 渲染，不做计数。
  * - 只读边界（D50）：无任何写操作（上传/删除/收藏均不在范围）。
+ *
+ * **Q70 真机实测（2026-10-01，Immich v3.2.2）**：
+ * - `size=thumbnail` 对 IMAGE 全部 200（4–29KB）；对 **VIDEO 全部 404**（`Asset media not found`），
+ *   且 `size=preview/fullsize` 同样 404、`size=original` 403（key 缺 asset.download）。
+ *   根因是该实例**视频缩略图任务未生成**（VIDEO 资产 `thumbhash: null`，IMAGE 有 thumbhash）——
+ *   属实例侧，不是本组件能修；故回落 `size=preview` **无益**（视频照样 404，图片反而放大 10 倍）。
+ * - 因此：**失败项不再丢格子**（渲染占位块），note **聚合成一条**并带上真实响应体原因。
  */
 
 export interface ImmichGalleryItem {
@@ -18,7 +25,7 @@ export interface ImmichGalleryItem {
   /** 拍摄/创建时间（ISO），组件相对化展示。 */
   at: string;
   type: "IMAGE" | "VIDEO";
-  /** 缩略图 data URI（image/jpeg;base64,…）。 */
+  /** 缩略图 data URI（image/jpeg;base64,…）；**空字符串 = 缩略图不可用**（组件渲染占位块，不丢格子）。 */
   thumb: string;
   /** 跳转 Immich Web 的相册页（新标签打开）。 */
   href: string;
@@ -37,7 +44,8 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
-/** 归一：search/metadata 条目 + 缩略图字节 → 网格项（可单测）。 */
+/** 归一：search/metadata 条目 + 缩略图字节 → 网格项（可单测）。
+ *  **Q70**：缩略图缺失的项仍保留（`thumb: ""`），由组件渲染占位 —— 避免网格缺格。 */
 export function normalizeImmichGallery(
   search: unknown,
   thumbs: Map<string, Uint8Array>,
@@ -53,12 +61,11 @@ export function normalizeImmichGallery(
     const id = str(a.id);
     if (!id) continue;
     const bytes = thumbs.get(id);
-    if (!bytes || bytes.byteLength === 0) continue; // 缩略图失败的项不进网格（notes 记录）
     out.push({
       id,
       at: str(a.takenAt) ?? str(a.createdAt) ?? "",
       type: a.type === "VIDEO" ? "VIDEO" : "IMAGE",
-      thumb: `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}`,
+      thumb: bytes && bytes.byteLength > 0 ? `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}` : "",
       href: `${base}/photos/${id}`,
     });
   }
@@ -114,7 +121,12 @@ export const immichGalleryConnector: WidgetConnector = {
       ? (assets.items as Array<Record<string, unknown>>)
       : [];
     const thumbs = new Map<string, Uint8Array>();
-    for (const a of list.slice(0, limit)) {
+    // Q70：失败按**原因聚合**成一条 note（原先每项一条刷屏），并统计视频占比
+    const wanted = list.slice(0, limit);
+    const reasons = new Map<string, number>();
+    let failCount = 0;
+    let failVideo = 0;
+    for (const a of wanted) {
       const id = str(a.id);
       if (!id) continue;
       try {
@@ -125,18 +137,28 @@ export const immichGalleryConnector: WidgetConnector = {
           allowPrivate: true,
         });
         if (res.status >= 400 || res.bytes.byteLength === 0) {
-          // 403 时把服务端的权限名带出来（08 §5：原因 + 怎么修）
-          const msg = res.status === 403 ? res.text.slice(0, 120) : `HTTP ${res.status}`;
-          throw new Error(msg);
+          // Q70：带出服务端真实响应体（只报 HTTP 码不利于定位，08 §5「原因」要具体）
+          const body = (res.text ?? "").slice(0, 120).replace(/\s+/g, " ").trim();
+          throw new Error(body ? `HTTP ${res.status} · ${body}` : `HTTP ${res.status}`);
         }
         thumbs.set(id, res.bytes);
       } catch (err) {
         const raw = err instanceof Error ? err.message : "未知错误";
-        const hint = raw.includes("Missing required permission")
-          ? " —— Immich 后台「账号设置 → API Keys」勾选 asset.view 权限"
-          : "";
-        notes.push(`缩略图获取失败（${id.slice(0, 8)}）：${raw}${hint} —— 该项跳过`);
+        failCount += 1;
+        if (a.type === "VIDEO") failVideo += 1;
+        reasons.set(raw, (reasons.get(raw) ?? 0) + 1);
       }
+    }
+    if (failCount > 0 && wanted.length > 0) {
+      const [reason, n] = [...reasons.entries()].sort((x, y) => y[1] - x[1])[0];
+      const fix = reason.includes("Missing required permission")
+        ? "Immich 后台「账号设置 → API Keys」勾选 asset.view 权限"
+        : reason.includes("Asset media not found")
+          ? `Immich 尚未生成这些${failVideo > 0 ? "视频" : ""}的缩略图 —— 到后台「任务」执行「生成缩略图/预览」（或等后台任务跑完）后点刷新`
+          : "检查 Immich 地址与 API Key 是否具备 asset.view 权限";
+      notes.push(
+        `${failCount}/${wanted.length} 个缩略图不可用（${reason}${n > 1 ? ` ×${n}` : ""}）—— ${fix}；缺图的格子显示占位块，不再跳过`,
+      );
     }
 
     return {

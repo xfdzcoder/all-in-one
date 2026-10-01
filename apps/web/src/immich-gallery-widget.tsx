@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
 import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 
@@ -58,11 +58,19 @@ export function ImmichGalleryWidget({
             <button
               key={it.id}
               type="button"
-              className="wb-gallery__cell"
+              className={`wb-gallery__cell${it.thumb ? "" : " wb-gallery__cell--empty"}`}
               title={it.at ? new Date(it.at).toLocaleString("zh-CN") : undefined}
               onClick={() => setPreview({ thumb: it.thumb, href: it.href, at: it.at })}
             >
-              <img src={it.thumb} alt="" loading="lazy" />
+              {/* Q70：缩略图不可用时渲染**占位块**，不再丢格子（真机：视频缩略图任务未生成会 404） */}
+              {it.thumb ? (
+                <img src={it.thumb} alt="" loading="lazy" />
+              ) : (
+                <span className="wb-gallery__placeholder">
+                  <IconPhotoOff size={18} aria-hidden />
+                  <span className="wb-sr-only">缩略图不可用</span>
+                </span>
+              )}
               {it.type === "VIDEO" && (
                 <Badge size="compact-xs" className="wb-gallery__video" color="dark" variant="filled">
                   视频
@@ -84,7 +92,17 @@ export function ImmichGalleryWidget({
 
       {preview && (
         <Modal opened onClose={() => setPreview(null)} title="照片预览（只读）" size="lg">
-          <img src={preview.thumb} alt="" style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }} />
+          {preview.thumb ? (
+            <img src={preview.thumb} alt="" style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }} />
+          ) : (
+            /* Q70：缩略图不可用（真机常见：Immich 视频缩略图任务未生成）—— 明说原因与去处 */
+            <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
+              <IconPhotoOff size={28} aria-hidden />
+              <Text size="xs" c="dimmed" ta="center">
+                缩略图不可用 —— 可到 Immich 中查看原片
+              </Text>
+            </div>
+          )}
           <Group justify="space-between" mt="sm">
             <Text size="xs" c="dimmed">
               {preview.at && <RelativeTime value={preview.at} />}

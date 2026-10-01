@@ -20,22 +20,24 @@ describe("normalizeImmichGallery（D50）", () => {
       items: [
         { id: "a1", type: "IMAGE", takenAt: "2026-09-26T02:27:30Z", originalFileName: "a.jpg" },
         { id: "a2", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
-        { id: "a3", type: "IMAGE", createdAt: "2026-09-26T02:27:32Z" }, // 无缩略图 → 跳过
+        { id: "a3", type: "IMAGE", createdAt: "2026-09-26T02:27:32Z" }, // 无缩略图 → Q70 仍保留（占位块）
       ],
     },
   };
 
-  it("缩略图 → data URI；无缩略图的项跳过；VIDEO 标记；href 指向 Immich Web", () => {
+  it("缩略图 → data URI；**缺缩略图的项保留（thumb 空 → 占位块，Q70）**；VIDEO 标记；href 指向 Immich Web", () => {
     const thumbs = new Map<string, Uint8Array>([
       ["a1", new Uint8Array([1, 2, 3])],
       ["a2", new Uint8Array([4, 5])],
     ]);
     const items = normalizeImmichGallery(search, thumbs, "https://immich.example/");
-    expect(items.map((i) => i.id)).toEqual(["a1", "a2"]);
+    // Q70：三项全保留（原先 a3 因缺缩略图被丢 → 网格缺格）
+    expect(items.map((i) => i.id)).toEqual(["a1", "a2", "a3"]);
     expect(items[0].thumb.startsWith("data:image/jpeg;base64,")).toBe(true);
     expect(items[0].at).toBe("2026-09-26T02:27:30Z"); // takenAt 优先
     expect(items[1].type).toBe("VIDEO");
     expect(items[1].href).toBe("https://immich.example/photos/a2");
+    expect(items[2].thumb).toBe(""); // Q70：缺图不丢项，组件渲染占位块
   });
 
   it("空/畸形 search 返回空数组", () => {
@@ -64,6 +66,11 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
       const url = req.url ?? "";
       if (url.startsWith("/api/assets/") && url.includes("/thumbnail")) {
         thumbHits++;
+        // Q70 真机复刻：视频缩略图 404（Immich `Asset media not found`）
+        if (url.includes("/api/assets/v1/")) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ message: "Asset media not found" }));
+        }
         res.setHeader("Content-Type", "image/jpeg");
         return res.end(Buffer.from([0xff, 0xd8, 0xff, 0xdb]));
       }
@@ -75,6 +82,7 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
               items: [
                 { id: "a1", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
                 { id: "a2", type: "IMAGE", createdAt: "2026-09-26T02:27:31Z" },
+                { id: "v1", type: "VIDEO", createdAt: "2026-09-26T02:27:32Z" },
               ],
             },
           }),
@@ -109,9 +117,17 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
       { type: "immich-gallery", config: { sourceId: id, limit: 6 } },
       ctx,
     )) as { items: Array<{ id: string; thumb: string }>; notes?: string[] };
-    expect(data.items.map((i) => i.id)).toEqual(["a1", "a2"]);
+    // Q70：三项全保留（v1 缩略图 404 也不丢格）
+    expect(data.items.map((i) => i.id)).toEqual(["a1", "a2", "v1"]);
     expect(data.items[0].thumb).toMatch(/^data:image\/jpeg;base64,/);
-    expect(thumbHits).toBe(2);
+    expect(data.items[2].thumb).toBe(""); // 缺图 → 组件渲染占位块
+    expect(thumbHits).toBe(3);
+    // Q70：note **聚合成一条**（原先每项一条），带真实响应体 + 怎么修（08 §5）
+    expect(data.notes).toHaveLength(1);
+    expect(data.notes?.[0]).toContain("1/3 个缩略图不可用");
+    expect(data.notes?.[0]).toContain("Asset media not found");
+    expect(data.notes?.[0]).toContain("生成缩略图");
+    expect(data.notes?.[0]).toContain("占位块");
 
     await expect(
       immichGalleryConnector.fetch({ type: "immich-gallery", config: {} }, ctx),
