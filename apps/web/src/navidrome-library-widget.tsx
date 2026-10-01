@@ -1,8 +1,9 @@
 import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Group, Modal, Text } from "@mantine/core";
+import { Badge, Group, Text } from "@mantine/core";
 
 import { useNavidromeLibrary } from "./data-hooks";
+import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
@@ -105,26 +106,18 @@ export function NavidromeLibraryWidget({
       )}
 
       {preview && (
-        <Modal opened onClose={() => setPreview(null)} title={`${preview.name}${preview.artist ? ` · ${preview.artist}` : ""}`} size="md">
-          {preview.cover ? (
-            <img
-              src={preview.cover}
-              alt=""
-              style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }}
-            />
-          ) : (
-            /* Q70：封面不可用（真机常见：封面原图过大）—— 明说原因 */
-            <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
-              <IconDiscOff size={28} aria-hidden />
-              <Text size="xs" c="dimmed" ta="center">
-                封面不可用
-              </Text>
-            </div>
-          )}
-          <Text size="xs" c="dimmed" mt="sm" ta="center">
-            只读展示 —— 播放控制属写操作，已于 D54 移除
-          </Text>
-        </Modal>
+        <MediaLightbox
+          src={preview.cover || undefined}
+          title={`${preview.name}${preview.artist ? ` · ${preview.artist}` : ""}`}
+          onClose={() => setPreview(null)}
+        >
+          <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
+            <IconDiscOff size={28} aria-hidden />
+            <Text size="xs" c="dimmed" ta="center">
+              封面不可用
+            </Text>
+          </div>
+        </MediaLightbox>
       )}
     </div>
   );

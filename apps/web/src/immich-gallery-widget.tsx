@@ -1,8 +1,9 @@
 import { IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Button, Group, Modal, Text } from "@mantine/core";
+import { Badge, Button, Group, Text } from "@mantine/core";
 
 import { useImmichGallery } from "./data-hooks";
+import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
@@ -32,6 +33,16 @@ export function ImmichGalleryWidget({
 }) {
   const { data, loading, error, refresh } = useImmichGallery(sourceId, limit, refreshSec);
   const [preview, setPreview] = useState<{ thumb: string; href: string; at: string } | null>(null);
+  // Q73（项 8）：铺开模式预览支持左右切换（循环）
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const step = (d: number) => {
+    const items = data?.items ?? [];
+    if (items.length === 0) return;
+    const next = (previewIdx + d + items.length) % items.length;
+    setPreviewIdx(next);
+    const it = items[next];
+    setPreview({ thumb: it.thumb, href: it.href, at: it.at });
+  };
   const all = useDataSources();
   const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
 
@@ -78,7 +89,8 @@ export function ImmichGalleryWidget({
           layout={layout}
           randomIntervalSec={randomIntervalSec}
           minCell={minCell}
-          onOpen={(it) => {
+          onOpen={(it, i) => {
+            setPreviewIdx(i);
             const src = data.items.find((x) => x.id === it.id);
             if (src) setPreview({ thumb: src.thumb, href: src.href, at: src.at });
           }}
@@ -95,34 +107,26 @@ export function ImmichGalleryWidget({
       )}
 
       {preview && (
-        <Modal opened onClose={() => setPreview(null)} title="照片预览（只读）" size="lg">
-          {preview.thumb ? (
-            <img src={preview.thumb} alt="" style={{ maxWidth: "100%", borderRadius: 8, display: "block", margin: "0 auto" }} />
-          ) : (
-            /* Q70：缩略图不可用（真机常见：Immich 视频缩略图任务未生成）—— 明说原因与去处 */
-            <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
-              <IconPhotoOff size={28} aria-hidden />
-              <Text size="xs" c="dimmed" ta="center">
-                缩略图不可用 —— 可到 Immich 中查看原片
-              </Text>
-            </div>
-          )}
-          <Group justify="space-between" mt="sm">
-            <Text size="xs" c="dimmed">
-              {preview.at && <RelativeTime value={preview.at} />}
-            </Text>
-            <Button
-              size="compact-xs"
-              component="a"
-              href={preview.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="light"
-            >
+        <MediaLightbox
+          src={preview.thumb || undefined}
+          title="照片预览（只读）"
+          meta={preview.at ? <RelativeTime value={preview.at} /> : undefined}
+          footer={
+            <Button size="compact-xs" component="a" href={preview.href} target="_blank" rel="noopener noreferrer" variant="light">
               在 Immich 中打开
             </Button>
-          </Group>
-        </Modal>
+          }
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
+          onClose={() => setPreview(null)}
+        >
+          <div className="wb-gallery__placeholder wb-gallery__placeholder--wide">
+            <IconPhotoOff size={28} aria-hidden />
+            <Text size="xs" c="dimmed" ta="center">
+              缩略图不可用 —— 可到 Immich 中查看原片
+            </Text>
+          </div>
+        </MediaLightbox>
       )}
     </div>
   );
