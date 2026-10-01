@@ -13,10 +13,24 @@
   min-width: 0;
   gap: var(--wb-space-2);
   padding: var(--wb-space-2);
-  background: var(--wb-color-surface);
+  /* D52 批2：玻璃材质（透明度/模糊/光晕均可经令牌覆盖） */
+  background: color-mix(in srgb, var(--wb-color-surface) calc(var(--wb-surface-glass-alpha) * 100%), transparent);
+  backdrop-filter: blur(var(--wb-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--wb-blur)) saturate(150%);
   border: var(--wb-border);
-  border-radius: var(--wb-radius-md);
+  border-radius: var(--wb-radius-lg);
+  box-shadow: var(--wb-shadow-card);
   overflow: hidden;
+  transition:
+    box-shadow var(--wb-motion-base) var(--wb-ease-out),
+    border-color var(--wb-motion-base) var(--wb-ease-out),
+    transform var(--wb-motion-base) var(--wb-ease-out);
+}
+
+.wb-widget:hover {
+  border-color: var(--wb-color-border-strong);
+  box-shadow: var(--wb-shadow-card-hover);
+  transform: translateY(-1px);
 }
 
 .wb-widget__header {
@@ -545,6 +559,38 @@
   position: absolute;
   right: 4px;
   bottom: 4px;
+}
+
+/* ── D52 批2 · 组件质感（Mantine 桥接；双类选择器压过运行时注入，不用 !important） ── */
+.mantine-Button-filled.mantine-Button-root {
+  background-image: linear-gradient(180deg, var(--wb-color-accent-hover), var(--wb-color-accent));
+  border: 1px solid color-mix(in srgb, var(--wb-color-accent) 45%, transparent);
+  box-shadow: 0 4px 14px var(--wb-color-accent-glow);
+  transition:
+    transform var(--wb-motion-fast) var(--wb-ease-out),
+    box-shadow var(--wb-motion-fast) var(--wb-ease-out),
+    filter var(--wb-motion-fast) var(--wb-ease-out);
+}
+
+.mantine-Button-filled.mantine-Button-root:hover {
+  filter: brightness(1.08);
+}
+
+.mantine-Button-root:active {
+  transform: scale(0.98);
+}
+
+.mantine-Modal-content.mantine-Modal-content {
+  background: color-mix(in srgb, var(--wb-color-surface-raised) 84%, transparent);
+  backdrop-filter: blur(var(--wb-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--wb-blur)) saturate(150%);
+  border: 1px solid var(--wb-color-border);
+  border-radius: var(--wb-radius-lg);
+  box-shadow: var(--wb-shadow-modal);
+}
+
+.mantine-Badge-root.mantine-Badge-root {
+  border-radius: var(--wb-radius-pill);
 }
 
 /* ── 可点击数据行（Q52 容器清单等；D52 批1 补齐 —— 裸 button 会吃 UA 底色破坏 AA）── */
