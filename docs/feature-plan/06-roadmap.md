@@ -14,6 +14,7 @@
 | 自定义 API 模板升级 | 受限 JS/JSX 模板（表达力升级） | **✅ 已落地（Q10，2026-09-30，D35：受限 JSX——模板是数据非代码）** |
 | 更多数据源接入（FR-E5） | Immich / Navidrome / Portainer / Mihomo（metacubexd） | **✅ 概览级已落地（Q39a，2026-10-01，D46：连接+概览展示）；深度组件待二期（FR-X3）** |
 | 图标体系（FR-X1） | 官方品牌图标 + 自定义图标库 | **✅ 已落地（Q38a/Q38b，2026-10-01，D45）** |
+| 服务深度组件（FR-X3，**只读**） | Immich 照片墙 / Navidrome 专辑·正在播放 / Portainer 容器清单·日志 / Mihomo 节点·延迟 | **已立项（D50，2026-10-01 用户拍板"只读优先"）；写操作类（播放遥控/容器启停/换节点）待拍板另立** |
 
 ## 2. 远期方向（公网化 / 多用户，D1/D9）
 
@@ -33,6 +34,6 @@
 | 3 | 邮件 connector 是否需要 Gmail API 专项（IMAP 是否够用） | 二期 connector 实现 | **✅ 已定论：需要（D37，OAuth 专项）** |
 | 4 | 服务器监控数据来源（node-exporter / agent / 后端直采） | 部署复杂度 | **✅ 已定论：打通第三方服务（Glances 等，D36）** |
 | 5 | 自定义 API 二期受限 JS 模板的安全边界 | 二期扩展 | **✅ 已定论：受限 JSX（Homarr 模式，D35）** |
-| 6 | **Workspace 实体形态**（概念模型"Workspace 拥有数据"在 schema 中以 `user_id` 代位；M2 建 Todo/RSS/凭证表前需定：引入 `workspace` 表 vs 继续 `user_id` 代位） | M2 全部业务表的归属设计 | **M2 启动前（新增）** |
+| 6 | **Workspace 实体形态**（概念模型"Workspace 拥有数据"在 schema 中以 `user_id` 代位；M2 建 Todo/RSS/凭证表前需定：引入 `workspace` 表 vs 继续 `user_id` 代位） | M2 全部业务表的归属设计 | **✅ 已定论（2026-10-01 追认）：维持 `user_id` 代位（D21 归属字段既定事实，多轮实施验证；引入 workspace 表留待多用户触发的 D1/D9 远期）** |
 
 > 维护约定：任何【待确认】项定论后，更新本表并在 [02-decisions.md](02-decisions.md) 追加决策条目。
