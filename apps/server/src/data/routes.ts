@@ -23,6 +23,7 @@ import { monitorConnector } from "../connector/monitor.ts";
 import { serviceOverviewConnector } from "../connector/service.ts";
 import { immichGalleryConnector } from "../connector/gallery.ts";
 import { navidromeLibraryConnector } from "../connector/navidrome-library.ts";
+import { portainerContainersConnector, portainerLogsConnector } from "../connector/portainer-containers.ts";
 import {
   PluginPermissionError,
   fetchPluginData,
@@ -59,6 +60,8 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(serviceOverviewConnector);
   registry.register(immichGalleryConnector);
   registry.register(navidromeLibraryConnector);
+  registry.register(portainerContainersConnector);
+  registry.register(portainerLogsConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),

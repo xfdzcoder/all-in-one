@@ -421,6 +421,51 @@ export function useNavidromeLibrary(sourceId?: string, limit?: unknown, refreshS
   };
 }
 
+/** Portainer 容器清单（FR-X3 只读深度，D50）。 */
+export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) {
+  const query = useQuery({
+    queryKey: ["portainer-containers", sourceId ?? ""],
+    queryFn: () => api.widgetData("portainer-containers", { sourceId }) as Promise<Record<string, unknown>>,
+    enabled: Boolean(sourceId),
+    staleTime: 30_000,
+    refetchInterval: refreshInterval(refreshSec, 120_000),
+  });
+  return {
+    data: query.data as
+      | {
+          containers: Array<{
+            id: string;
+            name: string;
+            state: string;
+            status: string;
+            image?: string;
+            ports?: string;
+            abnormal: boolean;
+          }>;
+          notes?: string[];
+        }
+      | undefined,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
+/** 容器日志尾部（点行时按需取，只读）。 */
+export function usePortainerLogs(sourceId?: string, containerId?: string) {
+  const query = useQuery({
+    queryKey: ["portainer-logs", sourceId ?? "", containerId ?? ""],
+    queryFn: () => api.widgetData("portainer-logs", { sourceId, containerId }) as Promise<{ logs: string }>,
+    enabled: Boolean(sourceId && containerId),
+    staleTime: 10_000,
+  });
+  return {
+    logs: query.data?.logs,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];

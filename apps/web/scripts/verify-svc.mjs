@@ -44,12 +44,16 @@ const mock = createServer((req, res) => {
   if (url.startsWith("/api/endpoints/1/docker/containers/json"))
     return res.end(
       json([
-        { Names: ["/good"], State: "running", Status: "Up 2 days" },
-        { Names: ["/bad"], State: "exited", Status: "Exited (1) 2 days ago" },
+        { Id: "c-good", Names: ["/good"], State: "running", Status: "Up 2 days" },
+        { Id: "c-bad", Names: ["/bad"], State: "exited", Status: "Exited (1) 2 days ago" },
       ]),
     );
   if (url.startsWith("/api/endpoints/1/docker/info"))
     return res.end(json({ Images: 32, NVolumes: 5, NCPU: 8, MemTotal: 8 * 2 ** 30 }));
+  if (url.startsWith("/api/endpoints/1/docker/containers/") && url.includes("/logs")) {
+    res.setHeader("Content-Type", "application/vnd.docker.raw-stream");
+    return res.end(Buffer.concat([Buffer.from([1, 0, 0, 0, 0, 0, 0, 5]), Buffer.from("hello")]));
+  }
   if (url.startsWith("/api/endpoints")) return res.end(json([{ Id: 1 }, { Id: 2 }]));
   // navidrome（实测形态：无 getStats → getScanStatus + getArtists）
   if (url.startsWith("/rest/ping")) return res.end(json({ "subsonic-response": { status: "ok", version: "0.53.3" } }));
@@ -161,6 +165,27 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 15000 });
   await sleep(400);
 
+  // 重置首页布局（清掉历史轮次的测试卡 —— scoped 查找按首个匹配，残留会污染断言）
+  await page.evaluate(async () => {
+    const seed = [
+      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+    ];
+    const list = await (await fetch("/api/dashboards")).json();
+    const home = list.find((d) => d.title === "首页");
+    await fetch(`/api/dashboards/${home.id}/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
+    });
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 15000 });
+  await sleep(800);
+
   // 前置：四类服务连接 + 一个坏连接（API 播种）
   const seeded = await page.evaluate(
     async ({ base, uniq }) => {
@@ -225,6 +250,29 @@ try {
     return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
   });
   ok("SVC navidrome album covers render (D50)", ndGal.count >= 1 && ndGal.dataUri, JSON.stringify(ndGal));
+
+  // Q52 Portainer 容器清单（D50 只读深度）：清单 + 异常高亮 + 日志尾部只读
+  ok("SVC add portainer containers", await addOverview(`svc-portainer-${uniq}`, "Portainer 容器清单"));
+  await sleep(2500);
+  const pc = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
+    const t = item?.textContent ?? "";
+    return { hasGood: t.includes("good"), hasBad: t.includes("bad"), hasExited: t.includes("Exited (1)") };
+  });
+  ok("SVC portainer container list + abnormal surfaced", pc.hasGood && pc.hasBad && pc.hasExited, JSON.stringify(pc));
+  ok(
+    "SVC portainer logs modal (read-only)",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
+      const row = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.includes("bad"));
+      row?.click();
+      return Boolean(row);
+    }),
+  );
+  await sleep(1500);
+  ok("SVC portainer logs tail renders", (await page.evaluate(() => document.body.textContent ?? "")).includes("hello"), "");
+  await page.keyboard.press("Escape");
+  await sleep(300);
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));

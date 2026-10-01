@@ -13,6 +13,7 @@ import { MonitorWidget } from "./monitor-widget";
 import { ServiceOverviewWidget } from "./service-overview-widget";
 import { ImmichGalleryWidget } from "./immich-gallery-widget";
 import { NavidromeLibraryWidget } from "./navidrome-library-widget";
+import { PortainerContainersWidget } from "./portainer-containers-widget";
 
 /**
  * 内置组件清单 —— 全部按 widget-sdk 契约声明（J8：内置组件即规范样例）。
@@ -308,6 +309,24 @@ export const navidromeLibraryManifest: WidgetManifest = {
   },
 };
 
+/** Portainer 容器清单（FR-X3 只读深度，D50）：状态/端口/镜像 + 日志尾部只读。 */
+export const portainerContainersManifest: WidgetManifest = {
+  type: "portainer-containers",
+  name: "Portainer 容器清单",
+  description: "容器状态/端口/镜像清单（只读）：点行看日志尾部，无启停操作",
+  icon: "portainer",
+  category: "服务",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:portainer", help: "在「数据源管理 · 数据连接」维护（Portainer）" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 30, defaultRefreshSec: 120, supportsManualRefresh: true },
+  },
+};
+
 export const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
@@ -337,6 +356,7 @@ export const widgetComponents = {
   "service-overview": ServiceOverviewWidget,
   "immich-gallery": ImmichGalleryWidget,
   "navidrome-library": NavidromeLibraryWidget,
+  "portainer-containers": PortainerContainersWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
@@ -359,6 +379,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   "service-overview": serviceOverviewManifest,
   "immich-gallery": immichGalleryManifest,
   "navidrome-library": navidromeLibraryManifest,
+  "portainer-containers": portainerContainersManifest,
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
@@ -383,6 +404,7 @@ export const builtinManifests: WidgetManifest[] = [
   serviceOverviewManifest,
   immichGalleryManifest,
   navidromeLibraryManifest,
+  portainerContainersManifest,
   launcherManifest,
   iframeManifest,
   customApiManifest,

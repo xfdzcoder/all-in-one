@@ -233,6 +233,18 @@ try {
     if (ndGal.count === 0) await sleep(700);
   }
   ok("LIVE navidrome album covers render", ndGal.count >= 6 && ndGal.dataUri === ndGal.count, JSON.stringify(ndGal));
+
+  // Q52 Portainer 容器清单（D50）：真机清单 + 异常高亮
+  await clickBtn("编辑页面");
+  await sleep(300);
+  ok("LIVE add portainer containers", await addOverview(names.portainer, "Portainer 容器清单"));
+  await clickBtn("完成编辑");
+  await sleep(2500);
+  const pcTxt = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("容器清单"));
+    return item?.textContent ?? "";
+  });
+  ok("LIVE portainer container list matches real host", pcTxt.includes("homepage") && pcTxt.includes("minecraft-mc-1") && pcTxt.includes("Exited (143)"), pcTxt.slice(0, 160));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
