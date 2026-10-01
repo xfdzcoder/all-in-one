@@ -12,9 +12,10 @@ export const todoConnector: WidgetConnector = {
   async fetch(query: WidgetDataQuery, ctx: FetchContext) {
     const list = typeof query.config.list === "string" ? query.config.list : undefined;
     const filter = typeof query.config.filter === "string" ? query.config.filter : "open";
+    // SRV-10：归档项**不进组件**（与 REST 默认口径、schema 注释一致；数据源管理走 includeArchived 可见/可恢复）
     const where = list
-      ? and(eq(todo.userId, ctx.userId), eq(todo.list, list))
-      : eq(todo.userId, ctx.userId);
+      ? and(eq(todo.userId, ctx.userId), eq(todo.list, list), eq(todo.archived, false))
+      : and(eq(todo.userId, ctx.userId), eq(todo.archived, false));
     let rows = await ctx.db
       .select()
       .from(todo)

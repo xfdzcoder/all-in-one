@@ -88,7 +88,8 @@ export function registerIconRoutes(app: FastifyInstance): void {
       .where(eq(customIcon.id, params.data.id))
       .limit(1);
     const row = rows[0];
-    if (!row) return reply.code(404).send({ error: "not found" });
+    // SRV-09/CON-11：归属校验（与 DELETE 同口径）——不是自己的图标一律 404（不泄漏存在性）
+    if (!row || row.userId !== req.user!.id) return reply.code(404).send({ error: "not found" });
     const ext = MIME_EXT[row.mime] ?? "bin";
     let bytes: Buffer;
     try {

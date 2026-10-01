@@ -121,7 +121,9 @@ export const mihomoNodesConnector: WidgetConnector = {
       });
       if (p.status < 400) providers = JSON.parse(p.text);
     } catch (err) {
-      notes.push(`订阅源获取失败：${err instanceof Error ? err.message : "未知错误"} —— 该项暂缺`);
+      notes.push(
+        `订阅源获取失败（${err instanceof Error ? err.message : "未知错误"}）—— 检查 external-controller 的 /providers/proxies 是否可达、密钥是否有权限；节点与延迟不受影响`,
+      );
     }
     return { ...normalizeMihomoNodes(proxies, providers), ...(notes.length > 0 ? { notes } : {}) };
   },

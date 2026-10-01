@@ -8,6 +8,7 @@ import type { FastifyInstance } from "fastify";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
+import { customIcon, user } from "../db/schema.ts";
 import { looksUnsafeSvg, sanitizeSvg } from "./sanitize.ts";
 
 let dir: string;
@@ -110,5 +111,30 @@ describe("自定义图标库（Q38b/D45）", () => {
       payload: { name: "x", mime: "image/png", dataBase64: "AAAA" },
     });
     expect(anon.statusCode).toBe(401);
+  });
+});
+
+describe("SRV-09/CON-11：GET /api/icons/:id 归属校验", () => {
+  it("别人的图标一律 404（不泄漏存在性）", async () => {
+    const foreignId = `u-${randomBytes(6).toString("hex")}`;
+    const now = new Date();
+    await db.insert(user).values({
+      id: foreignId,
+      username: `other-${randomBytes(4).toString("hex")}`,
+      passwordHash: "x",
+      createdAt: now,
+      updatedAt: now,
+    });
+    const iconId = `i-${randomBytes(6).toString("hex")}`;
+    await db.insert(customIcon).values({
+      id: iconId,
+      userId: foreignId,
+      name: "foreign.png",
+      mime: "image/png",
+      size: 8,
+      createdAt: new Date(),
+    });
+    const res = await app.inject({ method: "GET", url: `/api/icons/${iconId}`, cookies: { sid } });
+    expect(res.statusCode).toBe(404); // 归属校验（修前：200 直出文件）
   });
 });

@@ -77,9 +77,26 @@ function isPrivateV6(ip: string): boolean {
   return false;
 }
 
+/** SEC-4：错误/日志里的 URL **脱敏** —— 去 userinfo（user:pass@）、query 值打码（保留键名）。
+ *  custom-api 等配置的 URL 常带 `?apikey=…` 或基本认证，明文进 502 响应体/日志 = 密钥外发。 */
+export function sanitizeUrlForLog(raw: string): string {
+  try {
+    const u = new URL(raw);
+    if (u.username || u.password) {
+      u.username = "";
+      u.password = "";
+    }
+    const keys = [...u.searchParams.keys()];
+    for (const k of keys) u.searchParams.set(k, "****");
+    return u.toString().replace(/\?$/, "");
+  } catch {
+    return "<invalid-url>";
+  }
+}
+
 export class SsrfBlockedError extends Error {
   constructor(target: string, reason: string) {
-    super(`SSRF blocked for ${target}: ${reason}`);
+    super(`SSRF blocked for ${sanitizeUrlForLog(target)}: ${reason}`);
     this.name = "SsrfBlockedError";
   }
 }

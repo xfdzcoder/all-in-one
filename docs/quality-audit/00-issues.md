@@ -47,17 +47,17 @@
 | TST-21 | 创建不清理（grep 证实：全仓 method: "DELETE" 仅出现在 mail accounts（verify-gmail.mjs:93,181、verify-mail.mjs:134）与 plugins（ver | 每轮运行向库内累积数据源/凭证：真机库越跑越脏，且 verify-live 的真实 API key/口令凭证（引用）永久留在凭证库（SEC3 场景下这些是高价值残留） | Q100 | 13 |
 | TST-5 | apps/server/src/connector/service.ts:449-503（best() 12 个降级分支）vs apps/server/src/connector/service.test.ts | 契约测试未覆盖每条降级分支：仅 /connections 失败（service.test.ts:149）与 /memory 静默丢弃（:132,:144）有断言；immich 版本/统计双路由回落（service.ts:450-454）、navidrome 扫描状态/曲库统计/最近添加失败（:470 | Q100 | 13 |
 | TST-6 | apps/server/src/connector/opencode.test.ts:107,124、apps/server/src/connector/monitor.test.ts:129 | 弱断言 expect(data.probe.error).toBeTruthy()——只断存在不断内容。D47「原因 + 怎么修」文案被换成 "error" 也全绿，降级文案回归无守卫（对照 service.test.ts:157-160 已示范强断言） | Q100 | 13 |
-| CON-11 | apps/server/src/icon/routes.ts:82-91（GET）vs :118（DELETE） | GET /api/icons/:id 只按 id 查行、不校验 userId，而 DELETE 显式校验 row.userId !== req.user!.id —— 归属校验不一致，多用户预留（NFR5/D9）下的越权读面（当前单用户不可利用，故不入 P0） | Q98 | 12 |
+| CON-11 ✅ | apps/server/src/icon/routes.ts:82-91（GET）vs :118（DELETE） | GET /api/icons/:id 只按 id 查行、不校验 userId，而 DELETE 显式校验 row.userId !== req.user!.id —— 归属校验不一致，多用户预留（NFR5/D9）下的越权读面（当前单用户不可利用，故不入 P0） | Q98 | 12 |
 | SEC-1 ✅ | apps/server/src/connector/ssrf.ts:28-42（isPrivateIp） | 内网段判定漏项 → SSRF 基线「默认拒内网」有绕过空档：① IPv6 link-local 只判 startsWith("fe80")，而 fe80::/10 实含 fe80–febf（fe81::1/fe90::1/febf::1 均通过）；② IPv6 组播 ff00::/8、站点本地 fe | Q98 | 14 |
 | SEC-2 ✅ | apps/server/src/connector/registry.ts:96-103（outboundRequest） | maxBytes 上限在 await res.arrayBuffer() 全量缓冲之后才校验（bytes.byteLength > maxBytes 才抛）——超大响应仍被完整读入内存再丢弃，体积上限对内存打爆/DoS 形同虚设；随后还全量 TextDecoder().decode | Q98 | 14 |
-| SEC-4 | apps/server/src/connector/ssrf.ts:35（SSRF blocked for ${target}）→ apps/server/src/data/routes.ts:126、apps/serv | 错误文案内嵌完整 target URL，经 502/400 响应体与日志外发。若 custom-api 配置的 URL 带 ?apikey=… 查询密钥或 user:pass@ 基本认证（常见 API 形态），密钥即进入日志/响应——与 NFR6 脱敏及 navidrome-library.ts:9 | Q98 | 14 |
+| SEC-4 ✅ | apps/server/src/connector/ssrf.ts:35（SSRF blocked for ${target}）→ apps/server/src/data/routes.ts:126、apps/serv | 错误文案内嵌完整 target URL，经 502/400 响应体与日志外发。若 custom-api 配置的 URL 带 ?apikey=… 查询密钥或 user:pass@ 基本认证（常见 API 形态），密钥即进入日志/响应——与 NFR6 脱敏及 navidrome-library.ts:9 | Q98 | 14 |
 | SEC-5 ✅ | apps/server/src/connector/registry.ts:66-73（cacheKeyOf）；消费点 apps/server/src/data/routes.ts:77 | JSON.stringify(query.config, Object.keys(query.config).sort()) 传的是 replacer 数组，只序列化顶层键 → 嵌套的 SecretRef {credentialRef}（packages/widget-sdk/src/config. | Q98 | 14 |
 | SRV-03 ✅ | apps/server/src/connector/registry.ts:75-81 | cacheKeyOf 对嵌套对象键丢失 → 缓存键碰撞。JSON.stringify(query.config, Object.keys(query.config).sort()) 的 replacer 数组只含顶层键，嵌套对象（SecretRef {type,credentialRef}、app- | Q98 | 10 |
 | SRV-04 ✅ | apps/server/src/connector/registry.ts:107-111 | maxBytes 形同虚设：先整包缓冲再判大小。const bytes = new Uint8Array(await res.arrayBuffer()) 在检查 bytes.byteLength > maxBytes 之前就把响应完整读进内存——恶意/异常上游回一个 2GB 响应会先把进程内存打爆 | Q98 | 10 |
 | SRV-06 ✅ | apps/server/src/data/routes.ts:94-120 + apps/server/src/data/cache.ts:49-52 | 无 single-flight：并发同 key 取数会重复打上游。allowFetch() 的 lastFetch 只在 set() 时写入，两个并发请求同时 miss 缓存会都通过限流判定、各自回源（gallery 单请求就可能连打 6+120 次上游）。与 NFR4「防打爆第三方 API」目标相 | Q98 | 10 |
-| SRV-08 | apps/server/src/connector/service.ts:80（genericHint ?? "该项暂缺"）、connector/mihomo-nodes.ts:124 | 降级文案违反 D47「原因 + 怎么修」：degradeNote 兜底 hint「该项暂缺」与 mihomo 订阅源失败的「—— 该项暂缺」只给结论不给修法，接近 08 §5 明令禁止的「该服务未提供 X」式甩锅（Navidrome 族无 permissionHint，全部走这个兜底）。对照同文件  | Q98 | 10 |
-| SRV-09 | apps/server/src/icon/routes.ts:85-91 | GET /api/icons/:id 缺归属校验（越权读）：只按 customIcon.id 查询即回文件，未比对 row.userId !== req.user!.id（同文件 DELETE 在 :118 有比对）。当前单用户无实际越权，但违背 NFR5/D9「schema 带归属字段为多用户预留 | Q98 | 10 |
-| SRV-10 | apps/server/src/todo/connector.ts:15-22 | todo connector 不排除归档项，与 REST/文档语义不一致。REST GET /api/todos 默认 eq(todo.archived,false)（todo/routes.ts:39），schema 注释明言「归档项不在组件显示，仅数据源管理可见/可恢复」（db/schema.t | Q98 | 10 |
+| SRV-08 ✅ | apps/server/src/connector/service.ts:80（genericHint ?? "该项暂缺"）、connector/mihomo-nodes.ts:124 | 降级文案违反 D47「原因 + 怎么修」：degradeNote 兜底 hint「该项暂缺」与 mihomo 订阅源失败的「—— 该项暂缺」只给结论不给修法，接近 08 §5 明令禁止的「该服务未提供 X」式甩锅（Navidrome 族无 permissionHint，全部走这个兜底）。对照同文件  | Q98 | 10 |
+| SRV-09 ✅ | apps/server/src/icon/routes.ts:85-91 | GET /api/icons/:id 缺归属校验（越权读）：只按 customIcon.id 查询即回文件，未比对 row.userId !== req.user!.id（同文件 DELETE 在 :118 有比对）。当前单用户无实际越权，但违背 NFR5/D9「schema 带归属字段为多用户预留 | Q98 | 10 |
+| SRV-10 ✅ | apps/server/src/todo/connector.ts:15-22 | todo connector 不排除归档项，与 REST/文档语义不一致。REST GET /api/todos 默认 eq(todo.archived,false)（todo/routes.ts:39），schema 注释明言「归档项不在组件显示，仅数据源管理可见/可恢复」（db/schema.t | Q98 | 10 |
 | WEB-2 | apps/web/src/data-admin.tsx:184-188 + apps/server/src/data-source/routes.ts:121-128 | 编辑数据连接时 clean 把空串/undefined 字段整体剔除，而服务端 PATCH 是「合并保留旧值」→ 任何文本字段都无法清空。最危险是 Portainer restartAllow：用户清空「重启白名单」想禁重启，保存后旧白名单仍在（D51「留空=禁止重启」失效），UI 看起来已清空 | Q98 | 11 |
 | WEB-5 | data-hooks.ts:724 vs :734 | useFeeds：queryFn 发送清洗后的 tags，refresh（force）却发送原始 tagIds（Q93 注释明言可能是 ""/非数组畸形值）→ 畸形配置下「查询正常、点刷新报错」的不一致行为 | Q98 | 11 |
 | SDK-1 | packages/widget-sdk/src/manifest.ts:56；plugin.ts:57；触发点 apps/server/src/plugin/package.ts:99 | validateManifest/validatePluginManifest 入参为 null 时 m.type 直接 TypeError（JSON.parse("null") 合法 JSON）；服务端安装插件时 manifest.json 为 null → 未捕获异常 → 500 而非 400（ | Q99 | 12 |
@@ -96,7 +96,7 @@
 | 来源 | 问题 | 并入 |
 |---|---|---|
 | 07 记录 129 | verify 种子步「硬找首页」残留约 13 处 | TST-10（Q100） |
-| 07 记录 129 | mail 账号删除是否回收孤儿 credential | Q98（与 SRV-09/CON-11 归属校验同批核查） |
+| 07 记录 129 | mail 账号删除是否回收孤儿 credential | **✅ 已修（Q98b）**：`deleteCredentialIfOrphan` 保守回收（mail 账号/连接 config/布局 SecretRef 三面引用扫描，拿不准就保留） |
 | 07 记录 132 | verify-live 登录凭证两套来源（须手工 export） | TST-21 同批（Q100） |
 | 07 记录 132 | verify-live navidrome/portainer 写死快照 | TST-11（Q100） |
 

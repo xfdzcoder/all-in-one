@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSafeOutboundUrl, SsrfBlockedError } from "./ssrf.ts";
+import { assertSafeOutboundUrl, sanitizeUrlForLog, SsrfBlockedError } from "./ssrf.ts";
 
 const publicDns = async () => [{ address: "93.184.216.34" }];
 const privateDns = async () => [{ address: "192.168.31.133" }];
@@ -111,5 +111,21 @@ describe("内网判定补严（SRV-01 / SEC-1）", () => {
     await expect(
       assertSafeOutboundUrl("https://evil.example/", false, async () => [{ address: "::ffff:7f00:1" }]),
     ).rejects.toThrow(SsrfBlockedError);
+  });
+});
+
+describe("SEC-4：错误文案脱敏（URL 不外发密钥）", () => {
+  it("masks userinfo and query values, keeps keys", () => {
+    const out = sanitizeUrlForLog("https://user:pass@api.example.com/v1?apikey=super-secret&x=1");
+    expect(out).not.toContain("pass");
+    expect(out).not.toContain("super-secret");
+    expect(out).toContain("apikey=****");
+    expect(out).toContain("api.example.com");
+  });
+
+  it("SsrfBlockedError message never contains the raw secret", async () => {
+    const err = await assertSafeOutboundUrl("http://127.0.0.1:1/x?token=hunter2").catch((e) => e as Error);
+    expect(String(err)).not.toContain("hunter2");
+    expect(String(err)).toContain("token=****");
   });
 });

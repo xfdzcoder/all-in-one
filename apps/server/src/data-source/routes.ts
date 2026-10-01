@@ -4,6 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
+import { deleteCredentialIfOrphan } from "../credentials/store.ts";
 import { dataSource } from "../db/schema.ts";
 
 /** D42：连接类型白名单 —— 扩展 = 加枚举值。 */
@@ -144,12 +145,17 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
     if (!params.success) return reply.code(400).send({ error: "invalid request" });
     const userId = req.user!.id;
     const rows = await app.db
-      .select({ id: dataSource.id })
+      .select({ id: dataSource.id, configJson: dataSource.configJson })
       .from(dataSource)
       .where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)))
       .limit(1);
-    if (rows.length === 0) return reply.code(404).send({ error: "not found" });
+    const row = rows[0];
+    if (!row) return reply.code(404).send({ error: "not found" });
     await app.db.delete(dataSource).where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)));
+    // Q98b（备查项）：连带回收**孤儿凭证**（configJson 里的 credentialRef；仍被引用则保留）
+    for (const id of [...(row.configJson ?? "").matchAll(/"credentialId"\s*:\s*"([^"]+)"/g)].map((m) => m[1])) {
+      await deleteCredentialIfOrphan(app.db, userId, id);
+    }
     return { ok: true };
   });
 

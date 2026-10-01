@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { assertSafeOutboundUrl, SsrfBlockedError } from "../connector/ssrf.ts";
 import { config } from "../config.ts";
-import { readSecret } from "../credentials/store.ts";
+import { deleteCredentialIfOrphan, readSecret } from "../credentials/store.ts";
 import type { Db } from "../db/client.ts";
 import { mailAccount, type MailAccount } from "../db/schema.ts";
 import type {
@@ -147,6 +147,8 @@ export async function deleteAccount(db: Db, userId: string, id: string): Promise
     .delete(mailAccount)
     .where(and(eq(mailAccount.id, id), eq(mailAccount.userId, userId)))
     .returning();
+  // Q98b（备查项）：连带回收**孤儿凭证**（仍被别处引用则保留）
+  if (row?.credentialId) await deleteCredentialIfOrphan(db, userId, row.credentialId);
   return Boolean(row);
 }
 

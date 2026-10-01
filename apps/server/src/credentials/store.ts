@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 
 import type { Db } from "../db/client.ts";
-import { credential, type Credential } from "../db/schema.ts";
+import { credential, dashboard, dataSource, mailAccount, type Credential } from "../db/schema.ts";
 import { decryptSecret, encryptSecret, loadMasterKey } from "./crypto.ts";
 
 /**
@@ -79,6 +79,31 @@ export async function readSecret(
   const row = rows[0];
   if (!row) return null;
   return decryptSecret(row.cipherText, loadMasterKey());
+}
+
+/** Q98b（备查项）：删除邮件账号/数据连接后**回收孤儿凭证** —— 仅当已无任何引用时才删。
+ *  引用面（保守扫描）：`mail_account.credentialId`、`data_source.configJson`、`dashboard.layoutJson`
+ *  （widget props 的 SecretRef）。**拿不准就保留**：宁可留一个孤儿凭证，不可把别人正在用的删断。 */
+export async function deleteCredentialIfOrphan(db: Db, userId: string, credentialId: string): Promise<boolean> {
+  const [mailRef] = await db
+    .select({ id: mailAccount.id })
+    .from(mailAccount)
+    .where(eq(mailAccount.credentialId, credentialId))
+    .limit(1);
+  if (mailRef) return false;
+  const [sourceRef] = await db
+    .select({ id: dataSource.id })
+    .from(dataSource)
+    .where(like(dataSource.configJson, `%${credentialId}%`))
+    .limit(1);
+  if (sourceRef) return false;
+  const [layoutRef] = await db
+    .select({ id: dashboard.id })
+    .from(dashboard)
+    .where(like(dashboard.layoutJson, `%${credentialId}%`))
+    .limit(1);
+  if (layoutRef) return false;
+  return deleteCredential(db, userId, credentialId);
 }
 
 export async function deleteCredential(

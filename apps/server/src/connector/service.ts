@@ -77,7 +77,7 @@ function degradeNote(what: string, err: unknown, permissionHint?: string, generi
   if (permissionHint && (msg.includes("403") || msg.toLowerCase().includes("permission"))) {
     return `${what}获取失败（${msg}）—— ${permissionHint}`;
   }
-  return `${what}获取失败（${msg}）—— ${genericHint ?? "该项暂缺"}`;
+  return `${what}获取失败（${msg}）—— ${genericHint ?? "检查该服务接口是否支持此指标、稍后重试；其余指标不受影响"}`;
 }
 
 /** Immich（实测 v3 路由 /api/server/*，旧版 /api/*；API Key 细粒度权限）。 */

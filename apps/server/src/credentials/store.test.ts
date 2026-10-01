@@ -9,9 +9,11 @@ import { ensureInitialUser } from "../auth/ensure-user.ts";
 import {
   createCredential,
   deleteCredential,
+  deleteCredentialIfOrphan,
   listCredentials,
   readSecret,
 } from "./store.ts";
+import { dashboard, mailAccount } from "../db/schema.ts";
 import { generateMasterKeyBase64 } from "./crypto.ts";
 
 let dir: string;
@@ -62,5 +64,45 @@ describe("credential store (SEC3)", () => {
     const created = await createCredential(db, userId, "temp", "generic", "s");
     expect(await deleteCredential(db, userId, created.id)).toBe(true);
     expect(await readSecret(db, userId, created.id)).toBeNull();
+  });
+});
+
+describe("deleteCredentialIfOrphan（Q98b：孤儿凭证回收，拿不准就保留）", () => {
+  it("引用清零才删", async () => {
+    const c = await createCredential(db, userId, "orphan-free", "password", "s");
+    expect(await deleteCredentialIfOrphan(db, userId, c.id)).toBe(true);
+    expect((await listCredentials(db, userId)).some((x) => x.id === c.id)).toBe(false);
+  });
+
+  it("mail_account 仍引用 → 保留", async () => {
+    const c = await createCredential(db, userId, "orphan-mail", "password", "s");
+    const now = new Date();
+    await db.insert(mailAccount).values({
+      id: randomBytes(8).toString("hex"),
+      userId,
+      name: "A",
+      host: "imap.test",
+      username: "u",
+      credentialId: c.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    expect(await deleteCredentialIfOrphan(db, userId, c.id)).toBe(false);
+    expect((await listCredentials(db, userId)).some((x) => x.id === c.id)).toBe(true);
+  });
+
+  it("dashboard.layoutJson 里的 SecretRef 仍引用 → 保留", async () => {
+    const c = await createCredential(db, userId, "orphan-layout", "password", "s");
+    const now = new Date();
+    await db.insert(dashboard).values({
+      id: randomBytes(8).toString("hex"),
+      userId,
+      title: `tmp-${randomBytes(4).toString("hex")}`,
+      layoutJson: JSON.stringify([{ props: { apiToken: { type: "secretRef", credentialId: c.id } } }]),
+      createdAt: now,
+      updatedAt: now,
+    });
+    expect(await deleteCredentialIfOrphan(db, userId, c.id)).toBe(false);
+    expect((await listCredentials(db, userId)).some((x) => x.id === c.id)).toBe(true);
   });
 });

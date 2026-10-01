@@ -249,3 +249,18 @@ describe("service-overview 数据通道（sourceId → 连接派发）", () => {
     ).rejects.toThrow("数据连接不存在");
   });
 });
+
+describe("SRV-08：降级文案 D47（原因 + 怎么修）", () => {
+  it("generic 兜底不再是「该项暂缺」式甩锅", async () => {
+    const { normalizeNavidrome } = await import("./service.ts");
+    const out = normalizeNavidrome({
+      ping: { "subsonic-response": { status: "ok", version: "0.53.3" } },
+      errors: [{ what: "专辑", err: new Error("boom") }],
+    });
+    const note = out.notes?.[0] ?? "";
+    expect(note).toContain("专辑获取失败"); // 原因
+    expect(note).toContain("检查"); // 怎么修
+    expect(note).not.toContain("该项暂缺");
+    expect(note).not.toContain("该服务未提供");
+  });
+});
