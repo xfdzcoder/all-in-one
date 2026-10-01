@@ -547,6 +547,26 @@
   bottom: 4px;
 }
 
+/* ── 可点击数据行（Q52 容器清单等；D52 批1 补齐 —— 裸 button 会吃 UA 底色破坏 AA）── */
+.wb-admin-row {
+  display: block;
+  width: 100%;
+  padding: var(--wb-space-2) var(--wb-space-3);
+  background: var(--wb-color-surface);
+  border: 1px solid var(--wb-color-border);
+  border-radius: var(--wb-radius-sm);
+  color: inherit;
+  font: inherit;
+  transition:
+    background var(--wb-motion-fast) var(--wb-ease-out),
+    border-color var(--wb-motion-fast) var(--wb-ease-out);
+}
+
+.wb-admin-row:hover {
+  background: var(--wb-color-surface-hover);
+  border-color: var(--wb-color-border-strong);
+}
+
 /* ── 服务概览（D48 结构化卡片 + 迷你趋势）── */
 .wb-metric-grid {
   display: grid;

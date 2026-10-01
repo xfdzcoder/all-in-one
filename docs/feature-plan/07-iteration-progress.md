@@ -147,7 +147,7 @@
 - [ ] Q57 · FR-X3g Mihomo 策略组切换（写操作，**D51**）：切换前确认（当前→目标节点）+ 审计日志 + 真机验证
 
 - [x] Q58 · UI 现代化·阶段0 样张探索（用户拍板：**A 克制精致**主方向 / 先样张 / 含微交互+浅色主题 / 基础层先行）**✅ 2026-10-01**——4 张样张（现状/A 纯/A+玻璃/A+柔和，`capture-style-variants.mjs` 管线 + docs/design-audit/style-v2/）；**用户选定 02「A+玻璃背景」**（半透明卡片+氛围光斑）+ 微调要求**按钮尽量 icon 化**（→ Q65）
-- [ ] Q59 · UI 现代化·视觉规范 v2 + **D52**：tokens 升级（OKLCH tinted dark 4 级表面 / 字阶+展示级数字 / 多层阴影 / 动效令牌）+ 品牌字体 vendor（Inter/Geist，OFL 登记）+ 双主题变量组 + 规范文档
+- [x] Q59 · UI 现代化·视觉规范 v2 + **D52**：tokens 升级（OKLCH tinted dark 4 级表面 / 字阶+展示级数字 / 多层阴影 / 动效令牌）+ 品牌字体 vendor（Inter Variable，OFL）+ 双主题变量组 + 规范文档**✅ 2026-10-01**——tokens.css v2（玻璃/氛围/动效/阴影/字重令牌 + `[data-theme=light]` 变量组）+ @fontsource-variable/inter + `design-audit/03-style-v2.md`；**AA 修**：`.wb-admin-row` 裸 button 吃 UA 底色（Q52 遗留）补行样式、muted 提亮一档 → verify-dark 3/3
 - [ ] Q60 · UI 现代化·批1 基础层：令牌全站生效 + 背景氛围（顶部光晕/微噪点）+ 滚动条/焦点环/选中色 + Mantine 主题同步
 - [ ] Q61 · UI 现代化·批2 组件层：卡片 hover 抬升/边框高光、按钮渐变+按压反馈、徽标/弹窗/表单质感
 - [ ] Q62 · UI 现代化·批3 内容层：数据卡片数字排版（tabular-nums/大字重对比）、骨架屏替换"加载中…"、空态插图+引导

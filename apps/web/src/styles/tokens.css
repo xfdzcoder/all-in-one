@@ -1,36 +1,46 @@
 /**
- * 设计令牌（Q19b）—— 全站唯一的定制入口。
+ * 设计令牌（Q19b 初版 · **Q59 视觉规范 v2 / D52**：A 克制精致 + 玻璃光感背景）。
  *
- * 约定（支撑"用户可自定义所有 CSS"）：
+ * 约定（支撑"用户可自定义所有 CSS"，D39 契约不变）：
  * 1. 组件样式只允许引用本文件的 --wb-* 变量与语义类名（见 widgets.css）；
  * 2. 用户覆盖方式二选一：
  *    a) 覆盖变量：在 /custom.css（或任意更晚加载的样式表）重定义任意 --wb-* 即全局生效；
  *    b) 覆盖规则：按 .wb-* 语义类名书写选择器（类名稳定、不随实现变动）；
  * 3. 禁止在组件里写内联 style（内联不可覆盖）；本文件不使用 !important（不与用户抢优先级）。
+ *
+ * v2 主题结构：`:root` = 深色（默认）；`:root[data-theme="light"]` = 浅色（Q63 接线切换）。
  */
 
 :root {
-  /* ── 表面（深色层级用表面明度表达，不用投影） ───────────────── */
-  --wb-color-bg: #0f1216;
-  --wb-color-surface: #161b22;
-  --wb-color-surface-hover: #1c222b;
-  --wb-color-surface-raised: #222a35;
-  --wb-color-border: rgba(255, 255, 255, 0.08);
-  --wb-color-border-strong: rgba(255, 255, 255, 0.16);
-  --wb-color-overlay: rgba(0, 0, 0, 0.55);
+  /* ── 表面（tinted slate：带蓝紫色偏的深色分层；玻璃质感用 --wb-surface-glass-alpha 表达） ── */
+  --wb-color-bg: #0a0d14;
+  --wb-color-surface: #111621;
+  --wb-color-surface-hover: #171d2b;
+  --wb-color-surface-raised: #1c2333;
+  --wb-color-border: rgba(140, 168, 255, 0.1);
+  --wb-color-border-strong: rgba(140, 168, 255, 0.24);
+  --wb-color-overlay: rgba(4, 6, 12, 0.6);
 
-  /* ── 文本（AA 已由 verify-dark 快检守护） ───────────────────── */
-  --wb-color-text: #e8eef5;
-  --wb-color-text-secondary: #b7c0cc;
-  --wb-color-text-muted: #a6a9ae;
+  /* ── 玻璃与氛围（D52：A+玻璃背景） ───────────────────────── */
+  --wb-surface-glass-alpha: 0.55;
+  --wb-blur: 18px;
+  --wb-bg-glow-1: rgba(64, 120, 255, 0.28);
+  --wb-bg-glow-2: rgba(158, 102, 255, 0.22);
+  --wb-bg-glow-3: rgba(42, 196, 176, 0.12);
+
+  /* ── 文本（AA 由 verify-dark 快检守护，深浅双主题） ─────────── */
+  --wb-color-text: #eef2fa;
+  --wb-color-text-secondary: #bac4d8;
+  --wb-color-text-muted: #959db2;
 
   /* ── 语义色 ─────────────────────────────────────────────── */
-  --wb-color-accent: #2f6fd0;
-  --wb-color-accent-hover: #3b7fe6;
+  --wb-color-accent: #4f7dff;
+  --wb-color-accent-hover: #6a92ff;
   --wb-color-success: #2f9e63;
   --wb-color-warning: #d9822b;
   --wb-color-danger: #d64545;
   --wb-color-info: #2f9fc4;
+  --wb-color-accent-glow: rgba(63, 99, 232, 0.35);
 
   /* ── 间距（8pt 网格） ───────────────────────────────────── */
   --wb-space-1: 4px;
@@ -40,15 +50,18 @@
   --wb-space-6: 24px;
   --wb-space-8: 32px;
 
-  /* ── 圆角 / 边框 / 阴影 ─────────────────────────────────── */
-  --wb-radius-sm: 6px;
-  --wb-radius-md: 10px;
-  --wb-radius-lg: 14px;
+  /* ── 圆角 / 边框 / 阴影（多层阴影体系 D52） ──────────────── */
+  --wb-radius-sm: 8px;
+  --wb-radius-md: 12px;
+  --wb-radius-lg: 16px;
+  --wb-radius-pill: 999px;
   --wb-border: 1px solid var(--wb-color-border);
-  --wb-shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --wb-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.28);
+  --wb-shadow-card-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 20px 48px rgba(0, 0, 0, 0.36);
+  --wb-shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(140, 168, 255, 0.08);
 
-  /* ── 字体 / 字阶 / 字重（模块化） ────────────────────────── */
-  --wb-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* ── 字体 / 字阶 / 字重（Inter Variable + 展示级数字排版） ── */
+  --wb-font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --wb-font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;
   --wb-text-xs: 12px;
   --wb-text-sm: 13px;
@@ -56,14 +69,53 @@
   --wb-text-lg: 16px;
   --wb-text-xl: 20px;
   --wb-text-2xl: 26px;
+  --wb-text-display: 32px;
   --wb-leading: 1.5;
   --wb-weight-regular: 400;
   --wb-weight-medium: 500;
   --wb-weight-semibold: 600;
+  --wb-weight-bold: 700;
+  --wb-tracking-tight: -0.02em;
 
-  /* ── 过渡 / 层级 ───────────────────────────────────────── */
-  --wb-transition: 150ms ease;
+  /* ── 过渡 / 动效（D52 动效令牌） ─────────────────────────── */
+  --wb-transition: 150ms cubic-bezier(0.2, 0.8, 0.25, 1);
+  --wb-motion-fast: 120ms;
+  --wb-motion-base: 180ms;
+  --wb-motion-slow: 280ms;
+  --wb-ease-out: cubic-bezier(0.2, 0.8, 0.25, 1);
 
   /* ── NFR2 触控目标（移动端由全局 CSS 引用；勿低于 44px） ──── */
   --wb-touch-min: 44px;
+}
+
+/* ── 浅色主题（Q63 接线切换；值先备齐，AA 双主题守护） ─────── */
+:root[data-theme="light"] {
+  --wb-color-bg: #f4f6fb;
+  --wb-color-surface: rgba(255, 255, 255, 0.72);
+  --wb-color-surface-hover: rgba(255, 255, 255, 0.86);
+  --wb-color-surface-raised: #ffffff;
+  --wb-color-border: rgba(30, 48, 90, 0.1);
+  --wb-color-border-strong: rgba(30, 48, 90, 0.2);
+  --wb-color-overlay: rgba(20, 28, 48, 0.32);
+
+  --wb-surface-glass-alpha: 0.72;
+  --wb-bg-glow-1: rgba(96, 141, 255, 0.22);
+  --wb-bg-glow-2: rgba(168, 122, 255, 0.16);
+  --wb-bg-glow-3: rgba(42, 196, 176, 0.12);
+
+  --wb-color-text: #17202f;
+  --wb-color-text-secondary: #3e4a60;
+  --wb-color-text-muted: #5c6577;
+
+  --wb-color-accent: #2f5fe0;
+  --wb-color-accent-hover: #2450cc;
+  --wb-color-success: #1d7c4b;
+  --wb-color-warning: #a85f16;
+  --wb-color-danger: #b83232;
+  --wb-color-info: #18799c;
+  --wb-color-accent-glow: rgba(47, 95, 224, 0.22);
+
+  --wb-shadow-card: 0 1px 2px rgba(24, 40, 80, 0.06), 0 12px 32px rgba(24, 40, 80, 0.1);
+  --wb-shadow-card-hover: 0 2px 6px rgba(24, 40, 80, 0.08), 0 20px 48px rgba(24, 40, 80, 0.14);
+  --wb-shadow-modal: 0 24px 64px rgba(24, 40, 80, 0.22), 0 0 0 1px rgba(30, 48, 90, 0.08);
 }
