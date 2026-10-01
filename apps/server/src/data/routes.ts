@@ -22,6 +22,7 @@ import { opencodeConnector } from "../connector/opencode.ts";
 import { monitorConnector } from "../connector/monitor.ts";
 import { serviceOverviewConnector } from "../connector/service.ts";
 import { immichGalleryConnector } from "../connector/gallery.ts";
+import { navidromeLibraryConnector } from "../connector/navidrome-library.ts";
 import {
   PluginPermissionError,
   fetchPluginData,
@@ -57,6 +58,7 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(monitorConnector);
   registry.register(serviceOverviewConnector);
   registry.register(immichGalleryConnector);
+  registry.register(navidromeLibraryConnector);
   return {
     registry,
     cache: new DataCache({ defaultTtlSec: 60, minIntervalSec: 5 }),

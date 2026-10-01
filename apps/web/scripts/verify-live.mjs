@@ -216,6 +216,23 @@ try {
     if (gal.count === 0) await sleep(700);
   }
   ok("LIVE immich gallery real thumbnails render", gal.count >= 6 && gal.dataUri === gal.count, JSON.stringify(gal));
+
+  // Q51 Navidrome 专辑墙（D50）：真机封面网格
+  await clickBtn("编辑页面");
+  await sleep(300);
+  ok("LIVE add navidrome album wall", await addOverview(names.navidrome, "Navidrome 专辑墙"));
+  await clickBtn("完成编辑");
+  await sleep(1000);
+  let ndGal = { count: 0, dataUri: 0 };
+  for (let i = 0; i < 40 && ndGal.count === 0; i++) {
+    ndGal = await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((x) => x.textContent.includes("专辑墙"));
+      const imgs = [...(item?.querySelectorAll(".wb-gallery img") ?? [])];
+      return { count: imgs.length, dataUri: imgs.filter((x) => x.src.startsWith("data:image/jpeg;base64,")).length };
+    });
+    if (ndGal.count === 0) await sleep(700);
+  }
+  ok("LIVE navidrome album covers render", ndGal.count >= 6 && ndGal.dataUri === ndGal.count, JSON.stringify(ndGal));
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

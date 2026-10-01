@@ -397,6 +397,30 @@ export function useImmichGallery(sourceId?: string, limit?: unknown, refreshSec?
   };
 }
 
+/** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加 + 正在播放，封面服务端代取。 */
+export function useNavidromeLibrary(sourceId?: string, limit?: unknown, refreshSec?: unknown) {
+  const n = typeof limit === "number" && Number.isFinite(limit) ? limit : 12;
+  const query = useQuery({
+    queryKey: ["navidrome-library", sourceId ?? "", n],
+    queryFn: () => api.widgetData("navidrome-library", { sourceId, limit: n }) as Promise<Record<string, unknown>>,
+    enabled: Boolean(sourceId),
+    staleTime: 60_000,
+    refetchInterval: refreshInterval(refreshSec, 300_000),
+  });
+  return {
+    data: query.data as
+      | {
+          albums: Array<{ id: string; name: string; artist?: string; cover: string }>;
+          nowPlaying: Array<{ title: string; artist?: string; username?: string }>;
+          notes?: string[];
+        }
+      | undefined,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+    refresh: () => void query.refetch(),
+  };
+}
+
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const key = ["service-overview", sourceId ?? ""];

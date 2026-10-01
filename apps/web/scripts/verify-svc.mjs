@@ -58,8 +58,12 @@ const mock = createServer((req, res) => {
   if (url.startsWith("/rest/getArtists"))
     return res.end(json({ "subsonic-response": { artists: { index: [{ artist: [{ name: "甲", albumCount: 6 }, { name: "乙", albumCount: 4 }] }] } } }));
   if (url.startsWith("/rest/getAlbumList2"))
-    return res.end(json({ "subsonic-response": { albumList2: { album: [{ name: "新专辑", artist: "某人" }] } } }));
+    return res.end(json({ "subsonic-response": { albumList2: { album: [{ id: "al-1", name: "新专辑", artist: "某人", coverArt: "al-1" }] } } }));
   if (url.startsWith("/rest/getNowPlaying")) return res.end(json({ "subsonic-response": { nowPlaying: {} } }));
+  if (url.startsWith("/rest/getCoverArt")) {
+    res.setHeader("Content-Type", "image/jpeg");
+    return res.end(Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x02]));
+  }
   // immich（实测 v3 路由）
   if (url.startsWith("/api/server/ping")) return res.end(json({ res: "pong" }));
   if (url.startsWith("/api/server/version")) return res.end(json({ major: 3, minor: 2, patch: 2 }));
@@ -211,6 +215,16 @@ try {
     return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
   });
   ok("SVC immich gallery renders server-fetched thumbs (D50)", gal.count >= 1 && gal.dataUri, JSON.stringify(gal));
+
+  // Q51 Navidrome 专辑墙（D50 只读深度）：封面服务端代取 → data URI 网格
+  ok("SVC add navidrome album wall", await addOverview(`svc-navidrome-${uniq}`, "Navidrome 专辑墙"));
+  await sleep(2500);
+  const ndGal = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => i.textContent.includes("专辑墙"));
+    const imgs = [...(item?.querySelectorAll(".wb-gallery img") ?? [])];
+    return { count: imgs.length, dataUri: imgs.every((i) => i.src.startsWith("data:image/jpeg;base64,")) };
+  });
+  ok("SVC navidrome album covers render (D50)", ndGal.count >= 1 && ndGal.dataUri, JSON.stringify(ndGal));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));
