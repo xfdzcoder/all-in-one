@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge, Button, Group, Modal, Text } from "@mantine/core";
 
 import { useImmichGallery } from "./data-hooks";
+import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
@@ -16,10 +17,18 @@ export function ImmichGalleryWidget({
   sourceId,
   limit = 12,
   refreshSec,
+  layout = "grid",
+  randomIntervalSec = 30,
+  minCell = 72,
 }: {
   sourceId?: string;
   limit?: number;
   refreshSec?: number;
+  /** Q71（项 6）：`grid` 铺开 / `random` 随机单图定时换。 */
+  layout?: "grid" | "random";
+  randomIntervalSec?: number;
+  /** 格子最小边长 px（只限最小、不限最大）。 */
+  minCell?: number;
 }) {
   const { data, loading, error, refresh } = useImmichGallery(sourceId, limit, refreshSec);
   const [preview, setPreview] = useState<{ thumb: string; href: string; at: string } | null>(null);
@@ -53,32 +62,27 @@ export function ImmichGalleryWidget({
         </Text>
       )}
       {data && data.items.length > 0 && (
-        <div className="wb-gallery">
-          {data.items.map((it) => (
-            <button
-              key={it.id}
-              type="button"
-              className={`wb-gallery__cell${it.thumb ? "" : " wb-gallery__cell--empty"}`}
-              title={it.at ? new Date(it.at).toLocaleString("zh-CN") : undefined}
-              onClick={() => setPreview({ thumb: it.thumb, href: it.href, at: it.at })}
-            >
-              {/* Q70：缩略图不可用时渲染**占位块**，不再丢格子（真机：视频缩略图任务未生成会 404） */}
-              {it.thumb ? (
-                <img src={it.thumb} alt="" loading="lazy" />
-              ) : (
-                <span className="wb-gallery__placeholder">
-                  <IconPhotoOff size={18} aria-hidden />
-                  <span className="wb-sr-only">缩略图不可用</span>
-                </span>
-              )}
-              {it.type === "VIDEO" && (
+        <MediaWall
+          items={data.items.map((it) => ({
+            id: it.id,
+            src: it.thumb,
+            title: it.at ? new Date(it.at).toLocaleString("zh-CN") : undefined,
+            badge:
+              it.type === "VIDEO" ? (
                 <Badge size="compact-xs" className="wb-gallery__video" color="dark" variant="filled">
                   视频
                 </Badge>
-              )}
-            </button>
-          ))}
-        </div>
+              ) : undefined,
+            placeholder: { icon: <IconPhotoOff size={18} aria-hidden />, label: "缩略图不可用" },
+          }))}
+          layout={layout}
+          randomIntervalSec={randomIntervalSec}
+          minCell={minCell}
+          onOpen={(it) => {
+            const src = data.items.find((x) => x.id === it.id);
+            if (src) setPreview({ thumb: src.thumb, href: src.href, at: src.at });
+          }}
+        />
       )}
       {(data?.notes ?? []).length > 0 && (
         <div className="wb-svc-notes">

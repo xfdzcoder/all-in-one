@@ -284,6 +284,19 @@ export const immichGalleryManifest: WidgetManifest = {
   configSchema: [
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:immich", help: "在「数据源管理 · 数据连接」维护（Immich）" },
     { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近上传优先" },
+    {
+      key: "layout",
+      label: "展示模式",
+      type: "select",
+      default: "grid",
+      options: [
+        { value: "grid", label: "铺开（网格填满卡片）" },
+        { value: "random", label: "随机（整卡一图，定时换）" },
+      ],
+      help: "Q71（项 6）：铺开 = 网格放大填满卡片；随机 = 整卡只展示一张图并定时随机刷新",
+    },
+    { key: "randomIntervalSec", label: "随机换图间隔（秒）", type: "number", default: 30, help: "仅「随机」模式生效，最短 3 秒" },
+    { key: "minCell", label: "格子最小边长（px）", type: "number", default: 72, help: "只限最小、不限最大：有空间就放大填满卡片，放不下则滚动" },
   ],
   capabilities: {
     data: { source: "http-connector" },
@@ -303,6 +316,19 @@ export const navidromeLibraryManifest: WidgetManifest = {
   configSchema: [
     { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:navidrome", help: "在「数据源管理 · 数据连接」维护（Navidrome）" },
     { key: "limit", label: "显示张数", type: "number", default: 12, help: "1–24，最近添加优先" },
+    {
+      key: "layout",
+      label: "展示模式",
+      type: "select",
+      default: "grid",
+      options: [
+        { value: "grid", label: "铺开（网格填满卡片）" },
+        { value: "random", label: "随机（整卡一图，定时换）" },
+      ],
+      help: "Q71（项 6）：铺开 = 网格放大填满卡片；随机 = 整卡只展示一张封面并定时随机刷新",
+    },
+    { key: "randomIntervalSec", label: "随机换封面间隔（秒）", type: "number", default: 30, help: "仅「随机」模式生效，最短 3 秒" },
+    { key: "minCell", label: "格子最小边长（px）", type: "number", default: 72, help: "只限最小、不限最大：有空间就放大填满卡片，放不下则滚动" },
   ],
   // D54：播放遥控（navidrome.play/pause/next/prev/stop）已移除 —— 本组件纯只读
   capabilities: {

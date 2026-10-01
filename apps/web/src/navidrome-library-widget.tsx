@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge, Group, Modal, Text } from "@mantine/core";
 
 import { useNavidromeLibrary } from "./data-hooks";
+import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
 import { useDataSources } from "./data-hooks";
 import { WbAlert, WbLoading, IconAction } from "./ui";
@@ -16,10 +17,18 @@ export function NavidromeLibraryWidget({
   sourceId,
   limit = 12,
   refreshSec,
+  layout = "grid",
+  randomIntervalSec = 30,
+  minCell = 72,
 }: {
   sourceId?: string;
   limit?: number;
   refreshSec?: number;
+  /** Q71（项 6）：`grid` 铺开 / `random` 随机单图定时换。 */
+  layout?: "grid" | "random";
+  randomIntervalSec?: number;
+  /** 格子最小边长 px（只限最小、不限最大）。 */
+  minCell?: number;
 }) {
   const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec);
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
@@ -69,27 +78,21 @@ export function NavidromeLibraryWidget({
         </Text>
       )}
       {data && data.albums.length > 0 && (
-        <div className="wb-gallery">
-          {data.albums.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              className={`wb-gallery__cell${a.cover ? "" : " wb-gallery__cell--empty"}`}
-              title={`${a.name}${a.artist ? ` · ${a.artist}` : ""}`}
-              onClick={() => setPreview({ cover: a.cover, name: a.name, artist: a.artist })}
-            >
-              {/* Q70：封面不可用时渲染**占位块**，不再丢格子（真机：封面原图过大被上限丢弃） */}
-              {a.cover ? (
-                <img src={a.cover} alt="" loading="lazy" />
-              ) : (
-                <span className="wb-gallery__placeholder">
-                  <IconDiscOff size={18} aria-hidden />
-                  <span className="wb-sr-only">封面不可用</span>
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <MediaWall
+          items={data.albums.map((a) => ({
+            id: a.id,
+            src: a.cover,
+            title: `${a.name}${a.artist ? ` · ${a.artist}` : ""}`,
+            placeholder: { icon: <IconDiscOff size={18} aria-hidden />, label: "封面不可用" },
+          }))}
+          layout={layout}
+          randomIntervalSec={randomIntervalSec}
+          minCell={minCell}
+          onOpen={(it) => {
+            const a = data.albums.find((x) => x.id === it.id);
+            if (a) setPreview({ cover: a.cover, name: a.name, artist: a.artist });
+          }}
+        />
       )}
       {(data?.notes ?? []).length > 0 && (
         <div className="wb-svc-notes">

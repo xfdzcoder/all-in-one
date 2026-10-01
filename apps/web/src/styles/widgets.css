@@ -562,10 +562,13 @@
   visibility: hidden;
 }
 
-/* ── Immich 照片墙（FR-X3 只读深度，D50）── */
+/* ── Immich 照片墙 / Navidrome 专辑墙（FR-X3 只读深度，D50 · **Q71**）── */
 .wb-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  /* 项 6：**只限最小、不限最大** —— 列/行都用 minmax(最小值, 1fr)：
+     有空间就无上限放大填满卡片，低于最小值不压缩，放不下就滚动。 */
+  grid-template-columns: repeat(auto-fill, minmax(var(--wb-gallery-min, 72px), 1fr));
+  grid-auto-rows: minmax(var(--wb-gallery-min, 72px), 1fr);
   gap: var(--wb-space-1);
   overflow: auto;
   flex: 1;
@@ -575,13 +578,45 @@
 
 .wb-gallery__cell {
   position: relative;
-  aspect-ratio: 1;
+  /* Q71：去掉固定 aspect-ratio:1 —— 行高由网格的 minmax(最小值,1fr) 决定，从而撑满卡片 */
   padding: 0;
   border: none;
   border-radius: var(--wb-radius-sm);
   overflow: hidden;
   cursor: pointer;
   background: var(--wb-color-surface-raised, rgba(255, 255, 255, 0.06));
+}
+
+/* Q71：随机模式 —— 整卡一张图（cover 裁切铺满） */
+.wb-gallery--random {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--wb-radius-sm);
+}
+
+.wb-gallery__random-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+  animation: wb-gallery-fade var(--wb-motion-slow) var(--wb-ease-out) both;
+}
+
+@keyframes wb-gallery-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-gallery__random-img {
+    animation: none;
+  }
 }
 
 .wb-gallery__cell img {

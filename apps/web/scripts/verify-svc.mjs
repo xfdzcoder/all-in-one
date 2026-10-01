@@ -402,6 +402,65 @@ try {
     };
   });
   ok("SVC gallery shows official brand icons (Q39)", galleryIcons.total >= 7 && galleryIcons.iconed >= 6, JSON.stringify(galleryIcons));
+
+  // 回到工作台（上一步切到了「数据源管理」全页视图，工作台组件不在 DOM）
+  await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("返回工作台"))?.click());
+  await sleep(600);
+
+  // Q71（项 6）：媒体墙「填满卡片」CSS 契约 —— 列/行都用 minmax(最小值, 1fr)，
+  // 且格子不再有固定 aspect-ratio（否则卡片拉伸时格子不会跟着填满）。
+  const wall = await page.evaluate(() => {
+    const g = document.querySelector(".wb-gallery");
+    const c = document.querySelector(".wb-gallery__cell");
+    if (!g || !c) return null;
+    const gs = getComputedStyle(g);
+    return {
+      cols: gs.gridTemplateColumns.split(" ").length,
+      rows: gs.gridAutoRows,
+      cellAspect: getComputedStyle(c).aspectRatio,
+    };
+  });
+  ok(
+    "Q71 gallery fills card: rows stretch, no fixed aspect-ratio (项 6)",
+    Boolean(wall) && wall.rows.includes("minmax") && wall.rows.includes("1fr") && wall.cellAspect === "auto",
+    JSON.stringify(wall),
+  );
+
+  // Q71（项 6）：**随机模式** —— 配置表单可选「随机」，整卡只展示一张图
+  ok("Q71 enter edit for random mode", await clickBtn("编辑页面"));
+  await sleep(300);
+  ok(
+    "Q71 open gallery widget config",
+    await page.evaluate(() => {
+      const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes("照片墙"));
+      const chrome = item?.querySelector(".wb-chrome");
+      const btn = [...(chrome?.querySelectorAll(".wb-chrome__actions button") ?? [])].find(
+        (b) => (b.getAttribute("aria-label") || b.textContent).trim() === "配置",
+      );
+      btn?.click();
+      return Boolean(btn);
+    }),
+  );
+  await sleep(500);
+  ok("Q71 pick 随机 layout", await selectOption("展示模式", "随机"));
+  await sleep(200);
+  ok("Q71 save config", await clickBtn("保存配置", true));
+  await sleep(600);
+  ok("Q71 exit edit", await clickBtn("完成编辑"));
+  await sleep(800);
+  const rand = await page.evaluate(() => {
+    const r = document.querySelector(".wb-gallery--random");
+    return {
+      random: Boolean(r),
+      imgs: r ? r.querySelectorAll("img").length : -1,
+      cells: document.querySelectorAll(".wb-gallery--random .wb-gallery__cell").length,
+    };
+  });
+  ok(
+    "Q71 random mode shows exactly one image (项 6)",
+    rand.random && (rand.imgs === 1 || rand.cells === 1),
+    JSON.stringify(rand),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
