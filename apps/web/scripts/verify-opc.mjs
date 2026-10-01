@@ -87,13 +87,61 @@ const setField = (label, value) =>
     { l: label, v: value },
   );
 
-const addOpencodeWidget = async (url, token, refreshSec) => {
+const selectOption = async (label, optionText) => {
+  await page.evaluate((l) => {
+    const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+      w.querySelector("label")?.textContent.includes(l),
+    );
+    wrapper?.querySelector("[role=combobox]")?.click();
+  }, label);
+  await sleep(300);
+  return page.evaluate((o) => {
+    const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) => e.textContent.includes(o));
+    opt?.click();
+    return Boolean(opt);
+  }, optionText);
+};
+
+// Q42：连接信息在「数据源管理 · 数据连接」维护（SEC3：令牌入凭证库，连接仅存引用）
+const createOpencodeSource = (name, url, token) =>
+  page.evaluate(
+    async ({ name, url, token }) => {
+      let apiToken;
+      if (token) {
+        const cred = await (
+          await fetch("/api/credentials", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: `${name}-cred`, kind: "http-header", secret: token }),
+          })
+        ).json();
+        apiToken = { credentialRef: cred.id };
+      }
+      const res = await fetch("/api/data-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "opencode",
+          name,
+          config: apiToken ? { url, apiToken } : { url },
+        }),
+      });
+      return res.ok;
+    },
+    { name, url, token },
+  );
+
+// Q42：添加组件 = 只选数据连接（连接信息不在组件表单重填）
+const addOpencodeWidget = async (sourceName, refreshSec) => {
   if (!(await clickBtn("添加组件"))) return false;
   await sleep(300);
   if (!(await clickBtn("OpenCode"))) return false;
   await sleep(400);
-  if (!(await setField("服务地址", url))) return false;
-  if (token && !(await setField("访问令牌", token))) return false;
+  const selectOnly = await page.evaluate(
+    () => ![...document.querySelectorAll(".mantine-Modal-root label")].some((l) => l.textContent.includes("服务地址") || l.textContent.includes("访问令牌")),
+  );
+  if (!selectOnly) return false;
+  if (!(await selectOption("数据连接", sourceName))) return false;
   if (refreshSec && !(await setField("刷新频率", String(refreshSec)))) return false;
   await sleep(200);
   return clickBtn("确认添加", true);
@@ -128,10 +176,16 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
+  // 前置：数据连接（Q42 —— 组件只做选择，连接信息在「数据源管理 · 数据连接」维护）
+  const srcGood = `OC 源-${uniq}`;
+  const srcWeird = `OC 异形源-${uniq}`;
+  ok("OPC create data source (good)", await createOpencodeSource(srcGood, goodUrl, "sk-opc"));
+  ok("OPC create data source (incompatible)", await createOpencodeSource(srcWeird, weirdUrl, null));
+
   // ① 正常 API（refreshSec=3600：定时刷新单测走另一个组件，避免相互污染）
   ok("OPC enter edit", await clickBtn("编辑页面"));
   await sleep(300);
-  ok("OPC add opencode widget", await addOpencodeWidget(goodUrl, "sk-opc", 3600));
+  ok("OPC add opencode widget (select-only form)", await addOpencodeWidget(srcGood, 3600));
   await sleep(2500);
   const bodyText = await page.evaluate(() => document.body.textContent ?? "");
   ok("OPC version badge (API probe)", bodyText.includes("v9.9.9-test"), bodyText.slice(-140));
@@ -183,7 +237,7 @@ try {
   ok("OPC refresh refetches", seenAuth === "Bearer sk-opc", String(seenAuth));
 
   // ② experimental 形状不符 → 显式探测失败提示（该组件 refreshSec=10 用于定时刷新断言）
-  ok("OPC add widget against incompatible API", await addOpencodeWidget(weirdUrl, null, 10));
+  ok("OPC add widget against incompatible API", await addOpencodeWidget(srcWeird, 10));
   await sleep(2500);
   const body2 = await page.evaluate(() => document.body.textContent ?? "");
   ok("OPC incompatible API surfaced explicitly", body2.includes("无法读取 opencode API") && body2.includes("形状不符"), body2.slice(-160));

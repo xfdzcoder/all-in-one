@@ -74,6 +74,35 @@ const setField = (label, value) =>
     { l: label, v: value },
   );
 
+const selectOption = async (label, optionText) => {
+  await page.evaluate((l) => {
+    const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+      w.querySelector("label")?.textContent.includes(l),
+    );
+    wrapper?.querySelector("[role=combobox]")?.click();
+  }, label);
+  await sleep(300);
+  return page.evaluate((o) => {
+    const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) => e.textContent.includes(o));
+    opt?.click();
+    return Boolean(opt);
+  }, optionText);
+};
+
+// Q42：连接信息在「数据源管理 · 数据连接」维护（数据通道被夹具拦截，url 仅占位）
+const createOpencodeSource = (name, url) =>
+  page.evaluate(
+    async ({ name, url }) => {
+      const res = await fetch("/api/data-sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "opencode", name, config: { url } }),
+      });
+      return res.ok;
+    },
+    { name, url },
+  );
+
 const clickInWidget = (marker, label) =>
   page.evaluate(
     ({ m, l }) => {
@@ -201,6 +230,8 @@ try {
   await sleep(400);
 
   // ③ 自定义 API 详情（完整响应）
+  const srcName = `I4 OC 源-${uniq}`;
+  ok("I4 create opencode data source", await createOpencodeSource(srcName, "http://fixture.local"));
   ok("I4 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   // Q34/Q41：编辑态隐藏「未读」徽标（与外框「配置/移除」重叠被遮挡；Q41 起随头部动作簇统一 CSS 隐藏）
@@ -220,7 +251,16 @@ try {
   await sleep(300);
   ok("I4 pick opencode", await clickBtn("OpenCode"));
   await sleep(400);
-  ok("I4 opencode url", await setField("服务地址", "http://fixture.local"));
+  // Q42：组件表单只做选择 —— 连接信息（服务地址/访问令牌）不再重填
+  ok(
+    "I4 opencode form has no connection fields",
+    await page.evaluate(() =>
+      ![...document.querySelectorAll(".mantine-Modal-root label")].some(
+        (l) => l.textContent.includes("服务地址") || l.textContent.includes("访问令牌"),
+      ),
+    ),
+  );
+  ok("I4 opencode pick source", await selectOption("数据连接", srcName));
   await sleep(200);
   ok("I4 opencode submit", await clickBtn("确认添加", true));
   await sleep(1500);

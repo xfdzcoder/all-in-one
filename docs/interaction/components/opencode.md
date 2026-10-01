@@ -9,15 +9,16 @@
 
 | 字段 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `url` | text（必填） | — | opencode server 地址（`http://127.0.0.1:4096`） |
-| `apiToken` | secret | — | 访问令牌（入凭证库 SEC3，配置仅存引用） |
+| `sourceId` | select（`data-source:opencode`） | — | **Q42**：只选「数据源管理 · 数据连接」已配置的连接；旧组件内联配置仍生效（兼容） |
 | `limit` | number | 20 | 会话条数 |
 | `refreshSec` | number | 60 | ≥10 标准刷新字段 |
+
+> **Q42（用户反馈⑫一.2）**：连接信息（服务地址 / 访问令牌）从组件表单移除——在「数据源管理 · 数据连接」维护一次，组件只做选择（Q36 监控组件同款收口）。
 
 ## 数据流
 
 ```
-POST /api/widgets/data { type:"opencode", config:{ url, apiTokenRef, limit } }
+POST /api/widgets/data { type:"opencode", config:{ sourceId → 合并连接配置（url, apiToken 引用）, limit } }
   ──► opencode connector：GET /api/... sessions + 版本探测
       响应形状变更 → probe.error 显式提示（不空白）
 ```
@@ -50,7 +51,7 @@ POST /api/widgets/data { type:"opencode", config:{ url, apiTokenRef, limit } }
 
 | 状态 | 表现 |
 |---|---|
-| 未配 url | 「配置后显示 opencode 会话」 |
+| 未选数据连接（旧组件未配 url） | 「配置后显示 opencode 会话」 |
 | 探测中 | 「探测中…」 |
 | 空态 | 「暂无会话」 |
 | 错误 | 红色 `WbAlert` |

@@ -217,9 +217,8 @@ export const opencodeManifest: WidgetManifest = {
   defaultSize: { w: 4, h: 4 },
   minSize: { w: 3, h: 2 },
   configSchema: [
-    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:opencode", help: "在「数据源管理 · 数据连接」维护；留空 = 使用下方内联配置" },
-    { key: "url", label: "服务地址", type: "text", placeholder: "http://127.0.0.1:4096" },
-    { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
+    // Q42（一.2）：只需选择已配置的数据连接 —— 连接信息在「数据源管理 · 数据连接」维护，不在组件表单重填
+    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:opencode", help: "在「数据源管理 · 数据连接」维护；旧组件的内联配置仍生效（兼容）" },
     { key: "limit", label: "会话条数", type: "number", default: 20 },
   ],
   capabilities: {
