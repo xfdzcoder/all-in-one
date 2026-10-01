@@ -41,6 +41,27 @@ describe("服务概览适配器（Q39/D46 接入 · Q44/D48 结构化重做）",
     expect(m.notes?.[0]).toContain("API Keys");
   });
 
+  it("normalizeImmich Q49：近 7 天新增（items 计数，total 被 size 封顶不可信）+ 最近上传清单", () => {
+    const m = normalizeImmich({
+      version: { major: 3, minor: 2, patch: 2 },
+      stats: { photos: 10, videos: 1, usage: 2 ** 30 },
+      week: { assets: { total: 2, count: 2, items: [{}, {}], nextPage: "2" } },
+      recent: {
+        assets: {
+          items: [
+            { originalFileName: "a.jpg", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
+            { originalFileName: "b.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
+          ],
+        },
+      },
+    });
+    expect(m.metrics.find((x) => x.label === "近 7 天新增")?.value).toBe("2+"); // nextPage 存在 → 2+
+    expect(m.lists?.find((l) => l.title === "最近上传")?.items).toEqual([
+      { title: "a.jpg", detail: "照片", at: "2026-09-26T02:27:30Z" },
+      { title: "b.mp4", detail: "视频", at: "2026-09-26T02:27:31Z" },
+    ]);
+  });
+
   it("normalizeNavidrome：scanStatus + getArtists 聚合（getStats 不存在的等价指标）+ 清单", () => {
     const m = normalizeNavidrome({
       ping: { "subsonic-response": { status: "ok", version: "1.16.1", serverVersion: "0.58.0" } },

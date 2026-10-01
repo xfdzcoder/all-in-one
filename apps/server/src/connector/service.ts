@@ -37,6 +37,24 @@ async function getJson(
   return res.text ? JSON.parse(res.text) : null;
 }
 
+async function postJson(
+  base: string,
+  path: string,
+  headers: Record<string, string>,
+  body: unknown,
+): Promise<unknown> {
+  const res = await outboundRequest(`${base}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify(body),
+    timeoutMs: TIMEOUT_MS,
+    maxBytes: MAX_BYTES,
+    allowPrivate: true,
+  });
+  if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
+  return res.text ? JSON.parse(res.text) : null;
+}
+
 function num(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
@@ -66,6 +84,8 @@ function degradeNote(what: string, err: unknown, permissionHint?: string, generi
 export function normalizeImmich(parts: {
   version?: unknown;
   stats?: unknown;
+  week?: unknown;
+  recent?: unknown;
   errors?: Array<{ what: string; err: unknown }>;
 }): ServiceOverview {
   const v = parts.version as Record<string, unknown> | string | null;
@@ -122,6 +142,31 @@ export function normalizeImmich(parts: {
     if (out.metrics.length > 0) {
       out.metrics.push({ label: "用户", value: String(byUser.length) });
     }
+  }
+
+  // Q49（用户已扩 asset.read）：近 7 天新增 + 最近上传清单
+  // ⚠ 实测 search/metadata 的 assets.total 被 size 封顶 —— 计数以 items 数组 + nextPage 为准
+  const weekAssets = ((parts.week ?? {}) as Record<string, unknown>).assets as Record<string, unknown> | undefined;
+  if (weekAssets && Array.isArray(weekAssets.items)) {
+    const n = weekAssets.items.length;
+    out.metrics.push({
+      label: "近 7 天新增",
+      value: `${count(n)}${weekAssets.nextPage ? "+" : ""}`,
+    });
+  }
+  const recentAssets = ((parts.recent ?? {}) as Record<string, unknown>).assets as Record<string, unknown> | undefined;
+  const recentList: Array<Record<string, unknown>> = Array.isArray(recentAssets?.items)
+    ? (recentAssets.items as Array<Record<string, unknown>>)
+    : [];
+  if (recentList.length > 0) {
+    (out.lists ??= []).push({
+      title: "最近上传",
+      items: recentList.slice(0, 5).map((a) => ({
+        title: str(a.originalFileName) ?? "(未命名)",
+        detail: a.type === "VIDEO" ? "视频" : "照片",
+        at: str(a.createdAt) ?? str(a.takenAt),
+      })),
+    });
   }
 
   for (const e of parts.errors ?? []) {
@@ -415,7 +460,15 @@ export const serviceOverviewConnector: WidgetConnector = {
         const stats =
           (await best("统计", () => getJson(base, "/api/server/statistics", apiKey))) ??
           (await best("统计", () => getJson(base, "/api/statistics", apiKey)));
-        overview = normalizeImmich({ version, stats, errors });
+        // Q49：近 7 天新增 + 最近上传（search/metadata 需 asset.read 权限）
+        const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+        const week = await best("近 7 天新增", () =>
+          postJson(base, "/api/search/metadata", apiKey, { page: 1, size: 1000, takenAfter: weekAgo }),
+        );
+        const recent = await best("最近上传", () =>
+          postJson(base, "/api/search/metadata", apiKey, { page: 1, size: 5, sortField: "recent", sortOrder: "desc" }),
+        );
+        overview = normalizeImmich({ version, stats, week, recent, errors });
         break;
       }
       case "navidrome": {

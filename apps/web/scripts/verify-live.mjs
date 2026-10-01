@@ -182,6 +182,7 @@ try {
   // Q45 Immich：照片/视频/占用/按用户（真机基线：16309 照片 / 140 视频 / xfdzcoder）
   const imm = await waitForCard(names.immich);
   ok("LIVE immich metrics match real instance", imm.includes("16,309") && imm.includes("140") && imm.includes("xfdzcoder"), imm.slice(0, 160));
+  ok("LIVE immich Q49 new-count + recent uploads", imm.includes("近 7 天新增") && imm.includes("最近上传"), imm.slice(0, 200));
   ok("LIVE immich no dishonest degradation", !imm.includes("获取失败"), imm.slice(-120));
 
   // Q46 Navidrome：曲目/专辑/艺术家聚合（真机基线：1376 / 269 / 38）

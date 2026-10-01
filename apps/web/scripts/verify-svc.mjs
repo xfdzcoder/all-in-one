@@ -74,6 +74,20 @@ const mock = createServer((req, res) => {
         usageByUser: [{ userId: "u1", userName: "mock-user", photos: 12, videos: 3, usage: 2 ** 30 }],
       }),
     );
+  if (url.startsWith("/api/search/metadata"))
+    return res.end(
+      json({
+        assets: {
+          total: 2,
+          count: 2,
+          nextPage: "2",
+          items: [
+            { originalFileName: "shot.jpg", type: "IMAGE", createdAt: "2026-09-26T02:27:30Z" },
+            { originalFileName: "clip.mp4", type: "VIDEO", createdAt: "2026-09-26T02:27:31Z" },
+          ],
+        },
+      }),
+    );
   res.writeHead(404).end();
 });
 await new Promise((r) => mock.listen(0, "127.0.0.1", r));
@@ -183,6 +197,7 @@ try {
   await sleep(2500);
   body = await page.evaluate(() => document.body.textContent ?? "");
   ok("SVC immich v3 routes + per-user list", body.includes("3.2.2") && body.includes("照片") && body.includes("12") && body.includes("mock-user"), body.slice(-140));
+  ok("SVC immich Q49 new-count + recent uploads", body.includes("近 7 天新增") && body.includes("最近上传") && body.includes("shot.jpg"), body.slice(-140));
 
   // ④ 坏连接显式失败
   ok("SVC add broken overview", await addOverview(`svc-broken-${uniq}`));
