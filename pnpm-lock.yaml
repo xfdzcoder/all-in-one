@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  gridstack@14.0.0: 5189ddb8756ee28177974d521323e83d255b614460c2248195330cee6e2de223
+
 importers:
 
   .: {}
@@ -237,7 +240,7 @@ importers:
         version: 5.104.0(react@19.3.0)
       gridstack:
         specifier: ^14.0.0
-        version: 14.0.0
+        version: 14.0.0(patch_hash=5189ddb8756ee28177974d521323e83d255b614460c2248195330cee6e2de223)
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -3166,7 +3169,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  gridstack@14.0.0: {}
+  gridstack@14.0.0(patch_hash=5189ddb8756ee28177974d521323e83d255b614460c2248195330cee6e2de223): {}
 
   he@1.2.0: {}
 

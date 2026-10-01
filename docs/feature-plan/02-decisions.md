@@ -409,6 +409,14 @@
 - **后果**：新服务接入按「连接 kind + 适配器 + ServiceOverview 归一」模式扩展；品牌图标按 D45 登记（SOURCES.md）。
 - **后续**：v1 的 `stats[]` 贫血契约被用户批评为 demo 级（Q39 四服务指标），契约演进见 **D48**；指标质量规范见 **D47**。
 
+## D49 · gridstack React wrapper 竞态补丁（拖动中卡片内容消失）
+
+- **日期**：2026-10-01（Q43，用户反馈⑫一.3「拖动卡片时，偶发卡片会消失，只有右下角的调整大小的箭头还存在」）
+- **根因**（红-绿验证实锤）：gridstack@14.0.0 React wrapper（`dist/react/`）两处竞态同症——① `syntheticItems` 在**渲染期** `Utils.findInGrid` 查节点，拖动中节点短暂离开引擎（`dropout→_leave→removeNode` 窗口）时查不到 → `return null` → **portal 整体卸载**；② `GridStackItem` 容器 effect 查不到 `.grid-stack-item-content`（`node.el` 被换成 drag placeholder）时 `setContainer(null)` 同样卸载。卸载后若无后续重算**永不自愈**（故"偶发"且持久）。症状与上游 #2976 同族（该修复只覆盖 sidebar 拖入路径）。
+- **决策**：`pnpm patch gridstack@14.0.0` 打两处守卫（last-known-node 回退 + keep-previous-container），`patches/gridstack@14.0.0.patch` 入库 + `patchedDependencies`（pnpm-workspace.yaml，Docker 构建自动应用）。**否决**：升级（14.0.0 即最新版）、切换选型（D12 冻结）、watchdog 自愈（治标）。
+- **验证**：`verify-gdrag.mjs` —— 25 轮多路径拖拽压测（空白落点/碰撞交换/越上缘/拖远放回原位）+ **确定性竞态用例**（monkey-patch `findInGrid` 模拟竞态窗口 → 断言内容不卸载）。**红-绿**：还原补丁行为复跑 → 5 卡内容全部消失（`during:[0,0,0,0,0]`）→ 用例有效；恢复补丁 → 28/28 绿。
+- **附带教训**：verify 脚本共享同一工作台状态，**新脚本必须收尾恢复标准 seed**（否则污染不自播种的后续脚本：verify-gdrag 曾致 verify-j3「信息流不可见」误报）。
+
 ## D47 · 组件/接入质量门禁（指标设计与完成定义）
 
 - **日期**：2026-10-01（Q40，用户反馈⑫二.1「没有从用户角度考虑用户希望看到什么指标……完全是作为一个 demo 来做的」，用户要求建立自我约束）

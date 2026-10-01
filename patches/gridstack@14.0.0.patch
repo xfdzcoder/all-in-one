@@ -1,0 +1,53 @@
+diff --git a/dist/react/gridstack-item.js b/dist/react/gridstack-item.js
+index 7a2595bf878c4375ea357591f5099fba6707782d..cffb367ad6f5bb4d0224601df9a610ca219b0840 100644
+--- a/dist/react/gridstack-item.js
++++ b/dist/react/gridstack-item.js
+@@ -52,7 +52,10 @@ export function GridStackItem({ id, options = {}, children, }) {
+             return;
+         const node = Utils.findInGrid(grid, id, true);
+         const cont = node?.el?.querySelector(".grid-stack-item-content") ?? null;
+-        setContainer((prev) => (prev === cont ? prev : cont));
++        // Q43 patch: a transient lookup failure (node.el swapped to the drag placeholder /
++        // node briefly out of the engine during drag) must NOT detach the portal — keep the
++        // previous container instead of unmounting the widget content.
++        setContainer((prev) => (cont && cont !== prev ? cont : prev));
+     }, [grid, id, layoutVersion, optsKey]);
+     // Tracks whether the component is "truly unmounting" vs. Strict Mode double-invoke.
+     const remountedRef = useRef(false);
+diff --git a/dist/react/gridstack.js b/dist/react/gridstack.js
+index b79e76c3c420a5bd8c282e759e07b35b5d5a64d1..f44a535c220d56466881ae10a890a5781ec886b2 100644
+--- a/dist/react/gridstack.js
++++ b/dist/react/gridstack.js
+@@ -22,6 +22,8 @@ export const GridStackComponent = forwardRef(function GridStackComponent({ optio
+     // Ids scheduled for deferred removal — cancelled if the same id re-registers
+     // within the same microtask (cross-grid DnD: remove fires before add).
+     const pendingRemovalRef = useRef(new Set());
++    // Q43 patch: last known node per synthetic id (fallback when a render races drag).
++    const lastNodeRef = useRef(new Map());
+     const serializersRef = useRef(new Map());
+     const deserializersRef = useRef(new Map());
+     const bumpLayout = useCallback(() => setLayoutVersion((v) => v + 1), []);
+@@ -52,6 +54,7 @@ export const GridStackComponent = forwardRef(function GridStackComponent({ optio
+             });
+             serializersRef.current.delete(id);
+             deserializersRef.current.delete(id);
++            lastNodeRef.current.delete(id);
+         });
+     }, []);
+     const registerWidgetSerializer = useCallback((id, serialize, deserialize) => {
+@@ -246,7 +249,14 @@ export const GridStackComponent = forwardRef(function GridStackComponent({ optio
+         if (!g || syntheticIds.size === 0)
+             return null;
+         return Array.from(syntheticIds).map((synId) => {
+-            const node = Utils.findInGrid(g, synId, true);
++            let node = Utils.findInGrid(g, synId, true);
++            // Q43 patch: during drag the node can briefly leave the engine (temporary remove)
++            // — a render in that window must not drop the portal (item content vanishes and,
++            // with no later recompute, never comes back). Fall back to the last known node.
++            if (node?.component)
++                lastNodeRef.current.set(synId, node);
++            else
++                node = lastNodeRef.current.get(synId);
+             if (!node?.component)
+                 return null;
+             const Comp = components[node.component];

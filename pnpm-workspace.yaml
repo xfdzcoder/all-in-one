@@ -4,3 +4,5 @@ packages:
 allowBuilds:
   better-sqlite3: false
   esbuild: true
+patchedDependencies:
+  gridstack@14.0.0: patches/gridstack@14.0.0.patch

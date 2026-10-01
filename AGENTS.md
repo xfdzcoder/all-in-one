@@ -52,4 +52,5 @@
 - **options 必须保持稳定**：wrapper 在 options 签名变化时调用 `updateOptions()` → `load(children)`，会重置未保存的布局改动。用 `useState(() => options)` 挂载期捕获一次；编辑模式切换用 `grid.enableMove/enableResize`，**不要**放进 options（如 `staticGrid`）。
 - **增删组件不触发 `onChange`**（gridstack 的 change 事件只含"位置变化"），必须同时接 `onAdded`/`onRemoved` 到保存逻辑。
 - **拖拽生效有 50% 碰撞规则**：移向相邻同类尺寸组件时需覆盖对方 50%+ 面积才会推挤/交换；测试拖拽用例应拖向空白区或拖够距离，否则 moveNodeCheck 返回 false（非 bug）。
+- **Q43 竞态补丁（D49）**：gridstack@14.0.0 React wrapper 存在拖动中 portal 卸载竞态（渲染期 `findInGrid` 短暂查不到节点即丢弃/解绑内容 → 卡片内容消失、只剩缩放手柄），已用 `pnpm patch` 修复（`patches/gridstack@14.0.0.patch` 两处守卫：last-node 回退 + keep-previous-container）。**升级 gridstack 时必须复查该补丁是否仍需要**并重新生成；回归见 `apps/web/scripts/verify-gdrag.mjs`（多路径压测 + 确定性竞态用例）。
 - 选型已冻结：gridstack 优先、react-grid-layout 仅作既定备选（切换需走决策记录），勿自研网格。
