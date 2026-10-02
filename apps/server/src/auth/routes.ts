@@ -3,11 +3,12 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { eq } from "drizzle-orm";
 
 import { user } from "../db/schema.ts";
-import { loginBody } from "../api/schemas.ts";
-import { verifyPassword } from "./password.ts";
+import { changePasswordBody, changeUsernameBody, loginBody } from "../api/schemas.ts";
+import { hashPassword, verifyPassword } from "./password.ts";
 import {
   SESSION_COOKIE,
   createSession,
+  revokeOtherSessions,
   revokeSession,
 } from "./session.ts";
 import { authGuard } from "./guard.ts";
@@ -79,6 +80,50 @@ export function registerAuthRoutes(app: FastifyInstance): void {
   // authGuard 顺带清掉过期 token 会话，语义更完整）
   app.get("/api/auth/me", { preHandler: authGuard }, async (req) => {
     return req.user!;
+  });
+
+  // FR-S2（Q110）：改用户名 —— **必须验证当前密码**；同名占用 409
+  app.post("/api/auth/change-username", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = changeUsernameBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "invalid request" });
+    const { currentPassword, username } = parsed.data;
+    const me = req.user!;
+    const rows = await app.db.select().from(user).where(eq(user.id, me.id)).limit(1);
+    const account = rows[0];
+    if (!account) return reply.code(401).send({ error: "unauthorized" });
+    if (!(await verifyPassword(account.passwordHash, currentPassword))) {
+      return reply.code(401).send({ error: "当前密码不正确" });
+    }
+    const dup = await app.db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.username, username))
+      .limit(1);
+    if (dup.length > 0 && dup[0].id !== me.id) {
+      return reply.code(409).send({ error: "用户名已被占用" });
+    }
+    await app.db.update(user).set({ username, updatedAt: new Date() }).where(eq(user.id, me.id));
+    return { id: me.id, username };
+  });
+
+  // FR-S2（Q110）：改密码 —— **必须验证当前密码**；改后吊销其它会话（保留当前）
+  app.post("/api/auth/change-password", { preHandler: authGuard }, async (req, reply) => {
+    const parsed = changePasswordBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "当前口令与新口令都要填写" });
+    }
+    const { currentPassword, newPassword } = parsed.data;
+    const me = req.user!;
+    const rows = await app.db.select().from(user).where(eq(user.id, me.id)).limit(1);
+    const account = rows[0];
+    if (!account) return reply.code(401).send({ error: "unauthorized" });
+    if (!(await verifyPassword(account.passwordHash, currentPassword))) {
+      return reply.code(401).send({ error: "当前密码不正确" });
+    }
+    const passwordHash = await hashPassword(newPassword);
+    await app.db.update(user).set({ passwordHash, updatedAt: new Date() }).where(eq(user.id, me.id));
+    await revokeOtherSessions(app.db, me.id, req.cookies[SESSION_COOKIE]);
+    return { ok: true };
   });
 }
 

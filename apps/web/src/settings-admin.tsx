@@ -1,4 +1,4 @@
-import { Button, Group, SegmentedControl, Stack, Text, Title, UnstyledButton } from "@mantine/core";
+import { Button, Group, PasswordInput, SegmentedControl, Stack, Text, TextInput, Title, UnstyledButton } from "@mantine/core";
 import {
   IconDatabase,
   IconInfoCircle,
@@ -7,9 +7,9 @@ import {
   IconPuzzle,
   IconUser,
 } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
-import type { Me } from "./api";
+import { api, type Me } from "./api";
 import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
 import { WbAlert } from "./ui";
@@ -46,8 +46,10 @@ export function SettingsAdmin(props: {
   isDesktop: boolean;
   /** 数据源管理的页签深链（wb:navigate 跳转带过来）。 */
   dataTab: string | undefined;
+  /** 改用户名后刷新会话（头部 `me.username` 跟着变）。 */
+  onProfileChanged: () => void;
 }) {
-  const { tab, onTab, onBack, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab } = props;
+  const { tab, onTab, onBack, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab, onProfileChanged } = props;
   const items = SETTINGS_TABS.filter((t) => t.key !== "plugins" || isDesktop);
 
   return (
@@ -78,31 +80,7 @@ export function SettingsAdmin(props: {
         </nav>
         <div className="wb-settings__panel">
           {tab === "account" && (
-            <Stack gap="md" className="wb-settings__section">
-              <Title order={5}>账户</Title>
-              <Group gap="xs">
-                <Text size="sm" c="dimmed">
-                  用户名
-                </Text>
-                <Text size="sm" fw={600}>
-                  {me.username}
-                </Text>
-              </Group>
-              <Group gap="xs">
-                <Button
-                  size="xs"
-                  variant="default"
-                  leftSection={<IconLogout size={14} />}
-                  onClick={onLogout}
-                >
-                  退出登录
-                </Button>
-              </Group>
-              <WbAlert tone="info" size="sm">
-                忘记口令？管理员口令在部署时由 <code>ADMIN_PASSWORD</code> 设置 ——
-                在服务器上修改该环境变量并重启服务即可重置。
-              </WbAlert>
-            </Stack>
+            <AccountPanel me={me} onProfileChanged={onProfileChanged} onLogout={onLogout} />
           )}
           {tab === "appearance" && (
             <Stack gap="md" className="wb-settings__section">
@@ -165,5 +143,155 @@ function DataPanel({ dataTab }: { dataTab: string | undefined }) {
     <div className="wb-settings__data">
       <DataAdmin embedded initialTab={dataTab} />
     </div>
+  );
+}
+
+/** 账户面板（FR-S2/Q110）：改用户名 / 改密码（都**验证当前密码**）+ 退出登录。 */
+function AccountPanel({
+  me,
+  onProfileChanged,
+  onLogout,
+}: {
+  me: Me;
+  onProfileChanged: () => void;
+  onLogout: () => void;
+}) {
+  const [msg, setMsg] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [username, setUsername] = useState(me.username);
+  const [namePw, setNamePw] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwNew2, setPwNew2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const saveUsername = async () => {
+    if (nameBusy) return; // WEB-18：in-flight 守卫（双击重复提交）
+    if (username.trim() === me.username) {
+      setMsg({ tone: "error", text: "用户名没有变化" });
+      return;
+    }
+    if (!namePw) {
+      setMsg({ tone: "error", text: "修改用户名需要验证当前密码" });
+      return;
+    }
+    setNameBusy(true);
+    try {
+      await api.changeUsername(namePw, username.trim());
+      setMsg({ tone: "success", text: "用户名已更新" });
+      setNamePw("");
+      onProfileChanged();
+    } catch (e) {
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setNameBusy(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (pwBusy) return;
+    if (!pwCurrent) {
+      setMsg({ tone: "error", text: "修改密码需要验证当前密码" });
+      return;
+    }
+    if (pwNew !== pwNew2) {
+      setMsg({ tone: "error", text: "两次输入的新口令不一致" });
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await api.changePassword(pwCurrent, pwNew);
+      setMsg({ tone: "success", text: "密码已更新；其它设备上的登录已失效" });
+      setPwCurrent("");
+      setPwNew("");
+      setPwNew2("");
+    } catch (e) {
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setPwBusy(false);
+    }
+  };
+
+  return (
+    <Stack gap="md" className="wb-settings__section">
+      <Title order={5}>账户</Title>
+      {msg && (
+        <WbAlert tone={msg.tone} size="sm" onClose={() => setMsg(null)}>
+          {msg.text}
+        </WbAlert>
+      )}
+      <Stack gap="xs" className="wb-settings__form">
+        <Text size="sm" c="dimmed">
+          用户名
+        </Text>
+        <Group gap="xs" align="flex-end" wrap="wrap">
+          <TextInput
+            size="xs"
+            label="新用户名"
+            value={username}
+            onChange={(e) => setUsername(e.currentTarget.value)}
+            className="wb-flex-1"
+          />
+          <PasswordInput
+            size="xs"
+            label="当前密码"
+            value={namePw}
+            onChange={(e) => setNamePw(e.currentTarget.value)}
+            className="wb-flex-1"
+          />
+          <Button size="xs" disabled={nameBusy} onClick={() => void saveUsername()}>
+            保存用户名
+          </Button>
+        </Group>
+        <Text size="xs" c="dimmed">
+          当前：<b>{me.username}</b>（修改需要验证当前密码）
+        </Text>
+      </Stack>
+      <Stack gap="xs" className="wb-settings__form">
+        <Text size="sm" c="dimmed">
+          密码
+        </Text>
+        <Group gap="xs" align="flex-end" wrap="wrap">
+          <PasswordInput
+            size="xs"
+            label="当前密码"
+            value={pwCurrent}
+            onChange={(e) => setPwCurrent(e.currentTarget.value)}
+            className="wb-flex-1"
+          />
+          <PasswordInput
+            size="xs"
+            label="新密码（建议至少 8 位）"
+            value={pwNew}
+            onChange={(e) => setPwNew(e.currentTarget.value)}
+            className="wb-flex-1"
+          />
+          <PasswordInput
+            size="xs"
+            label="再输一次新密码"
+            value={pwNew2}
+            onChange={(e) => setPwNew2(e.currentTarget.value)}
+            className="wb-flex-1"
+          />
+          <Button size="xs" disabled={pwBusy} onClick={() => void savePassword()}>
+            保存密码
+          </Button>
+        </Group>
+      </Stack>
+      <Group gap="xs">
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconLogout size={14} />}
+          onClick={onLogout}
+        >
+          退出登录
+        </Button>
+      </Group>
+      <WbAlert tone="info" size="sm">
+        忘记口令？管理员口令在部署时由 <code>ADMIN_PASSWORD</code> 设置 ——
+        在服务器上修改该环境变量并重启服务即可重置。
+      </WbAlert>
+    </Stack>
   );
 }

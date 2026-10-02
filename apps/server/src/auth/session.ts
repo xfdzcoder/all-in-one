@@ -1,6 +1,6 @@
 import {createHash, randomBytes} from "node:crypto";
 
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 
 import type { Db } from "../db/client.ts";
 import { session, user, type Session, type User } from "../db/schema.ts";
@@ -49,6 +49,18 @@ export async function revokeSession(
 ): Promise<void> {
   if (!token) return;
   await db.delete(session).where(eq(session.id, tokenHash(token)));
+}
+
+/** FR-S2（B2）：改密码后吊销**其它**会话（保留当前会话 —— 自己不被踢下线）。 */
+export async function revokeOtherSessions(
+  db: Db,
+  userId: string,
+  keepToken: SessionToken | undefined,
+): Promise<void> {
+  const keepId = keepToken ? tokenHash(keepToken) : undefined;
+  await db
+    .delete(session)
+    .where(and(eq(session.userId, userId), keepId ? ne(session.id, keepId) : undefined));
 }
 
 /** Constant-time compare helper for future CSRF/token checks. */

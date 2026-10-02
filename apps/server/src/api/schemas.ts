@@ -7,6 +7,19 @@ export const loginBody = z.object({
   password: z.string().min(1).max(256),
 });
 
+/** FR-S2（Q110）：改用户名 / 改密码 —— 都**必须验证当前密码**（忘记走 ADMIN_PASSWORD 重置流程）。 */
+export const changeUsernameBody = z.object({
+  currentPassword: z.string().min(1).max(256),
+  username: z.string().min(1).max(128),
+});
+
+export const changePasswordBody = z.object({
+  currentPassword: z.string().min(1).max(256),
+  /** 新口令长度下限与 `loginBody` 一致（1–256）：系统现有语义是 env 建号/登录都不设下限，
+   *  UI 只给「建议至少 8 位」提示。是否强制 ≥8 待用户拍板（07 待确认 #8）。 */
+  newPassword: z.string().min(1).max(256),
+});
+
 /** layoutJson = JSON text of gridstack widget list (Dashboard owns layout only). */
 const layoutJsonSchema = z
   .string()

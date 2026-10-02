@@ -77,11 +77,14 @@ const initialThemeMode = (): ThemeMode => {
 function Workbench({
   me,
   onLogout,
+  onProfileChanged,
   themeMode,
   onToggleTheme,
 }: {
   me: Me;
   onLogout: () => void;
+  /** FR-S2：改用户名后刷新会话（头部 `me.username` 跟着变）。 */
+  onProfileChanged: () => void;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
 }) {
@@ -399,6 +402,7 @@ function Workbench({
               onLogout={handleLogout}
               isDesktop={isDesktop}
               dataTab={dataTab}
+              onProfileChanged={onProfileChanged}
             />
           </WidgetErrorBoundary>
         )}
@@ -545,6 +549,7 @@ export default function App() {
           <Workbench
             me={session.me}
             onLogout={() => setSession({ kind: "anonymous" })}
+            onProfileChanged={() => void check()}
             themeMode={themeMode}
             onToggleTheme={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
           />

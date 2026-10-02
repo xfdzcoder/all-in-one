@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import {
+  changePasswordBody,
+  changeUsernameBody,
   dashboardCreateBody,
   dashboardPatchBody,
   layoutUpdateBody,
@@ -79,6 +81,28 @@ export const openApiDoc = {
     },
     "/api/auth/logout": { post: op("Logout, revokes session") },
     "/api/auth/me": { get: op("Current user") },
+    "/api/auth/change-username": {
+      post: op("修改用户名（FR-S2：必须验证当前密码）", {
+        body: changeUsernameBody,
+        bodyDesc: "current password + new username",
+        ok: "user",
+        codes: {
+          "400": { description: "invalid request" },
+          "401": { description: "当前密码不正确" },
+          "409": { description: "用户名已被占用" },
+        },
+      }),
+    },
+    "/api/auth/change-password": {
+      post: op("修改密码（FR-S2：必须验证当前密码；改后吊销其它会话、保留当前）", {
+        body: changePasswordBody,
+        bodyDesc: "current password + new password",
+        codes: {
+          "400": { description: "invalid request（缺字段等）" },
+          "401": { description: "当前密码不正确" },
+        },
+      }),
+    },
 
     // ── 页面（FR-P*：Workspace 拥有数据 / Dashboard 只拥有布局）──
     "/api/dashboards": {

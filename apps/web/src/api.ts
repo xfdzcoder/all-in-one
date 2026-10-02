@@ -194,6 +194,11 @@ export const api = {
   login: (username: string, password: string) =>
     req<Me>("POST", "/api/auth/login", { username, password }),
   logout: () => req<{ ok: boolean }>("POST", "/api/auth/logout"),
+  /** FR-S2（Q110）：改用户名/改密码 —— 都必须验证当前密码。 */
+  changeUsername: (currentPassword: string, username: string) =>
+    req<Me>("POST", "/api/auth/change-username", { currentPassword, username }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    req<{ ok: boolean }>("POST", "/api/auth/change-password", { currentPassword, newPassword }),
   listDashboards: () => req<Dashboard[]>("GET", "/api/dashboards"),
   // CON-10：与服务端 dashboardCreateBody 对齐（icon/columns/cellHeight 此前漏传）
   createDashboard: (
