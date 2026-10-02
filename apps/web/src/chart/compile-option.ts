@@ -107,3 +107,22 @@ export function compileChartOption(spec: ChartSpec, data: unknown): CompileResul
     },
   };
 }
+
+/**
+ * WS 流追加（**Q78**）：消息 → 行（对象=1 行、数组=多行、非对象丢弃）→ 滚动窗口（cap 截尾）。
+ * 纯函数便于单测；坏消息只跳过不打断流（D47：不整卡空白）。
+ */
+export function appendStreamRows(
+  prev: Array<Record<string, unknown>>,
+  payload: unknown,
+  cap = 120,
+): Array<Record<string, unknown>> {
+  const rows: Array<Record<string, unknown>> = [];
+  const take = (v: unknown) => {
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) rows.push(v as Record<string, unknown>);
+  };
+  if (Array.isArray(payload)) for (const item of payload) take(item);
+  else take(payload);
+  if (rows.length === 0) return prev;
+  return [...prev, ...rows].slice(-cap);
+}

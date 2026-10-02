@@ -10,6 +10,7 @@ import {
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
 import { api, type DataSourceRow, type FeedAgg, type TodoItem } from "./api";
 import { DATA_ROOT_KEYS, qk, qkRoot, sseKeysFor } from "./query-keys";
+import { dispatchWs } from "./ws-stream";
 import { normalizeTagIds } from "./config-form-utils";
 import { reportError } from "./feedback";
 
@@ -96,10 +97,18 @@ export function useSseInvalidation(): void {
       src.addEventListener("open", () => stopPolling());
       src.addEventListener("invalidation", (e: MessageEvent<string>) => {
         let topic = "todo";
+        let payload: unknown;
         try {
-          topic = String((JSON.parse(e.data) as { topic?: string }).topic ?? "todo");
+          const parsed = JSON.parse(e.data) as { topic?: string; payload?: unknown };
+          topic = String(parsed.topic ?? "todo");
+          payload = parsed.payload;
         } catch {
           /* 保持默认 */
+        }
+        // Q78/D56：ws:<id> 是**数据流**（带 payload）→ 分发订阅者，不走查询失效
+        if (topic.startsWith("ws:")) {
+          dispatchWs(topic.slice(3), payload);
+          return;
         }
         // WEB-11：topic → 根键映射收口 query-keys.ts（sseKeysFor）
         for (const key of sseKeysFor(topic)) {

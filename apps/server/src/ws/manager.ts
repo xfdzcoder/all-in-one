@@ -3,6 +3,7 @@ import { Agent as HttpsAgent } from "node:https";
 import { isIP } from "node:net";
 import { WebSocket } from "ws";
 
+import { config } from "../config.ts";
 import { loadSourceConfig, resolveSecretRefs, type FetchContext } from "../connector/registry.ts";
 import { assertSafeOutboundUrl } from "../connector/ssrf.ts";
 import { readSecret } from "../credentials/store.ts";
@@ -76,7 +77,8 @@ export class WsSourceManager {
     let pinned: string | null = null;
     try {
       // SEC-3：校验与连接目标绑定 —— ws/wss 同走 SSRF 基线（协议白名单 + 内网判定）
-      const safe = await assertSafeOutboundUrl(row.url, this.opts.allowPrivate ?? false);
+      // SEC4：与 outboundRequest 同语义 —— ALLOW_PRIVATE_OUTBOUND=1（E2E/内网场景）才放行内网
+      const safe = await assertSafeOutboundUrl(row.url, this.opts.allowPrivate ?? config.allowPrivateOutbound);
       pinned = safe.pinnedIp;
     } catch (e) {
       this.opts.log?.(`[ws] ${row.id} 目标被拒：${e instanceof Error ? e.message : String(e)}`);

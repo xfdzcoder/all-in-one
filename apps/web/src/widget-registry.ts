@@ -434,6 +434,7 @@ const chartManifest: WidgetManifest = {
     { key: "xField", label: "X 轴字段", type: "text", default: "x", help: "分类轴（饼图 = 名称列）" },
     { key: "yFields", label: "Y 系列字段", type: "text", placeholder: "a,b（逗号分隔）", help: "数值列，可多列（饼图取第一个）" },
     { key: "unit", label: "单位", type: "text", placeholder: "GB / % / 次…" },
+    { key: "wsSourceId", label: "WS 实时源", type: "select", dynamic: "data-source:ws", help: "Q78/D56：选定即实时流模式（服务端 WS → SSE 转发，滚动 120 点）；留空 = 上方 HTTP 快照" },
     { key: "stack", label: "堆叠", type: "boolean" },
     { key: "smooth", label: "平滑曲线", type: "boolean" },
     { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },

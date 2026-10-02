@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { IconRefresh } from "@tabler/icons-react";
 
-import { compileChartOption, type ChartSpec } from "./chart/compile-option";
+import { appendStreamRows, compileChartOption, type ChartSpec } from "./chart/compile-option";
 import type { EChartsCoreOption } from "./chart/echarts-setup";
 import { useEcharts } from "./chart/use-echarts";
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
+import { useWsStream } from "./ws-stream";
 import { WidgetTitle } from "./widget-title";
 import { IconAction, WbAlert, WbLoading } from "./ui";
 
@@ -18,6 +19,11 @@ export function ChartWidget(props: Record<string, unknown>) {
   // D42：认证来源（sourceId 提供 authHeader/apiToken），url 仍由组件配置
   const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"]);
   const { data, loading, error, refresh } = useCustomApiData(resolved);
+
+  // Q78/D56：WS 流模式 —— wsSourceId 命中即实时流（滚动窗口 120 点），否则走 HTTP 快照
+  const wsSourceId = typeof props.wsSourceId === "string" && props.wsSourceId ? props.wsSourceId : undefined;
+  const [streamRows, setStreamRows] = useState<Array<Record<string, unknown>>>([]);
+  useWsStream(wsSourceId, (payload) => setStreamRows((prev) => appendStreamRows(prev, payload)));
 
   // 字段先取原始值（简单依赖），spec 与 compiled 链式 memo（值不变不重编）
   const chartType = props.chartType === "bar" || props.chartType === "pie" ? props.chartType : "line";
@@ -41,8 +47,15 @@ export function ChartWidget(props: Record<string, unknown>) {
     [chartType, path, xField, yFieldsRaw, unit, stack, smooth],
   );
   const compiled = useMemo(
-    () => (data === undefined || data === null ? null : compileChartOption(spec, data)),
-    [data, spec],
+    () =>
+      wsSourceId
+        ? streamRows.length === 0
+          ? null
+          : compileChartOption(spec, streamRows)
+        : data === undefined || data === null
+          ? null
+          : compileChartOption(spec, data),
+    [wsSourceId, streamRows, data, spec],
   );
   const option = compiled && "option" in compiled ? (compiled.option as EChartsCoreOption) : null;
   const chartRef = useEcharts(option);
@@ -53,6 +66,7 @@ export function ChartWidget(props: Record<string, unknown>) {
         title="图表"
         actions={<IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>}
       />
+      {wsSourceId && <span className="wb-sr-only">{`实时 · ${streamRows.length} 点`}</span>}
       {loading && <WbLoading />}
       {/* D47：错误/降级一律「原因 + 怎么修」，不整卡空白不留白 */}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { compileChartOption, extractRows } from "./compile-option.ts";
+import { appendStreamRows, compileChartOption, extractRows } from "./compile-option.ts";
 
 /** Q76/D47：配置即 spec 的编译契约（含降级分支）。 */
 
@@ -56,5 +56,18 @@ describe("compileChartOption（配置即 spec）", () => {
     expect(onlyBad.error).toContain("0 行可用");
     const mixed = compileChartOption({ chartType: "bar", xField: "t", yFields: ["a"] }, [...rows, { a: 1 }]) as { rows: number };
     expect(mixed.rows).toBe(3); // 缺 x 的行跳过
+  });
+});
+
+describe("appendStreamRows（Q78 WS 流滚动窗口）", () => {
+  it("对象=1 行、数组=多行、坏消息跳过；cap 截尾保新", () => {
+    let rows: Array<Record<string, unknown>> = [];
+    rows = appendStreamRows(rows, { t: 1 });
+    rows = appendStreamRows(rows, [{ t: 2 }, { t: 3 }]);
+    rows = appendStreamRows(rows, "junk");
+    rows = appendStreamRows(rows, null);
+    expect(rows.map((r) => r.t)).toEqual([1, 2, 3]);
+    for (let i = 4; i <= 10; i += 1) rows = appendStreamRows(rows, { t: i }, 5);
+    expect(rows.map((r) => r.t)).toEqual([6, 7, 8, 9, 10]); // 只留最新 5 点
   });
 });
