@@ -115,7 +115,15 @@ const mock = createServer((req, res) => {
           ]
         : id === "art-2"
           ? [{ id: "nb-1", name: "乙的专辑一", artist: "乙", coverArt: "nb-1" }]
-          : [];
+          : // Q104（用户反馈①）：5 张专辑的艺人 —— 配 limit=2 验「显示张数」裁剪
+          id === "art-3"
+            ? Array.from({ length: 5 }, (_, i) => ({
+                id: `nc-${i + 1}`,
+                name: `丙的专辑${"一二三四五"[i]}`,
+                artist: "丙",
+                coverArt: `nc-${i + 1}`,
+              }))
+            : [];
     return res.end(json({ "subsonic-response": { artist: { id, name: id ?? "", album: albums } } }));
   }
   if (url.startsWith("/rest/getAlbumList2"))
@@ -993,6 +1001,8 @@ await installLayoutGuard(page);
       const cells = [...(item?.querySelectorAll(".wb-gallery__cell") ?? [])];
       return {
         count: cells.length,
+        // Q104：占位格（无图）计数 —— 专辑墙裁剪回归的判据
+        empty: cells.filter((c) => c.classList.contains("wb-gallery__cell--empty")).length,
         // 夹具 JPEG 是「最小 SOF 头」——服务端能解析宽高（D60）但浏览器不完整解码
         // （naturalWidth=0），故用**渲染格子的宽高比**当判据：宽 = 行高 × 原始比例
         ratios: cells.map((c) => {
@@ -1031,9 +1041,18 @@ await installLayoutGuard(page);
     wallN2.count === 1 && wallN2.titles.join("|") === "乙的专辑一 · 乙",
     JSON.stringify(wallN2),
   );
+  // ── Q104（用户反馈①）：「显示张数」裁剪 —— getArtist 返回 5 张只出 2 格、零占位块 ──
+  // （真机实测：getArtist.view 回艺人全部 106 张，渲染全量 ⇒ 第 25 张起全是占位块）
+  await setWidgetProps("navidrome-library", { artistId: "art-3", limit: 2 });
+  const wallN3 = await readWall("专辑墙");
+  ok(
+    "Q104 专辑墙按「显示张数」裁剪：art-3 共 5 张只出 2 格且全有图",
+    wallN3.count === 2 && wallN3.empty === 0 && wallN3.titles.join("|") === "丙的专辑一 · 丙|丙的专辑二 · 丙",
+    JSON.stringify(wallN3),
+  );
   // 还原筛选项 —— 后续用例不带着筛选跑（也少留改动在盘上）
   await setWidgetProps("immich-gallery", { albumId: "" });
-  await setWidgetProps("navidrome-library", { artistId: "" });
+  await setWidgetProps("navidrome-library", { artistId: "", limit: 12 });
 
   // ── Q91（项 8）：页面级网格粒度（列数 / 行高）──
   await page.evaluate(() =>

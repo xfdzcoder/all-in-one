@@ -53,7 +53,7 @@ if (!imm || !nav) {
   console.error("DB 里没有 Immich / Navidrome 数据源 —— 本脚本是真机验收，需要先配好连接");
   process.exit(1);
 }
-const dash = await api("/api/dashboards", { title: `开发-真机验证-${Date.now().toString(36)}` }, "POST");
+const dash = await api("/api/dashboards", { title: `tmp-verify-gallery-${Date.now().toString(36)}` }, "POST"); // TST-23：草稿盘统一前缀
 await api(`/api/dashboards/${dash.id}/layout`, {
   layoutJson: JSON.stringify([
     {
@@ -334,6 +334,79 @@ try {
     break;
   }
   if (!navDone) ok("LIVE 网格只出所选艺人的专辑（title 全部带「 · 艺人名」）", false, "试过的艺人都没有专辑");
+
+  // ── Q104（用户反馈①，2026-10-02）：「显示张数」裁剪真机对账 ──
+  // 真机实测根因：`getArtist.view` 回**全部**专辑（陈奕迅 106 张）而封面只取前 limit 张，
+  // 渲染全量 ⇒ 第 limit+1 张起全是「封面不可用」占位块（用户报「专辑图展示不全」）。
+  // 判据：选专辑最多的艺人 + 显示张数=3 ⇒ **恰 3 格且格格有图**（修复前是 N 格、尾部全占位）。
+  const biggestArtist = await (async () => {
+    const navBase = (process.env.NAVIDROME_URL ?? process.env.VERIFY_NAVIDROME_URL ?? "").replace(/\/+$/, "");
+    const u = process.env.NAVIDROME_USERNAME ?? process.env.VERIFY_NAVIDROME_USER ?? "";
+    const p = process.env.NAVIDROME_PASSWORD ?? process.env.VERIFY_NAVIDROME_PASS ?? "";
+    if (!navBase || !u || !p) return null;
+    try {
+      const q = new URLSearchParams({ u, p, v: "1.16.1", c: "verify-gallery-live", f: "json" });
+      const r = await fetch(`${navBase}/rest/getArtists.view?${q}`);
+      const j = await r.json();
+      const flat = (j["subsonic-response"]?.artists?.index ?? []).flatMap((i) => i.artist ?? []);
+      return (
+        flat
+          .map((a) => ({ name: String(a.name ?? ""), albums: Number(a.albumCount) || 0 }))
+          .filter((a) => a.name && a.albums > 3)
+          .toSorted((x, y) => y.albums - x.albums)[0] ?? null
+      );
+    } catch {
+      return null;
+    }
+  })();
+  /** 数字配置项（开配置 → 填数字框 → 保存 → 退出编辑）。返回 "ok" 或失败步骤。 */
+  const setConfigNumber = async (marker, label, value) => {
+    if (!(await clickBtn("编辑页面"))) return "edit";
+    await sleep(500);
+    if (!(await openConfig(marker))) return "open";
+    await sleep(800);
+    const set = await page.evaluate(
+      ({ l, v }) => {
+        const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+          w.querySelector("label")?.textContent.includes(l),
+        );
+        const target = wrapper?.querySelector("input");
+        if (!target) return false;
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+        setter.call(target, v);
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+      },
+      { l: label, v: value },
+    );
+    if (!set) {
+      await page.keyboard.press("Escape").catch(() => {});
+      return "set";
+    }
+    await sleep(300);
+    if (!(await clickBtn("保存配置"))) return "save";
+    await sleep(1500);
+    if (!(await clickBtn("完成编辑"))) return "exit";
+    return "ok";
+  };
+  if (biggestArtist) {
+    const step1 = await pickAndSave("专辑墙", "只看艺人", biggestArtist.name);
+    const step2 = step1 === "ok" ? await setConfigNumber("专辑墙", "显示张数", "3") : step1;
+    const w3 = step2 === "ok" ? await wallState("专辑墙") : null;
+    ok(
+      `Q104 真机「显示张数」裁剪：大艺人（${biggestArtist.albums} 张）limit=3 ⇒ 恰 3 格全有图`,
+      Boolean(w3) && w3.count === 3 && w3.srcs.every((s) => s.startsWith("data:image/")),
+      JSON.stringify({
+        artist: biggestArtist.name,
+        albums: biggestArtist.albums,
+        step: step2,
+        cells: w3?.count,
+        noImage: w3 ? w3.srcs.filter((s) => !s.startsWith("data:image/")).length : -1,
+      }),
+    );
+  } else {
+    console.log("  （跳过 Q104 真机裁剪对账：无 NAVIDROME_* 凭证，mock 面已由 verify-svc Q104 覆盖）");
+  }
 } finally {
   await browser?.close();
   // 无论成败都删掉临时草稿盘 —— 不污染真机数据。清理失败要报出来，但不能吞掉测试结论

@@ -68,12 +68,18 @@ function extractAlbumList(resp: unknown): Array<Record<string, unknown>> {
 }
 
 /** 归一：getAlbumList2 条目 + 封面字节（可单测）。
- *  Q94（反馈②）：「正在播放」已移除，故不再接收/返回该部分。 */
+ *  Q94（反馈②）：「正在播放」已移除，故不再接收/返回该部分。
+ *  **Q104（用户反馈①，2026-10-02）**：`limit` 裁剪**渲染范围 = 取封面范围**。
+ *  选「只看艺人」走 `getArtist.view` 返回艺人**全部**专辑（真机实测陈奕迅 106 张），
+ *  此前归一化渲染全量而只给前 `limit` 张取封面 —— 第 `limit`+1 张起全是「封面不可用」
+ *  占位块（用户报「专辑图展示不全」）。缺省 = 全部（兼容旧调用）。 */
 export function normalizeNavidromeLibrary(
   newest: unknown,
   covers: Map<string, Uint8Array>,
+  limit?: number,
 ): { albums: NavidromeAlbumItem[] } {
-  const list: Array<Record<string, unknown>> = extractAlbumList(newest);
+  const all = extractAlbumList(newest);
+  const list = limit === undefined ? all : all.slice(0, Math.max(0, limit));
   const albums: NavidromeAlbumItem[] = [];
   for (const a of list) {
     const id = str(a.id) ?? str(a.coverArt);
@@ -259,7 +265,8 @@ export const navidromeLibraryConnector: WidgetConnector = {
     }
 
     return {
-      ...normalizeNavidromeLibrary(newest, covers),
+      // Q104：裁剪渲染范围 = 取封面范围（`wanted` 同源同值）
+      ...normalizeNavidromeLibrary(newest, covers, limit),
       ...(notes.length > 0 ? { notes } : {}),
     };
   },

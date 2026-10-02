@@ -52,6 +52,36 @@ describe("normalizeNavidromeLibrary（D50）", () => {
     const out = normalizeNavidromeLibrary(resp, new Map());
     expect(out.albums.map((a) => a.name)).toEqual(["透明な色"]);
   });
+
+  it("Q104（用户反馈①）：limit 裁剪**渲染范围 = 取封面范围**（getArtist 全量列表不再溢出占位块）", () => {
+    // 真机实测：getArtist.view 返回艺人**全部**专辑（陈奕迅 106 张）而封面只取前 limit 张 ——
+    // 此前归一化渲染全量，第 limit+1 张起全是「封面不可用」占位块（用户报「专辑图展示不全」）
+    const resp = {
+      "subsonic-response": {
+        status: "ok",
+        artist: {
+          id: "ar-many",
+          name: "多专辑艺人",
+          album: Array.from({ length: 5 }, (_, i) => ({
+            id: `al-m${i + 1}`,
+            name: `专辑${i + 1}`,
+            artist: "多专辑艺人",
+            coverArt: `al-m${i + 1}`,
+          })),
+        },
+      },
+    };
+    const covers = new Map<string, Uint8Array>([
+      ["al-m1", miniJpeg(64, 64)],
+      ["al-m2", miniJpeg(64, 64)],
+    ]);
+    const out = normalizeNavidromeLibrary(resp, covers, 2);
+    // 只渲染取到封面的前 2 张；第 3–5 张不再以占位块形态出现
+    expect(out.albums.map((a) => a.name)).toEqual(["专辑1", "专辑2"]);
+    expect(out.albums.every((a) => a.cover !== "")).toBe(true);
+    // 不传 limit 保持旧行为（全量渲染）—— 兼容旧调用
+    expect(normalizeNavidromeLibrary(resp, covers).albums).toHaveLength(5);
+  });
 });
 
 describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", () => {
@@ -96,12 +126,32 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
         return res.end(JSON.stringify({ "subsonic-response": { nowPlaying: {} } }));
       }
       // Q94（反馈③）：Navidrome 未实现 getAlbumList2?type=byArtist → 选中艺人时改走 getArtist.view。
-      // ar-good 返回该艺人的专辑；ar-bad 模拟 Subsonic 业务失败（HTTP 200 + status:failed）。
+      // ar-good 返回该艺人的专辑；ar-bad 模拟 Subsonic 业务失败（HTTP 200 + status:failed）；
+      // Q104：ar-many 返回 **5 张**专辑（getArtist 全量列表）—— 配 limit 裁剪用。
       if (url.startsWith("/rest/getArtist.view")) {
         res.setHeader("Content-Type", "application/json");
         if (url.includes("id=ar-bad")) {
           return res.end(
             JSON.stringify({ "subsonic-response": { status: "failed", error: { code: 70, message: "artist not found" } } }),
+          );
+        }
+        if (url.includes("id=ar-many")) {
+          return res.end(
+            JSON.stringify({
+              "subsonic-response": {
+                status: "ok",
+                artist: {
+                  id: "ar-many",
+                  name: "多专辑艺人",
+                  album: Array.from({ length: 5 }, (_, i) => ({
+                    id: `al-m${i + 1}`,
+                    name: `专辑${i + 1}`,
+                    artist: "多专辑艺人",
+                    coverArt: `al-m${i + 1}`,
+                  })),
+                },
+              },
+            }),
           );
         }
         return res.end(
@@ -229,6 +279,27 @@ describe("navidrome-library 数据通道（sourceId 派发 + 封面代取）", (
         ctx,
       ),
     ).rejects.toThrow(/artist not found/);
+  });
+
+  it("Q104（用户反馈①）：显示张数裁剪 —— getArtist 全量 5 张只渲染 limit 张且全有封面", async () => {
+    const [user] = await db.select().from((await import("../db/schema.ts")).user).limit(1);
+    const id = crypto.randomUUID();
+    await db.insert(dataSource).values({
+      id,
+      userId: user.id,
+      kind: "navidrome",
+      name: "mock-nd-many",
+      configJson: JSON.stringify({ url: base, username: "u", password: { credentialRef: "cred:none" } }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const data = (await navidromeLibraryConnector.fetch(
+      { type: "navidrome-library", config: { sourceId: id, limit: 2, artistId: "ar-many" } },
+      ctx,
+    )) as { albums: Array<{ name: string; cover: string }> };
+    // 修复前：渲染 5 张（后 3 张是「封面不可用」占位块）；修复后 = 2 张全有图
+    expect(data.albums.map((a) => a.name)).toEqual(["专辑1", "专辑2"]);
+    expect(data.albums.every((a) => a.cover !== "")).toBe(true);
   });
 });
 
