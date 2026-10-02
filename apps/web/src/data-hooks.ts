@@ -9,6 +9,7 @@ import {
 
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
 import { api, type FeedAgg, type TodoItem } from "./api";
+import { DATA_ROOT_KEYS, qk, qkRoot, sseKeysFor } from "./query-keys";
 import { normalizeTagIds } from "./config-form-utils";
 import { reportError } from "./feedback";
 
@@ -60,28 +61,8 @@ function forceRefetch(
 
 /** 兜底轮询：失效全部数据查询（与 SSE 通知同效，仅在 SSE 不可用时启用）。 */
 function invalidateAllData(qc: ReturnType<typeof useQueryClient>): void {
-  for (const key of [
-    ["todos"],
-    ["feeds"],
-    ["kanban"],
-    ["kanban-boards"],
-    ["mail-messages"],
-    ["mail-accounts"],
-    ["opencode"],
-    ["custom-api"],
-    ["launcher"],
-    ["plugin-data"],
-    // Q87（项 4）：补齐服务类组件 —— 此前这些 key 缺失，SSE 失效/轮询兜底都通知不到它们。
-    // WEB-8（Q99c）：**immich/navidrome 缩略图查询不再进 30s 轮询失效** —— 它们的 payload 是
-    // 整批 base64（12 张 × 数十 KB × N 卡），每 30s 失效重取 = 纯 churn（旧字符串还压 GC）。
-    // 这两张墙按各自 `refreshSec`（默认 300s）与手动刷新取数即可，无需被兜底轮询搅动。
-    ["portainer-containers"],
-    ["portainer-logs"],
-    ["mihomo-nodes"],
-    ["service-overview"],
-    ["monitor"],
-    ["media-options"],
-  ]) {
+  // WEB-11：清单收口 query-keys.ts（Q87 教训：手抄 16 键、新增查询忘加一处即通知不到）
+  for (const key of DATA_ROOT_KEYS) {
     void qc.invalidateQueries({ queryKey: key });
   }
 }
@@ -119,11 +100,10 @@ export function useSseInvalidation(): void {
         } catch {
           /* 保持默认 */
         }
-        if (topic === "rss") void qc.invalidateQueries({ queryKey: ["feeds"] });
-        else if (topic === "kanban") {
-          void qc.invalidateQueries({ queryKey: ["kanban"] });
-          void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
-        } else void qc.invalidateQueries({ queryKey: ["todos"] });
+        // WEB-11：topic → 根键映射收口 query-keys.ts（sseKeysFor）
+        for (const key of sseKeysFor(topic)) {
+          void qc.invalidateQueries({ queryKey: key });
+        }
       });
       src.addEventListener("error", () => {
         // CONNECTING = 浏览器自动重连中（无需兜底）；CLOSED = 放弃 → 轮询兜底 + 定期重试
@@ -162,7 +142,7 @@ export function useTodos(
   const includeArchived = includeArchivedOrTagIds === true;
   const tagKey = (tagIds ?? []).join(",") || "all";
   const query = useQuery({
-    queryKey: ["todos", list ?? "all", tagKey, includeArchived ? "arch" : "live"],
+    queryKey: qk.todoList(list, tagKey, includeArchived),
     queryFn: () => api.listTodos(list, tagIds, includeArchived),
     refetchInterval: refreshInterval(refreshSec, 60_000),
   });
@@ -171,13 +151,13 @@ export function useTodos(
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
-    refresh: () => void qc.invalidateQueries({ queryKey: ["todos"] }),
+    refresh: () => void qc.invalidateQueries({ queryKey: qkRoot.todos }),
   };
 }
 
 export function useTodoMutations() {
   const qc = useQueryClient();
-  const invalidate = () => void qc.invalidateQueries({ queryKey: ["todos"] });
+  const invalidate = () => void qc.invalidateQueries({ queryKey: qkRoot.todos });
   const create = useMutation({
     // #6 修复：携带清单（组件配置的 list）—— 否则永远进收件箱，配置清单的组件看不到新任务
     mutationFn: (v: { title: string; list?: string }) => api.createTodo(v.title, v.list),
@@ -216,7 +196,7 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
 } {
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["custom-api", JSON.stringify(config)],
+    queryKey: qk.customApi(JSON.stringify(config)),
     queryFn: () => api.widgetData("custom-api", config),
     enabled: Boolean(config.url),
     staleTime: 60_000,
@@ -230,7 +210,7 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
     refresh: () => {
       // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
       void (api.widgetData("custom-api", config, true) as Promise<unknown>)
-        .then((d) => qc.setQueryData(["custom-api", JSON.stringify(config)], d))
+        .then((d) => qc.setQueryData(qk.customApi(JSON.stringify(config)), d))
         .catch((e) => reportError("自定义 API 刷新失败", e)); // WEB-4
     },
   };
@@ -239,7 +219,7 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
 /** 应用入口探活数据（app-launcher connector —— 内网服务探活，D22）。 */
 export function useAppLauncher(items: Array<{ name: string; url: string }>, refreshSec?: unknown) {
   const qc = useQueryClient();
-  const key = ["launcher", JSON.stringify(items)];
+  const key = qk.launcher(JSON.stringify(items));
   const query = useQuery({
     queryKey: key,
     queryFn: () =>
@@ -270,7 +250,7 @@ export type EmbedCheck = { embeddable: boolean; reason: string; verified: boolea
 /** 已安装插件列表（FR-W6；宿主据 status=enabled 动态注册组件 —— J8 新增组件不改核心）。 */
 export function usePlugins() {
   const query = useQuery({
-    queryKey: ["plugins"],
+    queryKey: qk.plugins,
     queryFn: () => api.listPlugins(),
     staleTime: 60_000,
   });
@@ -285,7 +265,7 @@ export function usePlugins() {
 /** Kanban 看板树（Q6b：列/卡渲染 + SSE 同步）。 */
 export function useKanbanTree(boardId: string | undefined, refreshSec?: unknown) {
   const query = useQuery({
-    queryKey: ["kanban", boardId ?? ""],
+    queryKey: qk.kanbanBoard(boardId),
     queryFn: () => api.getBoardTree(boardId!),
     enabled: Boolean(boardId),
     refetchInterval: refreshInterval(refreshSec, 60_000),
@@ -301,7 +281,7 @@ export function useKanbanTree(boardId: string | undefined, refreshSec?: unknown)
 /** 看板清单（组件内选择器用）。 */
 export function useKanbanBoards() {
   const query = useQuery({
-    queryKey: ["kanban-boards"],
+    queryKey: qk.kanbanBoards,
     queryFn: () => api.listBoards(),
   });
   return {
@@ -314,8 +294,8 @@ export function useKanbanBoards() {
 export function useKanbanMutations(boardId: string | undefined) {
   const qc = useQueryClient();
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["kanban"] });
-    void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
+    void qc.invalidateQueries({ queryKey: qkRoot.kanban });
+    void qc.invalidateQueries({ queryKey: qkRoot.kanbanBoards });
   };
   return {
     createBoard: (title: string) => api.createBoard(title).then((r) => (invalidate(), r)),
@@ -350,7 +330,7 @@ type OpencodeData = {
 
 export function useOpencodeData(config: Record<string, unknown>) {
   const qc = useQueryClient();
-  const key = ["opencode", JSON.stringify(config)];
+  const key = qk.opencode(JSON.stringify(config));
   const query = useQuery({
     queryKey: key,
     queryFn: () => api.widgetData("opencode", config) as Promise<OpencodeData>,
@@ -385,7 +365,7 @@ type MonitorMetrics = {
 
 export function useMonitorData(config: Record<string, unknown>) {
   const qc = useQueryClient();
-  const key = ["monitor", JSON.stringify(config)];
+  const key = qk.monitor(JSON.stringify(config));
   const query = useQuery({
     queryKey: key,
     queryFn: () => api.widgetData("monitor", config) as Promise<MonitorMetrics>,
@@ -409,7 +389,7 @@ export function useMonitorData(config: Record<string, unknown>) {
 /** 邮件账号清单（Q7b）。 */
 export function useMailAccounts() {
   const query = useQuery({
-    queryKey: ["mail-accounts"],
+    queryKey: qk.mailAccounts,
     queryFn: () => api.listMailAccounts(),
   });
   return {
@@ -430,8 +410,9 @@ export function useImmichGallery(
   const n = typeof limit === "number" && Number.isFinite(limit) ? limit : 12;
   const album = typeof albumId === "string" && albumId ? albumId : undefined;
   const qc = useQueryClient();
+  const key = qk.immichGallery(sourceId ?? "", n, album ?? "");
   const query = useQuery({
-    queryKey: ["immich-gallery", sourceId ?? "", n, album ?? ""],
+    queryKey: key,
     queryFn: () => api.widgetData("immich-gallery", { sourceId, limit: n, albumId: album }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 60_000,
@@ -456,7 +437,7 @@ export function useImmichGallery(
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: forceRefetch(qc, ["immich-gallery", sourceId ?? "", n, album ?? ""], "immich-gallery", {
+    refresh: forceRefetch(qc, key, "immich-gallery", {
       sourceId,
       limit: n,
       albumId: album,
@@ -477,7 +458,7 @@ export function useNavidromeLibrary(
   const artist = typeof artistId === "string" && artistId ? artistId : undefined;
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["navidrome-library", sourceId ?? "", n, artist ?? ""],
+    queryKey: qk.navidromeLibrary(sourceId ?? "", n, artist ?? ""),
     queryFn: () => api.widgetData("navidrome-library", { sourceId, limit: n, artistId: artist }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 60_000,
@@ -501,7 +482,7 @@ export function useNavidromeLibrary(
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: forceRefetch(qc, ["navidrome-library", sourceId ?? "", n, artist ?? ""], "navidrome-library", {
+    refresh: forceRefetch(qc, qk.navidromeLibrary(sourceId ?? "", n, artist ?? ""), "navidrome-library", {
       sourceId,
       limit: n,
       artistId: artist,
@@ -513,7 +494,7 @@ export function useNavidromeLibrary(
 export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) {
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["portainer-containers", sourceId ?? ""],
+    queryKey: qk.portainerContainers(sourceId ?? ""),
     queryFn: () => api.widgetData("portainer-containers", { sourceId }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 30_000,
@@ -536,14 +517,14 @@ export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) 
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: forceRefetch(qc, ["portainer-containers", sourceId ?? ""], "portainer-containers", { sourceId }),
+    refresh: forceRefetch(qc, qk.portainerContainers(sourceId ?? ""), "portainer-containers", { sourceId }),
   };
 }
 
 /** 容器日志尾部（点行时按需取，只读）。 */
 export function usePortainerLogs(sourceId?: string, containerId?: string) {
   const query = useQuery({
-    queryKey: ["portainer-logs", sourceId ?? "", containerId ?? ""],
+    queryKey: qk.portainerLogs(sourceId ?? "", containerId ?? ""),
     queryFn: () => api.widgetData("portainer-logs", { sourceId, containerId }) as Promise<{ logs: string }>,
     enabled: Boolean(sourceId && containerId),
     staleTime: 10_000,
@@ -559,7 +540,7 @@ export function usePortainerLogs(sourceId?: string, containerId?: string) {
 export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
   const qc = useQueryClient();
   const query = useQuery({
-    queryKey: ["mihomo-nodes", sourceId ?? ""],
+    queryKey: qk.mihomoNodes(sourceId ?? ""),
     queryFn: () => api.widgetData("mihomo-nodes", { sourceId }) as Promise<Record<string, unknown>>,
     enabled: Boolean(sourceId),
     staleTime: 30_000,
@@ -576,7 +557,7 @@ export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
       | undefined,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    refresh: forceRefetch(qc, ["mihomo-nodes", sourceId ?? ""], "mihomo-nodes", { sourceId }),
+    refresh: forceRefetch(qc, qk.mihomoNodes(sourceId ?? ""), "mihomo-nodes", { sourceId }),
   };
 }
 
@@ -585,7 +566,7 @@ export function usePortainerRestart(sourceId?: string) {
   const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: (containerId: string) => api.portainerRestart(sourceId ?? "", containerId),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["portainer-containers"] }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qkRoot.portainerContainers }),
   });
   return {
     send: (containerId: string) => {
@@ -598,7 +579,7 @@ export function usePortainerRestart(sourceId?: string) {
 
 /** 服务概览（Q39/D46）：sourceId → 服务端按连接 kind 派发适配器。 */
 export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
-  const key = ["service-overview", sourceId ?? ""];
+  const key = qk.serviceOverview(sourceId ?? "");
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: key,
@@ -626,7 +607,7 @@ export function useMailMessages(
   const qc = useQueryClient();
   // WEB-1：账号过滤**下推服务端**（原先传 undefined 取全局再客户端过滤 —— limit 语义被破坏）
   const ids = Array.isArray(accountIds) ? accountIds.filter((x) => typeof x === "string" && x) : [];
-  const key = ["mail-messages", ids.join(",") || "all", limit];
+  const key = qk.mailMessages(ids.join(","), limit);
   const query = useQuery({
     queryKey: key,
     queryFn: () => api.mailMessages({ accountIds: ids.length > 0 ? ids : undefined, limit }),
@@ -650,7 +631,7 @@ export function useMailMessages(
 /** 单封正文（沙箱渲染前取回，D30）。 */
 export function useMailMessage(accountId: string | null, uid: number | string | null) {
   const query = useQuery({
-    queryKey: ["mail-message", accountId, uid],
+    queryKey: qk.mailMessage(accountId, uid),
     queryFn: () => api.mailMessage(accountId!, uid!),
     enabled: Boolean(accountId) && uid !== null,
     staleTime: 300_000,
@@ -665,9 +646,9 @@ export function useMailMessage(accountId: string | null, uid: number | string | 
 export function useMailMutations() {
   const qc = useQueryClient();
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["mail-accounts"] });
-    void qc.invalidateQueries({ queryKey: ["mail-messages"] });
-    void qc.invalidateQueries({ queryKey: ["mail-message"] });
+    void qc.invalidateQueries({ queryKey: qkRoot.mailAccounts });
+    void qc.invalidateQueries({ queryKey: qkRoot.mailMessages });
+    void qc.invalidateQueries({ queryKey: qkRoot.mailMessage });
   };
   return {
     createAccount: async (input: {
@@ -702,7 +683,7 @@ export function usePluginData(
 ) {
   const enabled = Boolean(source) && source !== "none";
   const query = useQuery({
-    queryKey: ["plugin-data", type, JSON.stringify(config)],
+    queryKey: qk.pluginData(type, JSON.stringify(config)),
     queryFn: () => api.widgetData(type, config),
     enabled,
     staleTime: 60_000,
@@ -718,7 +699,7 @@ export function usePluginData(
  *  load 事件照常触发，前端无法自判，见 connector/iframe.ts）。 */
 export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
   const query = useQuery({
-    queryKey: ["iframe-embed", url],
+    queryKey: qk.iframeEmbed(url),
     queryFn: () =>
       api.widgetData("iframe-embed", { url, parentOrigin: window.location.origin }) as Promise<EmbedCheck>,
     enabled: Boolean(url),
@@ -761,16 +742,16 @@ export function useFeeds(
 }
 
 export function useFeedSources() {
-  return useQuery({ queryKey: ["feed-sources"], queryFn: () => api.listFeeds() });
+  return useQuery({ queryKey: qk.feedSources, queryFn: () => api.listFeeds() });
 }
 
 /** RSS 变更（标已读/订阅/退订）→ 失效 feeds + sources（SSE 兜底其它组件）。 */
 export function useFeedMutations() {
   const qc = useQueryClient();
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["feeds"] });
-    void qc.invalidateQueries({ queryKey: ["feed-sources"] });
-    void qc.invalidateQueries({ queryKey: ["custom-api"] });
+    void qc.invalidateQueries({ queryKey: qkRoot.feeds });
+    void qc.invalidateQueries({ queryKey: qkRoot.feedSources });
+    void qc.invalidateQueries({ queryKey: qkRoot.customApi });
   };
   return {
     markRead: useMutation({ mutationFn: (itemKey: string) => api.markFeedRead(itemKey), onSuccess: invalidate }),
@@ -784,7 +765,7 @@ export function useFeedMutations() {
 
 /** Workspace 标签（FR-D1/D2，D40）：列表 + 变更（改后失效 todos/feeds/queries）。 */
 export function useTags() {
-  const query = useQuery({ queryKey: ["tags"], queryFn: () => api.listTags() });
+  const query = useQuery({ queryKey: qk.tags, queryFn: () => api.listTags() });
   return {
     data: query.data,
     loading: query.isLoading,
@@ -795,11 +776,11 @@ export function useTags() {
 export function useTagMutations() {
   const qc = useQueryClient();
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["tags"] });
-    void qc.invalidateQueries({ queryKey: ["todos"] });
-    void qc.invalidateQueries({ queryKey: ["feeds"] });
+    void qc.invalidateQueries({ queryKey: qkRoot.tags });
+    void qc.invalidateQueries({ queryKey: qkRoot.todos });
+    void qc.invalidateQueries({ queryKey: qkRoot.feeds });
     // Q27b#5：订阅源列表键是 feed-sources（漏失效 → 打标"存了但选不上"）
-    void qc.invalidateQueries({ queryKey: ["feed-sources"] });
+    void qc.invalidateQueries({ queryKey: qkRoot.feedSources });
   };
   const create = useMutation({
     mutationFn: (v: { name: string; color?: string }) => api.createTag(v.name, v.color),
@@ -825,7 +806,7 @@ export function useTagMutations() {
 /** 命名数据连接（D42）：列表 + 变更。 */
 export function useDataSources(kind?: string) {
   const query = useQuery({
-    queryKey: ["data-sources", kind ?? "all"],
+    queryKey: qk.dataSources(kind),
     queryFn: () => api.listDataSources(kind),
   });
   return {
@@ -837,7 +818,7 @@ export function useDataSources(kind?: string) {
 
 export function useDataSourceMutations() {
   const qc = useQueryClient();
-  const invalidate = () => void qc.invalidateQueries({ queryKey: ["data-sources"] });
+  const invalidate = () => void qc.invalidateQueries({ queryKey: qkRoot.dataSources });
   const create = useMutation({
     mutationFn: (v: { kind: string; name: string; config: Record<string, unknown> }) =>
       api.createDataSource(v),
@@ -871,7 +852,7 @@ export function useMediaOptionLabel(
 ): string | undefined {
   const sid = typeof scopeSourceId === "string" ? scopeSourceId : "";
   const scoped = useQuery({
-    queryKey: ["media-options", scopeDynamic ?? "", sid],
+    queryKey: qk.mediaOptions(scopeDynamic, sid),
     queryFn: () =>
       api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
         const items = (d as { items?: Array<{ value: string; label: string }> }).items;
@@ -886,9 +867,9 @@ export function useDynamicOptionsMap(
   scopeSourceId?: string,
   scopeDynamic?: string,
 ): Record<string, Array<{ value: string; label: string }>> {
-  const tags = useQuery({ queryKey: ["tags"], queryFn: () => api.listTags() });
+  const tags = useQuery({ queryKey: qk.tags, queryFn: () => api.listTags() });
   const todosAll = useQuery({
-    queryKey: ["todos", "all", "__names__"],
+    queryKey: qk.todoNames(),
     queryFn: () => api.listTodos(undefined, undefined, true),
   });
   const boards = useKanbanBoards();
@@ -906,7 +887,7 @@ export function useDynamicOptionsMap(
   // 换连接即换 queryKey → 自动重取；未选连接时不发请求。
   const sid = typeof scopeSourceId === "string" ? scopeSourceId : "";
   const scoped = useQuery({
-    queryKey: ["media-options", scopeDynamic ?? "", sid],
+    queryKey: qk.mediaOptions(scopeDynamic, sid),
     queryFn: () =>
       api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
         const items = (d as { items?: Array<{ value: string; label: string }> }).items;
@@ -974,6 +955,6 @@ export function useSourceHomeUrl(sourceId: unknown): string | undefined {
 
 /** 页面列表（Q29b：任务页签标注所在 Dashboard）。 */
 export function useDashboards() {
-  const query = useQuery({ queryKey: ["dashboards"], queryFn: () => api.listDashboards() });
+  const query = useQuery({ queryKey: qk.dashboards, queryFn: () => api.listDashboards() });
   return { data: query.data };
 }

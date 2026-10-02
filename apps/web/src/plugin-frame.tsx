@@ -3,6 +3,7 @@ import { Alert, Text } from "@mantine/core";
 import type { ConfigValues, PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api } from "./api";
+import { qkRoot } from "./query-keys";
 import { randomNonce } from "./random-id";
 import { queryClient, usePluginData } from "./data-hooks";
 
@@ -154,7 +155,7 @@ export function PluginFrame({
             .pluginAction(pluginId, d.name, d.params)
             .then(() => {
               // 动作可能改动 todo/feed 数据 —— 刷新插件数据桥（SSE 另有失效通知）
-              void queryClient.invalidateQueries({ queryKey: ["plugin-data"] });
+              void queryClient.invalidateQueries({ queryKey: qkRoot.pluginData });
               return undefined; // promise(always-return)：链式语义明确
             })
             .catch((err: unknown) => {

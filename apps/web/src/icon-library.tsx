@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Group, Stack, Text, TextInput } from "@mantine/core";
 
 import { api, type IconRow } from "./api";
+import { qk, qkRoot } from "./query-keys";
 import { copyText } from "./clipboard";
 import { ConfirmAction } from "./confirm";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +18,7 @@ const OK_MIME = new Set(["image/svg+xml", "image/png", "image/webp"]);
  */
 export function IconLibrary() {
   const qc = useQueryClient();
-  const list = useQuery({ queryKey: ["icons"], queryFn: () => api.listIcons() });
+  const list = useQuery({ queryKey: qk.icons, queryFn: () => api.listIcons() });
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -54,7 +55,7 @@ export function IconLibrary() {
       setName("");
       setFile(null);
       setFormOpen(false);
-      await qc.invalidateQueries({ queryKey: ["icons"] });
+      await qc.invalidateQueries({ queryKey: qkRoot.icons });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -143,7 +144,7 @@ export function IconLibrary() {
               title="删除图标？"
               message={`确认删除图标「${r.name}」？（引用它的配置将无法显示图标；业务数据保留）`}
               onConfirm={() => {
-                void api.deleteIcon(r.id).then(() => qc.invalidateQueries({ queryKey: ["icons"] }));
+                void api.deleteIcon(r.id).then(() => qc.invalidateQueries({ queryKey: qkRoot.icons }));
               }}
             />
           </div>

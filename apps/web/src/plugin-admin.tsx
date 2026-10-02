@@ -12,6 +12,7 @@ import {
 import type { PluginManifest } from "@all-in-one/widget-sdk";
 
 import { api, type PluginRow } from "./api";
+import { qkRoot } from "./query-keys";
 import { ConfirmAction } from "./confirm";
 import { WbAlert } from "./ui";
 import { queryClient, usePlugins } from "./data-hooks";
@@ -75,7 +76,7 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
   const fileRef = useRef<HTMLInputElement>(null);
 
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["plugins"] });
+    void queryClient.invalidateQueries({ queryKey: qkRoot.plugins });
     refresh();
   };
 
