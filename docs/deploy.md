@@ -18,6 +18,10 @@ docker compose up -d --build
 
 ## 备份 / 恢复
 
+> **迁移回滚（SRV-11）**：drizzle 迁移是 up-only、无 down 脚本 —— 回退靠**整卷还原备份**或手工反向 SQL，
+> 步骤与半应用状态处理见 [`apps/server/drizzle/README.md`](../apps/server/drizzle/README.md)。
+> 表结构迁移与布局 `LAYOUT_SCHEMA_VERSION` 是两条独立演进线，改数据结构前先看该文档。
+
 ```bash
 # 备份（随时可做；含 WAL 一致性）
 docker compose stop all-in-one     # 停服保证一致性
