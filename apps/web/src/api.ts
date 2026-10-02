@@ -57,6 +57,8 @@ export type FeedSource = {
 
 /** 命名数据连接（D42）。 */
 export type DataSourceRow = {
+  /** SRV-07：配置损坏提示（JSON 解析失败 —— 重新保存即修复） */
+  configError?: string;
   id: string;
   kind: string;
   name: string;

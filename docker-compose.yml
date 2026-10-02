@@ -21,6 +21,10 @@ services:
       # Gmail 接入（可选，D37）：Google Cloud OAuth 客户端（Web），见 docs/deploy.md
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID:-}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET:-}
+      # 日志级别（deploy.md：debug|info|warn|error）
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # 内网出站逃生阀（SEC4，慎用）：custom-api / 邮件组件以本机/内网服务为目标时置 1
+      ALLOW_PRIVATE_OUTBOUND: ${ALLOW_PRIVATE_OUTBOUND:-0}
     volumes:
       # SQLite 库文件 + 插件安装目录 + 备份落点
       - ./data:/app/data

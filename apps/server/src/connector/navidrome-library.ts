@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { outboundRequest, resolveSecretRefs , mapLimit } from "./registry.ts";
+import { outboundRequest, resolveSecretRefs , mapLimit, loadSourceConfig } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
 
 /**
@@ -114,12 +114,7 @@ export const navidromeArtistsConnector: WidgetConnector = {
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
     if (row.kind !== "navidrome") throw new Error(`艺人清单需要 Navidrome 连接（当前：${row.kind}）`);
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");
@@ -158,12 +153,7 @@ export const navidromeLibraryConnector: WidgetConnector = {
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
     if (row.kind !== "navidrome") throw new Error(`专辑墙需要 Navidrome 连接（当前：${row.kind}）`);
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");

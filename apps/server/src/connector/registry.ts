@@ -38,6 +38,24 @@ export class UnknownWidgetTypeError extends Error {
   }
 }
 
+/** SRV-07：连接配置解析 —— 解析失败必须说「原因 + 怎么修」（D47）。
+ *  此前 10 处静默 catch（noop）把**库里损坏的配置**吞成 `{}`，对外误报「连接缺少地址」——
+ *  用户照提示补地址永远修不好（真实原因是 configJson 损坏）。 */
+export function loadSourceConfig(
+  configJson: string,
+  label = "数据连接",
+): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(configJson) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch (err) {
+    throw new Error(
+      `${label}的配置已损坏（JSON 解析失败）—— 请在「数据源管理 · 数据连接」打开该连接、重新填写并保存一次配置`,
+      { cause: err },
+    );
+  }
+}
+
 /** 把配置中的 SecretRef 解析为明文（仅在 connector 内部使用）。 */
 export async function resolveSecretRefs(
   rawConfig: Record<string, unknown>, // 不叫 rawConfig：遮蔽全局 app rawConfig（no-shadow 真混淆源）

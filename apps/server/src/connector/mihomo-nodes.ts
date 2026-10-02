@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
  * Mihomo 节点面板（FR-X3 只读深度，**D50**）：策略组 / 节点延迟 / 订阅源详情。
@@ -91,12 +91,7 @@ export const mihomoNodesConnector: WidgetConnector = {
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
     if (row.kind !== "mihomo") throw new Error(`节点面板需要 Mihomo 连接（当前：${row.kind}）`);
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");

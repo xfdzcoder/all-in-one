@@ -5,7 +5,7 @@ import { emptyOverview, validateServiceOverview } from "@all-in-one/widget-sdk";
 import type { ServiceListItem, ServiceOverview } from "@all-in-one/widget-sdk";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
  * 第三方服务概览适配器（Q39/D46 接入 · **Q44/D48 结构化重做**，指标按
@@ -421,12 +421,7 @@ export const serviceOverviewConnector: WidgetConnector = {
       .limit(1);
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");

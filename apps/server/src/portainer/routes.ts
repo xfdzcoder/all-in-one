@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 
 import { dataSource } from "../db/schema.ts";
-import { outboundRequest, resolveSecretRefs } from "../connector/registry.ts";
+import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "../connector/registry.ts";
 import type { FetchContext } from "../connector/registry.ts";
 import { authGuard } from "../auth/guard.ts";
 
@@ -36,12 +36,7 @@ export async function portainerRestart(ctx: FetchContext, sourceId: string, cont
   const row = rows[0];
   if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
   if (row.kind !== "portainer") throw new Error(`容器重启需要 Portainer 连接（当前：${row.kind}）`);
-  let rawConfig: Record<string, unknown> = {};
-  try {
-    rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-  } catch {
-    /* noop */
-  }
+  const rawConfig = loadSourceConfig(row.configJson);
   const config = await resolveSecretRefs(rawConfig, ctx);
   const base = (str(config.url) ?? "").replace(/\/+$/, "");
   if (!base) throw new Error("连接缺少地址");

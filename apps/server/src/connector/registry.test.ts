@@ -100,3 +100,25 @@ describe("mapLimit（SRV-29：小并发 + 总时间预算）", () => {
     expect(out.some((x) => x === null)).toBe(true);
   });
 });
+
+describe("loadSourceConfig（SRV-07：损坏配置说「原因 + 怎么修」）", () => {
+  it("合法 JSON 返回对象；空对象合法", async () => {
+    const { loadSourceConfig } = await import("./registry.ts");
+    expect(loadSourceConfig('{"url":"https://x"}')).toEqual({ url: "https://x" });
+    expect(loadSourceConfig("{}")).toEqual({});
+  });
+
+  it("损坏 JSON 抛错：含原因 + 怎么修，且带 cause（错误链不断）", async () => {
+    const { loadSourceConfig } = await import("./registry.ts");
+    let caught: Error | null = null;
+    try {
+      loadSourceConfig("{oops", "监控源");
+    } catch (e) {
+      caught = e as Error;
+    }
+    expect(caught?.message).toContain("配置已损坏"); // 原因
+    expect(caught?.message).toContain("重新填写并保存"); // 怎么修
+    expect(caught?.message).toContain("监控源"); // 带上下文
+    expect(caught?.cause).toBeTruthy();
+  });
+});

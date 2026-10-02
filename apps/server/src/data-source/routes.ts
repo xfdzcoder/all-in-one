@@ -41,12 +41,17 @@ const patchBody = z
 
 const idParams = z.object({ id: z.string().min(1).max(64) });
 
-/** config 键白名单校验（未知键拒绝 —— 防配置污染）。 */
+/** config 键白名单校验（未知键拒绝 —— 防配置污染）。
+ *  SRV-07：损坏的 configJson **不再静默吞成空表单** —— 抛出「原因 + 怎么修」，
+ *  由列表按行捕获后以 `configError` 随行返回（管理面可见、其余行不受影响）。 */
 function parseConfig(configJson: string): Record<string, unknown> {
   try {
     return JSON.parse(configJson) as Record<string, unknown>;
-  } catch {
-    return {};
+  } catch (err) {
+    throw new Error(
+      "连接配置已损坏（JSON 解析失败）—— 请重新填写并保存一次配置",
+      { cause: err },
+    );
   }
 }
 
@@ -72,7 +77,14 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
       .from(dataSource)
       .where(where)
       .orderBy(asc(dataSource.kind), asc(dataSource.name));
-    return rows.map((r) => ({ ...r, config: parseConfig(r.configJson) }));
+    return rows.map((r) => {
+      // SRV-07：单行损坏不让整表 500 —— 该行带 `configError`，其余行照常
+      try {
+        return { ...r, config: parseConfig(r.configJson) };
+      } catch (e) {
+        return { ...r, config: {}, configError: e instanceof Error ? e.message : "配置解析失败" };
+      }
+    });
   });
 
   // POST /api/data-sources —— 创建（同 kind 同名 409）

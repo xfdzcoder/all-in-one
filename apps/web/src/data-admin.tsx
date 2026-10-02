@@ -787,6 +787,8 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                           variant="subtle"
                           onClick={() => {
                             setDsEditing(r.id);
+                            // SRV-07：损坏配置不再显示成空表单 —— 明确告知「为什么空 + 怎么修」
+                            setDsError((r as { configError?: string }).configError ?? null);
                             setDsKind(r.kind);
                             setDsName(r.name);
                             setDsConfig(

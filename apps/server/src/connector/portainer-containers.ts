@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
  * Portainer 容器清单（FR-X3 只读深度，**D50**）：状态/端口/镜像 + 日志尾部（只读）。
@@ -86,12 +86,7 @@ export const portainerContainersConnector: WidgetConnector = {
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
     if (row.kind !== "portainer") throw new Error(`容器清单需要 Portainer 连接（当前：${row.kind}）`);
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     if (!base) throw new Error("连接缺少地址");
@@ -119,12 +114,7 @@ export const portainerLogsConnector: WidgetConnector = {
     const rows = await ctx.db.select().from(dataSource).where(eq(dataSource.id, sourceId)).limit(1);
     const row = rows[0];
     if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
-    let rawConfig: Record<string, unknown> = {};
-    try {
-      rawConfig = JSON.parse(row.configJson) as Record<string, unknown>;
-    } catch {
-      /* noop */
-    }
+    const rawConfig = loadSourceConfig(row.configJson);
     const config = await resolveSecretRefs(rawConfig, ctx);
     const base = (str(config.url) ?? "").replace(/\/+$/, "");
     const headers = { "X-API-Key": str(config.apiToken) ?? "" };
