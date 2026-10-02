@@ -18,6 +18,7 @@ import { useKanbanBoards, useKanbanMutations, useKanbanTree } from "./data-hooks
 import { WidgetEditContext } from "./widget-edit-context";
 import { WidgetTitle } from "./widget-title";
 import { WbAlert, WbLoading, IconAction } from "./ui";
+import { reportError } from "./feedback";
 
 /**
  * Kanban 组件（二期 Q6b）：多项目看板、列与卡片、卡片操作（编辑/移动/归档/删除）。
@@ -72,7 +73,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
       if (row && (row.sortOrder !== i || !sameCol)) return m.patchCard(c.id, { columnId, sortOrder: i });
       return null;
     });
-    void Promise.all(ops.filter(Boolean));
+    void Promise.all(ops.filter(Boolean)).catch((e) => reportError("看板卡片排序保存失败", e)); // WEB-4
   };
 
 

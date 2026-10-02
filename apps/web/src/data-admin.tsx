@@ -37,6 +37,7 @@ import { MailAccountsPanel } from "./mail-accounts";
 import { TagInput } from "./tag-input";
 import { ServiceIcon } from "./service-icon";
 import { WbAlert } from "./ui";
+import { reportError } from "./feedback";
 
 /**
  * 数据源管理（FR-D2/D40；Q25c/#2 由弹窗改为**独立全页**——大数量好展示）：
@@ -501,7 +502,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     title="删除看板？"
                     message={`删除看板将一并删除其中全部列与卡片（不可恢复）。业务数据边界：仅删看板数据。确认删除？`}
                     onConfirm={() => {
-                      void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined));
+                      void m.deleteBoard(activeBoardId).then(() => setBoardId(undefined)).catch((e) => reportError("删除看板失败", e)); // WEB-4
                     }}
                   />
                 </div>
@@ -518,7 +519,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     onChange={(e) => setNewBoard(e.currentTarget.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newBoard.trim()) {
-                        void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                        void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id)).catch((e) => reportError("新建看板失败", e)); // WEB-4
                         setNewBoard("");
                         setNewBoardOpen(false);
                       }
@@ -529,7 +530,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     size="xs"
                     disabled={!newBoard.trim()}
                     onClick={() => {
-                      void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id));
+                      void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id)).catch((e) => reportError("新建看板失败", e)); // WEB-4
                       setNewBoard("");
                       setNewBoardOpen(false);
                     }}

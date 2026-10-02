@@ -5,6 +5,7 @@ import { api } from "./api";
 import { ConfirmAction } from "./confirm";
 import { useMailAccounts, useMailMutations } from "./data-hooks";
 import { WbAlert } from "./ui";
+import { reportError } from "./feedback";
 
 /**
  * 邮箱账号面板（Q26b / D42）：账号增改删 + Gmail OAuth 绑定。
@@ -171,7 +172,7 @@ export function MailAccountsPanel() {
               variant="subtle"
               title="删除账号？"
               message={`确认删除邮件账号「${a.name}」？（仅移除账号配置与凭证引用，邮件保留在邮件服务器）`}
-              onConfirm={() => void m.deleteAccount(a.id).then(() => refresh())}
+              onConfirm={() => void m.deleteAccount(a.id).then(() => refresh()).catch((e) => reportError("删除邮箱账号失败", e))} // WEB-4
             />
           </div>
         ))}

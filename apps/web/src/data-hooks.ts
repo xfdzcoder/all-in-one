@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MutationCache } from "@tanstack/react-query";
 import {
   QueryClient,
   useMutation,
@@ -9,10 +10,17 @@ import {
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
 import { api, type TodoItem } from "./api";
 import { normalizeTagIds } from "./config-form-utils";
+import { reportError } from "./feedback";
 
 /** TanStack Query 单例（04-tech-stack：TanStack Query + SSE）。 */
 export const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  // WEB-6（Q99d）：**全局 mutation 失败兜底** —— 二十余处 `useMutation` 未接 onError，
+  // 失败静默像成功。这里统一进反馈通道（控制台 + 顶栏 WbAlert）；需要局部错误条的调用点
+  // 仍可自行加 `onError` 做更细的展示。
+  mutationCache: new MutationCache({
+    onError: (error) => reportError("操作失败", error),
+  }),
 });
 
 /** FR-I3 定时刷新间隔：组件配置 refreshSec（秒）> 0 时优先，否则用组件默认值。 */
@@ -221,9 +229,9 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
     fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
     refresh: () => {
       // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
-      void (api.widgetData("custom-api", config, true) as Promise<unknown>).then((d) =>
-        qc.setQueryData(["custom-api", JSON.stringify(config)], d),
-      );
+      void (api.widgetData("custom-api", config, true) as Promise<unknown>)
+        .then((d) => qc.setQueryData(["custom-api", JSON.stringify(config)], d))
+        .catch((e) => reportError("自定义 API 刷新失败", e)); // WEB-4
     },
   };
 }
@@ -250,9 +258,9 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>, refr
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("app-launcher", { items }, true) as Promise<unknown>).then((d) =>
-        qc.setQueryData(key, d),
-      );
+      void (api.widgetData("app-launcher", { items }, true) as Promise<unknown>)
+        .then((d) => qc.setQueryData(key, d))
+        .catch((e) => reportError("应用入口刷新失败", e)); // WEB-4
     },
   };
 }
@@ -356,9 +364,9 @@ export function useOpencodeData(config: Record<string, unknown>) {
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("opencode", config, true) as Promise<OpencodeData>).then((d) =>
-        qc.setQueryData(key, d),
-      );
+      void (api.widgetData("opencode", config, true) as Promise<OpencodeData>)
+        .then((d) => qc.setQueryData(key, d))
+        .catch((e) => reportError("OpenCode 刷新失败", e)); // WEB-4
     },
   };
 }
@@ -391,9 +399,9 @@ export function useMonitorData(config: Record<string, unknown>) {
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("monitor", config, true) as Promise<MonitorMetrics>).then((d) =>
-        qc.setQueryData(key, d),
-      );
+      void (api.widgetData("monitor", config, true) as Promise<MonitorMetrics>)
+        .then((d) => qc.setQueryData(key, d))
+        .catch((e) => reportError("监控刷新失败", e)); // WEB-4
     },
   };
 }
@@ -745,9 +753,9 @@ export function useFeeds(
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
       // WEB-5：手动刷新必须复用**同一份清洗结果**（原先发原始 tagIds，畸形配置下「查询正常、点刷新报错」）
-      void (api.widgetData("rss", { limit, filter, tagIds: tags }, true) as Promise<unknown>).then((d) =>
-        qc.setQueryData(key, d),
-      );
+      void (api.widgetData("rss", { limit, filter, tagIds: tags }, true) as Promise<unknown>)
+        .then((d) => qc.setQueryData(key, d))
+        .catch((e) => reportError("RSS 刷新失败", e)); // WEB-4
     },
   };
 }

@@ -23,6 +23,7 @@ import { rescaleLayout } from "./grid-rescale";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
 import { IconAction, WbAlert } from "./ui";
+import { reportError } from "./feedback";
 import { LoginPage } from "./LoginPage";
 import { WidgetErrorBoundary } from "./error-boundary";
 import { DataAdmin } from "./data-admin";
@@ -120,6 +121,13 @@ function Workbench({
 
   // ISS-1 修复：页面 CRUD 统一错误提示（失败不再静默）
   const [pageError, setPageError] = useState<string | null>(null);
+  // WEB-4/WEB-6（Q99d）：异步失败反馈通道 —— reportError() 派发 `wb:error`，这里统一可见
+  const [asyncError, setAsyncError] = useState<string | null>(null);
+  useEffect(() => {
+    const onErr = (e: Event) => setAsyncError(String((e as CustomEvent<string>).detail ?? "操作失败"));
+    window.addEventListener("wb:error", onErr);
+    return () => window.removeEventListener("wb:error", onErr);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -381,7 +389,7 @@ function Workbench({
               label="退出登录"
               variant="default"
               size="md"
-              onClick={() => void api.logout().then(onLogout)}
+              onClick={() => void api.logout().then(onLogout).catch((e) => reportError("退出登录失败", e))} // WEB-4
             >
               <IconLogout size={18} />
             </IconAction>
@@ -472,6 +480,11 @@ function Workbench({
             {pageError && (
               <WbAlert tone="error" size="sm" onClose={() => setPageError(null)}>
                 {pageError}
+              </WbAlert>
+            )}
+            {asyncError && (
+              <WbAlert tone="error" size="sm" onClose={() => setAsyncError(null)}>
+                {asyncError}
               </WbAlert>
             )}
             {active && (
