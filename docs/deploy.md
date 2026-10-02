@@ -1,6 +1,6 @@
 # 部署与备份（NFR1）
 
-## Docker Compose（推荐，G15）
+## Docker Compose（推荐，NFR1 目标 G1–G5）
 
 ```bash
 # 生成一次性密钥
@@ -8,7 +8,7 @@ export ADMIN_PASSWORD='你的口令'
 export CREDENTIALS_MASTER_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
 
 docker compose up -d --build
-# 首次访问 http://192.168.31.133:3000，用 ADMIN_USERNAME/ADMIN_PASSWORD 登录
+# 首次访问 http://<宿主IP>:3000，用 ADMIN_USERNAME/ADMIN_PASSWORD 登录
 ```
 
 - 数据（SQLite）持久化在 `./data/app.db`（含 `-wal`/`-shm`）；**插件安装目录 `./data/plugins`** 也在该卷下——备份 `./data` 即覆盖一切。

@@ -1,6 +1,6 @@
 # 个人工作台 · 单镜像部署（NFR1）
 # 用法：ADMIN_PASSWORD=xxx CREDENTIALS_MASTER_KEY=yyy docker compose up -d
-# 备份/恢复见 docs/feature-plan/06-roadmap.md 与下方注释
+# 备份/恢复见 docs/deploy.md「备份 / 恢复」与下方注释
 services:
   all-in-one:
     build: .

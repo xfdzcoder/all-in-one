@@ -6,7 +6,7 @@
 
 | 方案 | 优点 | 缺点/风险 |
 |---|---|---|
-| **gridstack.js**（v13，官方 React wrapper） | 原生触摸事件（v6+）；断点列数响应；save/load 原生；零依赖；**Homarr 生产验证（其 fork 即此库）**；活跃维护 | 各断点共享一套布局（"per column layouts"官方 TBD）——被 D6 化解；官方 React wrapper 较新 → spike 验证 |
+| **gridstack.js**（**v14 实测**；勘误 2026-10-02：原写 v13 已过时，D12 spike 实测 v14） | 原生触摸事件（v6+）；断点列数响应；save/load 原生；零依赖；**Homarr 生产验证（其 fork 即此库）**；活跃维护 | 各断点共享一套布局（"per column layouts"官方 TBD）——被 D6 化解；官方 React wrapper 较新 → spike 验证 |
 | **react-grid-layout** | 原生支持每断点独立布局（lg/md/sm/xs）；React 生态久经考验 | 触摸支持弱（D10 后非需求）；维护节奏放缓；仅 React |
 | interact.js / dnd-kit + 自研网格 | 手势控制力最强 | 违背"避免重复造轮子"，碰撞/推挤算法自研成本高，**不采用** |
 

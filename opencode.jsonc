@@ -19,7 +19,7 @@
     { "action": "shell", "resource": "node apps/web/scripts/*", "effect": "allow" },
     { "action": "shell", "resource": "node apps/server/scripts/*", "effect": "allow" },
 
-    // 本地提交（D22 允许；每批次一条，不 push）
+    // 本地提交（D53：每批次一条，门禁全绿即 push origin main；D22 原禁令已被 D53 取代）
     { "action": "shell", "resource": "git add *", "effect": "allow" },
     { "action": "shell", "resource": "git commit *", "effect": "allow" },
 

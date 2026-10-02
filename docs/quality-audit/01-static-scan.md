@@ -60,3 +60,18 @@
 - **产品侧 no-shadow/scoping 全修**（9 处：含 `config` 参数遮蔽全局 app config 的真混淆源、`sr`/`nextId`/`userId`/`pluginsRoot`/`summarize` 纯函数上提）；脚本/测试的旅程级闭包与短回调名**定向豁免**（局部惯用法）。
 - **余量 15 条 jsx-a11y 保 warn**（A11Y-1，P2 专项）：`prefer-tag-over-role` 与既有「复杂行 `div role=button`」模式冲突（换真 button 会重新引入 WEB-3 嵌套交互元素问题，需专门设计）、遮罩点击已有 Esc/焦点路径、composer autoFocus 有意为之。
 - **教训留档**：上提纯函数时**必须原样剪切**——本轮 `summarize` 首版被重写（丢省略号与对象过滤语义），靠 `git diff` 复核抓回并恢复原实现。
+
+
+## 6 · 构建产物体积实测（DOC-28 / ⑪，2026-10-02 基线）
+
+> 这是 **ECharts 引入前**的基线（批 H/Q75 尚未开工）—— D55 要求的「构建体积收口复核」以此为对照。
+
+| 产物 | 原始 | 说明 |
+|---|---|---|
+| `assets/index-*.js` | **1050 KB** | 单 chunk（当前无路由级分包），gzip 后整包 js/css/html ≈ **352 KB** |
+| `assets/index-*.css` | 262 KB | 含 Mantine 组件样式 + `--wb-*` 令牌表 |
+| 字体（Inter variable ×5） | ≈190 KB | `@fontsource-variable/inter`（latin/latin-ext/cyrillic/greek） |
+| 其余（品牌 SVG/PNG 等） | ≈40 KB | vendored 图标（D45） |
+| **dist 合计** | **1555 KB** | |
+
+观察：① JS 单 chunk 1050KB 是体积主项（Mantine + react + gridstack + 表格/图表类组件全量打入）；② ECharts 按需注册（D55）落地时以此为对照，预期增量 <150KB；③ 若后续要瘦身，优先方向 = 路由级/组件级懒加载（组件表 `widget-registry` 的组件可按需动态 import）。

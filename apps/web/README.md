@@ -11,9 +11,9 @@ React 19 + Vite SPA —— 工作台前端宿主：布局引擎（gridstack，�
 
 ## 结构
 
-- `src/App.tsx` — 会话门禁 + Dashboard 壳（页面 Tab、新建/删除）
+- `src/App.tsx` — 会话门禁 + Dashboard 壳（**右上角页面切换器弹层**：切页/新建/删除/页面设置一并收纳，Q27d 起）
 - `src/Board.tsx` — 单页布局：gridstack 挂接、编辑/浏览模式、防抖自动保存
-- `src/widgets.tsx` / `src/widget-registry.ts` — 占位组件与组件映射（M2 换成 widget-sdk 注册表）
+- `src/widgets.tsx` / `src/widget-registry.ts` — 组件映射与 **manifest 注册表**（configSchema 驱动选择器/配置表单，J8 契约）
 - `src/api.ts` — 工作台 REST 客户端（同源 Cookie 会话）
 
 ## 注意

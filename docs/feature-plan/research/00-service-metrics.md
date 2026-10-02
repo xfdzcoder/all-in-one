@@ -19,7 +19,7 @@
 | 服务 | 官方 UI | Homepage（gethomepage.dev） | Homarr |
 |---|---|---|---|
 | Immich | 管理端 Server Statistics：照片/视频数、磁盘占用、按用户分解 | widget 字段白名单：`["users","photos","videos","storage"]`；且按 Immich 版本切 API（v1.118 分界） | Immich 相册轮播（深度组件） |
-| Navidrome | Web UI：曲库规模（曲目/专辑/艺术家）、最近添加、正在播放、管理面板扫描状态 | widget 固定展示收听统计（无字段配置） | "media and listening statistics"（曲库+收听） |
+| Navidrome | Web UI：曲库规模（曲目/专辑/艺术家）、最近添加、管理面板扫描状态（**「正在播放」Q94 已下线**） | widget 固定展示收听统计（无字段配置） | "media and listening statistics"（曲库+收听） |
 | Portainer | 环境首页：stacks / 容器 running·stopped·paused / images / volumes / networks + 主机信息 + 事件 | Docker 模式字段：`["running","stopped","total"]`；K8s 模式：`["applications","services","namespaces"]` | （作为安装载体） |
 | Mihomo/Clash | MetacubeXD 首页：**实时速率图**、当前出口节点/策略选择、活动连接、内存、累计流量 | 无官方 widget | 无官方 widget（社区多为自定义） |
 
@@ -47,11 +47,11 @@
 | `GET /rest/getScanStatus.view` | ✅ | `count=1376`（曲目）、`folderCount=266`、`lastScan`、`scanning` |
 | `GET /rest/getArtists.view` | ✅ | 38 位艺术家、合计 269 张专辑（artist.albumCount 求和） |
 | `GET /rest/getAlbumList2?type=newest` | ✅ | 最近添加专辑（含封面/艺人/曲目数） |
-| `GET /rest/getNowPlaying.view` | ✅ | 正在播放（用户+曲目） |
+| `GET /rest/getNowPlaying.view` | ~~✅~~ **已下线** | 正在播放（用户+曲目）—— **Q94（2026-10-02）按用户要求整体移除** |
 | `GET /rest/getPlaylists.view`、`getLicense.view` | ✅ | 播放列表数、订阅状态 |
 | `GET /rest/getStats.view` | ❌ 404 | **Navidrome 0.58 尚未实现 OpenSubsonic getStats**——旧代码把它当唯一数据源，缺失即整卡空白 |
 
-- 曲目总数用 `scanStatus.count`；专辑/艺术家用 `getArtists` 聚合；正在播放 `getNowPlaying`。"总时长/存储"暂无直出接口 → 诚实降级或排后。
+- 曲目总数用 `scanStatus.count`；专辑/艺术家用 `getArtists` 聚合；（正在播放 `getNowPlaying` 已随 Q94 下线）。"总时长/存储"暂无直出接口 → 诚实降级或排后。
 
 ### Portainer（实测 2.27.6，admin API key，环境 Id=3 "local"）
 
