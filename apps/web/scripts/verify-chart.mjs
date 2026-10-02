@@ -6,12 +6,25 @@
  *  ④ 取数路径指错 → **降级文案「原因 + 怎么修」**（D47 禁甩锅）且不整卡空白；
  *  ⑤ 刷新按钮在（FR-I3）。
  * Run: node scripts/verify-chart.mjs（server :3000 + preview :4173）
+ *
+ * **TST-23**（用户反馈②）：全程临时草稿盘（`tmp-verify-*` 自建自删 + `?page=` 深链），
+ * 不再「清理首页残留 chart 卡」—— 草稿盘天生无残留，用户页面零接触。
  */
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep, summarize, waitFor } from "./lib/verify-kit.mjs";
+import {
+  createScratchDashboard,
+  deleteScratchDashboard,
+  login,
+  makeApiFetch,
+  makeClickBtn,
+  makeOk,
+  sleep,
+  summarize,
+  waitFor,
+} from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173";
 const results = [];
@@ -41,6 +54,8 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 const clickBtn = makeClickBtn(page);
+const api = makeApiFetch(page); // TST-23：带 method 的同源 fetch（建/删草稿盘用）
+let scratch = null; // TST-23：本轮临时草稿盘（收尾自删）
 
 const setField = (label, value) =>
   page.evaluate(
@@ -63,24 +78,13 @@ const setField = (label, value) =>
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await login(page);
-  // 前置清理历史残留 chart 卡（TST-22 家族自愈：失败/调试轮次可能留卡，find 会命中错卡）
-  await page.evaluate(async () => {
-    const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
-    const home = list.find((d) => d.title === "首页") ?? list[0];
-    const items = JSON.parse(home.layoutJson ?? "[]");
-    const kept = items.filter((i) => i.component !== "chart");
-    if (kept.length !== items.length) {
-      await fetch(`/api/dashboards/${home.id}/layout`, {
-        method: "PUT",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ layoutJson: JSON.stringify(kept) }),
-      });
-      await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForSelector(".grid-stack", { timeout: 8000 });
-    }
-  });
   await installLayoutGuard(page);
+  // TST-23：chart 卡挂在**自建临时草稿盘**上（`?page=` 深链定位；新盘无历史卡，
+  // 原「前置清理首页残留 chart 卡」不再需要 —— 用户页面零接触）
+  scratch = await createScratchDashboard(api);
+  await page.goto(`${WEB}/?page=${scratch.id}`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await sleep(400);
 
   // ① 添加组件 → 图表 → 配置表单
   ok("CHART enter edit", await clickBtn("编辑页面"));
@@ -104,9 +108,10 @@ try {
   ok("CHART no error banner", !(await page.evaluate(() => (document.body.textContent ?? "").includes("不是数组"))));
 
   // ④ 降级：取数路径指错 → 「原因 + 怎么修」（D47）
-  const badPath = await page.evaluate(async () => {
+  const badPath = await page.evaluate(async (dashId) => {
     const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
-    const home = list.find((d) => d.title === "首页") ?? list[0];
+    const home = list.find((d) => d.id === dashId); // TST-23：只认草稿盘，绝不回落 list[0]
+    if (!home) return false;
     const items = JSON.parse(home.layoutJson ?? "[]");
     const card = items.find((i) => i.component === "chart");
     if (!card) return false;
@@ -118,7 +123,7 @@ try {
       body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
     });
     return true;
-  });
+  }, scratch.id);
   ok("CHART corrupt path fixture", Boolean(badPath));
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
@@ -162,11 +167,13 @@ try {
   ok("CHART ws source created", srcRes.status === 201, `status=${srcRes.status}`);
   const wsSourceId = JSON.parse(srcRes.body).id;
   // 画布卡切到流模式
-  await page.evaluate(async ({ sid }) => {
+  await page.evaluate(async ({ sid, dashId }) => {
     const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
-    const home = list.find((d) => d.title === "首页") ?? list[0];
+    const home = list.find((d) => d.id === dashId); // TST-23：只认草稿盘
+    if (!home) return;
     const items = JSON.parse(home.layoutJson ?? "[]");
     const card = items.find((i) => i.component === "chart");
+    if (!card) return;
     card.props.wsSourceId = sid;
     card.props.path = "";
     await fetch(`/api/dashboards/${home.id}/layout`, {
@@ -175,7 +182,7 @@ try {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
     });
-  }, { sid: wsSourceId });
+  }, { sid: wsSourceId, dashId: scratch.id });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(800); // 等服务端对账建连（处理器已先挂，连接即推 3 行）
@@ -198,6 +205,12 @@ try {
 }
 
 await sleep(1000);
+if (scratch) {
+  // TST-23：临时草稿盘自删（失败打印告警供手工清理，不吞测试结论）
+  await deleteScratchDashboard(api, scratch.id).catch((e) =>
+    console.error("!! 临时草稿盘清理失败，需手工删除：", scratch.id, e?.message ?? e),
+  );
+}
 await restoreLayouts(page).catch(() => {});
 await browser.close();
 mock.close();

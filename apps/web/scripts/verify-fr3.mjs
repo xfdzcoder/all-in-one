@@ -5,11 +5,22 @@
  *     REST 型组件产生新的列表请求。
  * Run: node scripts/verify-fr3.mjs (server :3000 with ALLOW_PRIVATE_OUTBOUND=1,
  *      preview :4173)
+ *
+ * **TST-23**（用户反馈②）：全程临时草稿盘（`tmp-verify-*` 自建自删 + `?page=` 深链），
+ * 不再重置「首页」布局 —— 用户页面（「用户页面禁止修改」）零接触。
  */
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
+import {
+  createScratchDashboard,
+  deleteScratchDashboard,
+  login,
+  makeApiFetch,
+  makeClickBtn,
+  makeOk,
+  sleep,
+} from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -50,6 +61,8 @@ page.on("request", (r) => {
 });
 
 const clickBtn = makeClickBtn(page); // TST-12/14：精确优先匹配（首个命中陷阱消解）
+const api = makeApiFetch(page); // TST-23：带 method 的同源 fetch（建/删草稿盘用）
+let scratch = null; // TST-23：本轮临时草稿盘（收尾自删）
 
 const setField = (label, value) =>
   page.evaluate(
@@ -91,24 +104,22 @@ try {
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
 await installLayoutGuard(page);
 
-  // 前置：重置首页布局（seed 含 Todo + 信息流）
-  await page.evaluate(async () => {
-    const seed = [
-      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
-      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
-      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
-      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
-      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
-    ];
-    const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
-    await fetch(`/api/dashboards/${home.id}/layout`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
-    });
+  // TST-23：组件挂在**自建临时草稿盘**上（不再重置任何既有页面）
+  scratch = await createScratchDashboard(api);
+  const seed = [
+    { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+    { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+    { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+    { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+    { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+  ];
+  const put = await api(`/api/dashboards/${scratch.id}/layout`, {
+    method: "PUT",
+    body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
   });
-  await page.reload({ waitUntil: "domcontentloaded" });
+  if (put.status !== 200) throw new Error(`草稿盘布局写入失败：HTTP ${put.status} ${put.body}`);
+  // 深链定位草稿盘（`?page=` 优先于 rows[0]；后续 reload 停留在草稿盘）
+  await page.goto(`${WEB}?page=${scratch.id}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
@@ -235,6 +246,12 @@ await installLayoutGuard(page);
   ok("flow completed", false, String(e).slice(0, 200));
 }
 
+if (scratch) {
+  // TST-23：临时草稿盘自删（失败打印告警供手工清理，不吞测试结论）
+  await deleteScratchDashboard(api, scratch.id).catch((e) =>
+    console.error("!! 临时草稿盘清理失败，需手工删除：", scratch.id, e?.message ?? e),
+  );
+}
 await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 apiMock.close();

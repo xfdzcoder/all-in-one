@@ -78,7 +78,8 @@ export async function restoreLayouts(page) {
         if (id && !before.has(id)) await fetch(c.del(id), { method: "DELETE" });
       }
     }
-    // ② 页面：删脚本新建的 + 逐页还原布局
+    // ② 页面：删脚本新建的 + 只回写**真被改动**的页（TST-23：未动过的页零写入，
+    //    用户页面「用户页面禁止修改」绝不收 PUT —— 连 updatedAt 都不惊动）
     const now = await (await fetch("/api/dashboards")).json();
     for (const d of now) {
       if (!s.dashboards.some((x) => x.id === d.id)) {
@@ -86,6 +87,8 @@ export async function restoreLayouts(page) {
       }
     }
     for (const x of s.dashboards) {
+      const cur = now.find((d) => d.id === x.id);
+      if (cur && (cur.layoutJson ?? "[]") === x.layoutJson) continue; // 未改动 ⇒ 不回写
       await fetch(`/api/dashboards/${x.id}/layout`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

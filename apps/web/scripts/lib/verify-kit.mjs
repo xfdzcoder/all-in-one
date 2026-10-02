@@ -113,3 +113,65 @@ export const waitForText = (page, text, { present = true, timeoutMs = 8000 } = {
     { text, present },
     { timeoutMs },
   );
+
+// ── 临时草稿盘（**TST-23**：verify 脚本零接触用户页面）────────────────────
+//
+// 背景（用户反馈②，2026-10-02）：历史脚本普遍 `find(title === "首页") ?? list[0]`
+// 回落**首个页面**再重置其布局 —— 用户把页面1改名「用户页面禁止修改」后，回落
+// 正打到它头上。收口为唯一模式：**脚本只准写自己创建的临时草稿盘**（标题带
+// `tmp-verify-` 前缀），自建自删；护栏对非草稿盘/受保护标题一律抛错，杜绝回落。
+
+/** 草稿盘标题前缀 —— 脚本自建盘的唯一识别（守卫按它放行）。 */
+export const SCRATCH_PREFIX = "tmp-verify-";
+
+/** 用户明令禁止触碰的页面标题（硬护栏，见 assertScratchTitle）。 */
+export const PROTECTED_DASH_TITLES = ["用户页面禁止修改"];
+
+/** 唯一草稿盘标题（同轮多盘不撞名）。 */
+export const scratchTitle = () => `${SCRATCH_PREFIX}${uniqId()}`;
+
+export const isScratchTitle = (title) => String(title ?? "").startsWith(SCRATCH_PREFIX);
+
+/**
+ * 护栏（TST-23）：布局写入/加卡前断言目标是**本轮自建草稿盘**。
+ * 非草稿盘（含「首页」等历史回落目标）与受保护页面一律抛错 —— 宁可脚本红，不可动用户盘。
+ */
+export function assertScratchTitle(title) {
+  const t = String(title ?? "");
+  if (PROTECTED_DASH_TITLES.includes(t)) {
+    throw new Error(`拒绝操作受保护页面「${t}」—— verify 脚本只准使用临时草稿盘（${SCRATCH_PREFIX}*），请勿回落 list[0]`);
+  }
+  if (!isScratchTitle(t)) {
+    throw new Error(`拒绝操作非草稿盘「${t}」—— 请用 createScratchDashboard 自建临时盘（${SCRATCH_PREFIX}*），不要写既有页面`);
+  }
+}
+
+/** 建临时草稿盘（标题强制前缀）。返回创建行（含 id/title）。 */
+export async function createScratchDashboard(apiFetch, title = scratchTitle()) {
+  assertScratchTitle(title);
+  const r = await apiFetch("/api/dashboards", { method: "POST", body: JSON.stringify({ title }) });
+  if (r.status !== 201) throw new Error(`创建临时草稿盘失败：HTTP ${r.status} ${r.body}`);
+  return JSON.parse(r.body);
+}
+
+/** 删临时草稿盘（不存在视为成功，幂等）。 */
+export async function deleteScratchDashboard(apiFetch, id) {
+  const r = await apiFetch(`/api/dashboards/${id}`, { method: "DELETE" });
+  if (r.status !== 200 && r.status !== 404) throw new Error(`删除临时草稿盘失败：HTTP ${r.status} ${r.body}`);
+  return true;
+}
+
+/**
+ * 临时盘生命周期：创建 → `fn(dash)` → **无论成败删除**。
+ * 测挂了也不留盘；删除失败打印告警（需手工删），不吞测试结论。
+ */
+export async function withScratchDashboard(apiFetch, fn) {
+  const dash = await createScratchDashboard(apiFetch);
+  try {
+    return await fn(dash);
+  } finally {
+    await deleteScratchDashboard(apiFetch, dash.id).catch((e) =>
+      console.error(`!! 临时草稿盘清理失败，需手工删除：${dash.id} ${dash.title}`, e?.message ?? e),
+    );
+  }
+}

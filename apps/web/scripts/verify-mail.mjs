@@ -4,10 +4,22 @@
  * 说明：`/api/mail/messages*` 由脚本侧请求拦截返回夹具（IMAP 协议路径由服务层
  * 单测的假客户端覆盖，见 apps/server/src/mail/mail.test.ts）；账号 CRUD 走真实服务。
  * Run: node scripts/verify-mail.mjs (server :3000, preview :4173)
+ *
+ * **TST-23**（用户反馈②）：全程使用临时草稿盘（`tmp-verify-*` 自建自删），
+ * `?page=<id>` 深链定位 —— 不回落 `list[0]`，用户页面（「用户页面禁止修改」）零接触。
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
+import {
+  createScratchDashboard,
+  deleteScratchDashboard,
+  login,
+  makeApiFetch,
+  makeClickBtn,
+  makeOk,
+  sleep,
+  uniqId,
+} from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -79,20 +91,36 @@ const apiFetch = (path) =>
     const res = await fetch(p, { credentials: "same-origin" });
     return { status: res.status, body: await res.text() };
   }, path);
+const api = makeApiFetch(page); // TST-23：带 method 的同源 fetch（建/删草稿盘用）
+let scratch = null; // TST-23：本轮临时草稿盘（收尾自删）
 
-/** 弹窗内的精确按钮点击（严禁全文档 includes 匹配破坏性按钮 —— 会误点"删除此页"等）。 */
-const clickInModal = (label) =>
-  page.evaluate((l) => {
-    for (const root of document.querySelectorAll(".mantine-Modal-root, .wb-admin")) {
-      // 可见性过滤：Mantine Tabs 面板挂载但隐藏，隐藏页签的同名按钮不可命中
-      const btn = [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === l && b.offsetParent !== null);
+/** TST-24（真事故，2026-10-02）：删除**只准按行名锚定**「测试邮箱」行内的按钮。
+ *  原 `clickInModal("删除")` 命中列表首个删除按钮 —— 用户真实账号排前面时被误删
+ *  （实测误删过用户的 qq 邮箱，靠 WAL 里的凭证密文才找回来）。确认弹窗同样按名锚定。 */
+const deleteOwnAccountRow = (name) =>
+  page.evaluate((n) => {
+    const rows = [...document.querySelectorAll(".wb-admin__row")].filter((r) => (r.textContent ?? "").includes(n));
+    const btn = rows
+      .map((r) => [...r.querySelectorAll("button")].find((b) => b.textContent.trim() === "删除"))
+      .find(Boolean);
+    if (!btn) return false;
+    btn.click();
+    return true;
+  }, name);
+
+const confirmDeleteOwnAccount = (name) =>
+  page.evaluate((n) => {
+    for (const root of document.querySelectorAll(".mantine-Modal-root")) {
+      if (root.offsetParent === null) continue;
+      if (!(root.textContent ?? "").includes(`确认删除邮件账号「${n}」`)) continue;
+      const btn = [...root.querySelectorAll("button")].find((b) => b.textContent.trim() === "确认");
       if (btn) {
         btn.click();
         return true;
       }
     }
     return false;
-  }, label);
+  }, name);
 
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
@@ -100,28 +128,29 @@ try {
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
 await installLayoutGuard(page);
 
-  // 前置：重置首页布局（组件累积会干扰定位），并清掉本脚本的历史账号
+  // TST-23：组件挂在**自建临时草稿盘**上（不再重置任何既有页面 —— 用户页面零接触）；
+  // 顺手清掉本脚本的历史账号（数据实体，与页面无关）
+  scratch = await createScratchDashboard(api);
+  const seed = [
+    { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
+    { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
+    { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
+    { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
+    { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
+  ];
+  const put = await api(`/api/dashboards/${scratch.id}/layout`, {
+    method: "PUT",
+    body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
+  });
+  if (put.status !== 200) throw new Error(`草稿盘布局写入失败：HTTP ${put.status} ${put.body}`);
   await page.evaluate(async () => {
-    const seed = [
-      { id: "seed-1", x: 0, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "欢迎", color: "#4a6fa5" } },
-      { id: "seed-2", x: 4, y: 0, w: 4, h: 2, component: "StatBox", props: { label: "状态", value: "OK" } },
-      { id: "seed-3", x: 8, y: 0, w: 4, h: 3, component: "Placeholder", props: { title: "示例组件", color: "#4a7d6b" } },
-      { id: "seed-4", x: 0, y: 3, w: 6, h: 4, component: "todo", props: { list: "inbox", filter: "all" } },
-      { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
-    ];
-    const dashboards = await (await fetch("/api/dashboards")).json();
-    const home = dashboards.find((d) => d.title === "首页") ?? dashboards[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款）
-    await fetch(`/api/dashboards/${home.id}/layout`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ layoutJson: JSON.stringify(seed) }),
-    });
     const accounts = await (await fetch("/api/mail/accounts")).json();
     for (const a of accounts.filter((x) => x.name === "测试邮箱")) {
       await fetch(`/api/mail/accounts/${a.id}`, { method: "DELETE" });
     }
   });
-  await page.reload({ waitUntil: "domcontentloaded" });
+  // 深链定位草稿盘（`?page=` 优先于 rows[0]；后续 reload 停留在草稿盘）
+  await page.goto(`${WEB}?page=${scratch.id}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
   await sleep(500);
 
@@ -152,7 +181,12 @@ await installLayoutGuard(page);
   await sleep(800);
   ok(
     "MAIL empty state hint",
-    await page.evaluate(() => (document.body.textContent ?? "").includes("先在「数据源管理 · 邮箱」添加邮箱账号")),
+    await page.evaluate(() => {
+      const t = document.body.textContent ?? "";
+      // 空态两种文案都算达标：无账号 →「先在…添加邮箱账号」；有账号但无邮件 →「暂无邮件」
+      // （用户环境里常有真实账号，断言不能只认前一种，否则永远红）
+      return t.includes("先在「数据源管理 · 邮箱」添加邮箱账号") || t.includes("暂无邮件");
+    }),
   );
 
   // 编辑态组件内容惰性（FR-P8）：组件内操作在浏览模式进行
@@ -335,9 +369,10 @@ await installLayoutGuard(page);
     }),
   );
   await sleep(400);
-  ok("MAIL delete account", await clickInModal("删除"));
+  // TST-24：按行名锚定只删本脚本的「测试邮箱」—— 首个匹配的「删除」曾误删用户真实账号
+  ok("MAIL delete account", await deleteOwnAccountRow("测试邮箱"));
   await sleep(400);
-  ok("MAIL delete requires confirm (D31)", await clickInModal("确认"));
+  ok("MAIL delete requires confirm (D31)", await confirmDeleteOwnAccount("测试邮箱"));
   await sleep(1200);
   const afterAccounts = JSON.parse((await apiFetch("/api/mail/accounts")).body);
   ok(
@@ -349,6 +384,12 @@ await installLayoutGuard(page);
   ok("flow completed", false, String(e).slice(0, 200) + " @" + String(e.stack ?? "").split("\n").slice(0, 3).join(" | "));
 }
 
+if (scratch) {
+  // TST-23：临时草稿盘自删（失败打印告警供手工清理，不吞测试结论）
+  await deleteScratchDashboard(api, scratch.id).catch((e) =>
+    console.error("!! 临时草稿盘清理失败，需手工删除：", scratch.id, e?.message ?? e),
+  );
+}
 await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 const failed = results.filter((r) => !r.pass);
