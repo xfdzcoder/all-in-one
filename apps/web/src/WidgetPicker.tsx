@@ -92,6 +92,7 @@ export function WidgetPicker({
             onChange={(key, value) => setValues((c) => ({ ...c, [key]: value }))}
             onSubmit={(v) => {
               void (async () => {
+                if (busy) return; // WEB-18：in-flight 守卫（双击曾重复添加组件/重复建凭证）
                 setBusy(true);
                 setError(null);
                 try {

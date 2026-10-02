@@ -129,7 +129,6 @@ const customApiManifest: WidgetManifest = {
   },
 };
 
-/** gridstack components 映射（key = manifest.type）。 */
 const rssManifest: WidgetManifest = {
   type: "rss",
   name: "信息流",
@@ -252,7 +251,6 @@ const monitorManifest: WidgetManifest = {
   },
 };
 
-/** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
 /** 服务概览（Q39/D46）：选一个服务连接 → 探活徽标 + 版本 + 关键计数。 */
 const serviceOverviewManifest: WidgetManifest = {
   type: "service-overview",
@@ -389,6 +387,7 @@ const mihomoNodesManifest: WidgetManifest = {
   },
 };
 
+/** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
 const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",

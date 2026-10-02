@@ -50,7 +50,11 @@ interface PluginBinding {
 }
 
 /** 插件组件实例缓存（模块级）：列表刷新不重建组件 → 沙箱框不重挂载。 */
-const pluginComponentCache = new Map<string, ComponentType<Record<string, unknown>>>();
+// WEB-19：值带 manifest 指纹 —— 同 id 重装/换 manifest 不吃旧闭包；随插件清单裁剪防只增不减
+const pluginComponentCache = new Map<
+  string,
+  { comp: ComponentType<Record<string, unknown>>; manifestJson: string }
+>();
 
 /** gridstack 节点上的扩展字段（component/props 由 react 层透传，类型未声明）。 */
 type NodeEx = GridStackWidget & { component?: string; props?: ConfigValues };
@@ -215,19 +219,30 @@ export function Board({
         }),
     [plugins],
   );
+  // WEB-19：随当前插件清单裁剪模块级缓存（卸载即释放组件闭包）
+  useEffect(() => {
+    const alive = new Set(pluginBindings.map((b) => b.id));
+    for (const key of pluginComponentCache.keys()) { // Map 迭代中删除当前项是安全的
+      if (!alive.has(key)) pluginComponentCache.delete(key);
+    }
+  }, [pluginBindings]);
   const components = useMemo(() => {
     const map: ComponentMap = { ...chromeComponents };
     for (const b of pluginBindings) {
       // 每插件一个稳定组件实例（模块级缓存）——列表刷新不重挂载沙箱框
-      let comp = pluginComponentCache.get(b.id);
-      if (!comp) {
+      const manifestJson = JSON.stringify(b.manifest);
+      let hit = pluginComponentCache.get(b.id);
+      if (!hit || hit.manifestJson !== manifestJson) {
         const binding = b;
-        comp = withWidgetChrome((props: Record<string, unknown>) => (
-          <PluginFrame pluginId={binding.id} manifest={binding.manifest} config={props} />
-        ));
-        pluginComponentCache.set(b.id, comp);
+        hit = {
+          comp: withWidgetChrome((props: Record<string, unknown>) => (
+            <PluginFrame pluginId={binding.id} manifest={binding.manifest} config={props} />
+          )),
+          manifestJson,
+        };
+        pluginComponentCache.set(b.id, hit);
       }
-      map[b.manifest.type] = comp;
+      map[b.manifest.type] = hit.comp;
     }
     return map;
   }, [pluginBindings]);
@@ -299,6 +314,7 @@ export function Board({
       }
       onLayoutSaved(dashboardId, json);
     } catch {
+      if (disposedRef.current) return; // WEB-17：已卸载 —— 不再 setState/排重试（见卸载清理注释）
       setSaveError("布局保存失败，稍后自动重试");
       setDirty(true);
       // keep pending + 调度退避重试
@@ -334,11 +350,16 @@ export function Board({
     if (prevEditRef.current && !editMode) void flush();
     prevEditRef.current = editMode;
   }, [editMode, flush]);
+  // WEB-17：卸载后不再 setState/无限退避（原 cleanup 清计时器后 flush 失败会再建 retryTimer —— 幽灵重试）
+  const disposedRef = useRef(false);
   useEffect(() => {
     return () => {
+      disposedRef.current = true;
       if (saveTimer.current) clearTimeout(saveTimer.current);
       if (retryTimer.current) clearTimeout(retryTimer.current);
-      void flushRef.current();
+      void flushRef.current().catch(() => {
+        console.error("[board] 卸载时布局保存失败，改动未能落盘（已尽力保存，不再重试）");
+      });
     };
   }, []);
 
@@ -374,13 +395,17 @@ export function Board({
     [manifestFor],
   );
 
+  // WEB-18：提交 in-flight 守卫 —— 双击曾重复建凭证/重复更新（propsWithSecretRefs 每次新建 credential）
+  const savingRef = useRef(false);
   const saveConfig = useCallback(
     (values: ConfigValues) => {
       void (async () => {
-        const grid = gridRef.current?.getGrid();
-        const node = grid && configureId ? findNode(grid, configureId) : undefined;
-        if (!grid || !node?.el || !configManifest) return;
+        if (savingRef.current) return;
+        savingRef.current = true;
         try {
+          const grid = gridRef.current?.getGrid();
+          const node = grid && configureId ? findNode(grid, configureId) : undefined;
+          if (!grid || !node?.el || !configManifest) return;
           // Q93（项 2）/ D63：同上 —— 不做展示侧唯一性校验
           // SEC3：secret 字段明文入库凭证库，props 只保存引用；未改动的引用原样保留
           const props = await propsWithSecretRefs(
@@ -395,6 +420,8 @@ export function Board({
           setConfigManifest(null);
         } catch (e) {
           setConfigError(e instanceof Error ? e.message : String(e));
+        } finally {
+          savingRef.current = false;
         }
       })();
     },

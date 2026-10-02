@@ -290,7 +290,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                   )}
                   {current && (
                     <div className="wb-admin__table">
-                      {items.map((t: TodoItem) => (
+                      {items.filter((t: TodoItem) => !q || t.title.includes(q) || (t.list ?? "").includes(q)).map((t: TodoItem) => (
                         <div key={t.id} className="wb-admin__row" data-admin-row="todo">
                           <Checkbox
                             checked={t.done}

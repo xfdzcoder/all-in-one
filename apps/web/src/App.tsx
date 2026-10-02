@@ -389,7 +389,17 @@ function Workbench({
               label="退出登录"
               variant="default"
               size="md"
-              onClick={() => void api.logout().then(onLogout).catch((e) => reportError("退出登录失败", e))} // WEB-4
+              onClick={() =>
+                void api
+                  .logout()
+                  .then(() => {
+                    // WEB-14：清客户端缓存 —— 上一会话的任务/邮件/**缩略图 base64** 不残留内存（换用户场景直接可见旧数据）
+                    queryClient.clear();
+                    onLogout();
+                    return true; // promise(always-return)：链式语义明确
+                  })
+                  .catch((e) => reportError("退出登录失败", e))
+              } // WEB-4
             >
               <IconLogout size={18} />
             </IconAction>

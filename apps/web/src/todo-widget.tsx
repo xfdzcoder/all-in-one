@@ -111,7 +111,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
                   if (done) setUndo((u) => ({ ids: [...(u?.ids ?? []), t.id], count: (u?.count ?? 0) + 1 }));
                   else setUndo((u) => (u ? { ids: u.ids.filter((x) => x !== t.id), count: Math.max(0, u.count - 1) } : null));
                 }}
-                aria-label={`toggle ${t.title}`}
+                aria-label={`完成状态：${t.title}`}
               />
               <Text
                 size="sm"
@@ -131,6 +131,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
               </Text>
               <ConfirmAction
                 label="×"
+                ariaLabel={`删除任务：${t.title}`}
                 size="compact-xs"
                 variant="subtle"
                 title="删除任务？"

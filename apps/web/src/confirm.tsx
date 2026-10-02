@@ -16,8 +16,11 @@ export function ConfirmAction({
   variant = "light",
   title = "确认操作",
   icon,
+  ariaLabel,
 }: {
   label: string;
+  /** 触发器可访问名（可见 label 是纯符号如「×」时用；tooltip 同步）。 */
+  ariaLabel?: string;
   message: string;
   onConfirm: () => void;
   color?: string;
@@ -32,14 +35,14 @@ export function ConfirmAction({
   return (
     <>
       {icon ? (
-        <Tooltip label={label} withinPortal>
-          <ActionIcon variant="subtle" color={color} size="sm" aria-label={label} onClick={() => setOpened(true)}>
+        <Tooltip label={ariaLabel ?? label} withinPortal>
+          <ActionIcon variant="subtle" color={color} size="sm" aria-label={ariaLabel ?? label} onClick={() => setOpened(true)}>
             {icon}
             <span className="wb-sr-only">{label}</span>
           </ActionIcon>
         </Tooltip>
       ) : (
-        <Button size={size} color={color} variant={variant} onClick={() => setOpened(true)}>
+        <Button size={size} color={color} variant={variant} aria-label={ariaLabel ?? label} onClick={() => setOpened(true)}>
           {label}
         </Button>
       )}

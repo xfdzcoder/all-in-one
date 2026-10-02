@@ -36,8 +36,9 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                 策略组
               </Text>
               <Stack gap={2}>
-                {data.groups.map((g) => (
-                  <Group key={g.name} gap={6} wrap="nowrap">
+                {data.groups.map((g, gi) => (
+                  // WEB-25：同名组可重复，复合键防 React key 冲突
+                  <Group key={`g-${g.name}-${gi}`} gap={6} wrap="nowrap">
                     <Text size="xs" truncate style={{ minWidth: 110 }}>
                       {g.name}
                     </Text>
@@ -59,8 +60,9 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                 节点（{data.nodes.length}）
               </Text>
               <Stack gap={2}>
-                {data.nodes.slice(0, 30).map((n) => (
-                  <Group key={n.name} gap={6} wrap="nowrap">
+                {data.nodes.slice(0, 30).map((n, ni) => (
+                  // WEB-25
+                  <Group key={`n-${n.name}-${ni}`} gap={6} wrap="nowrap">
                     <Text size="xs" truncate style={{ flex: 1 }}>
                       {n.name}
                     </Text>
@@ -85,8 +87,9 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                 订阅源
               </Text>
               <Stack gap={2}>
-                {data.providers.map((p) => (
-                  <Group key={p.name} gap={6} wrap="nowrap">
+                {data.providers.map((p, pi) => (
+                  // WEB-25
+                  <Group key={`p-${p.name}-${pi}`} gap={6} wrap="nowrap">
                     <Text size="xs" truncate style={{ flex: 1 }}>
                       {p.name}
                     </Text>

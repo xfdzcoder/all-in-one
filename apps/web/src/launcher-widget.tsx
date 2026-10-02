@@ -47,9 +47,10 @@ export function LauncherWidget({ itemsJson, refreshSec }: LauncherConfig & { ref
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       <Group gap="xs">
-        {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean; icon?: string }) => (
+        {(data?.items ?? items).map((it: { name: string; url: string; alive?: boolean; icon?: string }, idx: number) => (
           <a
-            key={it.url}
+            // WEB-25：同 URL 入口可重复，复合键防 React key 冲突
+            key={`${it.url}-${idx}`}
             href={it.url}
             target="_blank"
             rel="noopener noreferrer"
