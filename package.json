@@ -11,7 +11,9 @@
     "lint": "pnpm -r lint && knip",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r typecheck",
-    "knip": "knip"
+    "knip": "knip",
+    "verify": "node apps/web/scripts/run-verify.mjs",
+    "verify:smoke": "node apps/web/scripts/run-verify.mjs smoke"
   },
   "devDependencies": {
     "knip": "^6.39.0"

@@ -7,19 +7,11 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
+import { ADMIN_PASSWORD, makeOk, summarize } from "./lib/verify-kit.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-let pass = 0;
-let fail = 0;
-const ok = (cond, label, extra = "") => {
-  if (cond) {
-    pass += 1;
-    console.log(`PASS  ${label}`);
-  } else {
-    fail += 1;
-    console.log(`FAIL  ${label}  ${extra}`);
-  }
-};
+const results = []; // TST-15：统一记账
+const ok = makeOk(results); // TST-15：签名统一 (name, pass, detail)（原 cond,label 反序族，调用点已对调）
 
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/google-chrome",
@@ -76,7 +68,7 @@ const dragBy = async (gsId, dx, dy, { crossTop = false, steps = 12, returnHome =
 try {
   await page.goto("http://localhost:4173/", { waitUntil: "networkidle0" });
   await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
@@ -104,23 +96,23 @@ await installLayoutGuard(page);
   await sleep(800);
 
   ok(
+    "GDRAG enter edit",
     await page.evaluate(() => {
       const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim().includes("编辑页面"));
       b?.click();
       return Boolean(b);
     }),
-    "GDRAG enter edit",
   );
   await sleep(400);
 
   const baseline = await contentHealth();
-  ok(baseline.total === 5 && baseline.empty.length === 0, "GDRAG baseline: all items have content", JSON.stringify(baseline));
+  ok( "GDRAG baseline: all items have content",baseline.total === 5 && baseline.empty.length === 0, JSON.stringify(baseline));
 
   // 复现路径：拖到网格下缘外（_extraDragRow 撑高 → ResizeObserver → 拖动中事件 →
   // node.el 仍是 placeholder 时 portal 解绑），再原路放回（松手无 change 事件 → 不自愈）
   await dragBy("g5", 0, 420, { returnHome: true, steps: 16 });
   const h1 = await contentHealth();
-  ok(h1.total === 5 && h1.empty.length === 0, "GDRAG drop-back-at-origin: no vanished card", JSON.stringify(h1));
+  ok( "GDRAG drop-back-at-origin: no vanished card",h1.total === 5 && h1.empty.length === 0, JSON.stringify(h1));
 
   // 24 轮混合压测
   for (let i = 1; i <= 24; i++) {
@@ -131,7 +123,7 @@ await installLayoutGuard(page);
     else if (mode === 2) await dragBy(target, i % 2 ? 300 : -300, i % 3 ? 180 : -120);
     else await dragBy(target, 120, 320, { crossTop: true });
     const h = await contentHealth();
-    ok(h.total === 5 && h.empty.length === 0, `GDRAG round ${i}: no vanished card`, JSON.stringify(h));
+    ok( `GDRAG round ${i}: no vanished card`,h.total === 5 && h.empty.length === 0, JSON.stringify(h));
     if (h.empty.length) break;
   }
   // Q43 确定性回归：模拟竞态窗口（渲染期 findInGrid 短暂查不到节点）→
@@ -158,8 +150,8 @@ await installLayoutGuard(page);
     return { during, after: counts() };
   });
   ok(
-    race.during.every((n) => n > 0) && race.after.every((n) => n > 0),
     "Q43 race window: content survives transient lookup failure",
+    race.during.every((n) => n > 0) && race.after.every((n) => n > 0),
     JSON.stringify(race),
   );
 
@@ -182,10 +174,9 @@ await installLayoutGuard(page);
     });
   });
 } catch (e) {
-  ok(false, "flow completed", String(e).slice(0, 200));
+  ok( "flow completed",false, String(e).slice(0, 200));
 }
 
 await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
-console.log(`\n${pass}/${pass + fail} passed`);
-process.exit(fail ? 1 : 0);
+process.exit(summarize(results) ? 0 : 1);

@@ -5,14 +5,11 @@
  */
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
+import { ADMIN_PASSWORD, makeOk, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
-const ok = (name, pass, detail = "") => {
-  results.push({ name, pass, detail });
-  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const ok = makeOk(results); // TST-14/15：公共库（签名/输出/非布尔告警统一）
 
 // mock upstream requiring Bearer auth
 const upstream = createServer((req, res) => {
@@ -50,7 +47,7 @@ try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await page.waitForSelector("input[autocomplete=username]");
   await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 

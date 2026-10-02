@@ -6,19 +6,11 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
+import { ADMIN_PASSWORD, makeOk, summarize } from "./lib/verify-kit.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-let pass = 0;
-let fail = 0;
-const ok = (cond, label, extra = "") => {
-  if (cond) {
-    pass += 1;
-    console.log(`PASS  ${label}`);
-  } else {
-    fail += 1;
-    console.log(`FAIL  ${label}  ${extra}`);
-  }
-};
+const results = []; // TST-15：统一记账
+const ok = makeOk(results); // TST-15：签名统一 (name, pass, detail)（原 cond,label 反序族，调用点已对调）
 
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/google-chrome",
@@ -31,7 +23,7 @@ await page.setViewport({ width: 1400, height: 900 });
 try {
   await page.goto("http://localhost:4173/", { waitUntil: "networkidle0" });
   await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上
@@ -70,7 +62,7 @@ await installLayoutGuard(page);
     );
     return cards.map((c) => c.textContent.trim().slice(0, 3));
   });
-  ok(before.join() === "卡A,卡B,卡C", "DRAG fixture has 3 cards", before.join());
+  ok( "DRAG fixture has 3 cards",before.join() === "卡A,卡B,卡C", before.join());
   await sleep(300);
 
   // ① 占位跟随指针：hover 卡C 上沿 → 占位应在卡B、卡C之间（全列表序 2）
@@ -81,7 +73,7 @@ await installLayoutGuard(page);
     const tops = cards.map((c) => c.getBoundingClientRect().top);
     return { slotAt: slot.length ? tops.filter((t) => t < slot[0]).length : -1 };
   });
-  ok(mid.slotAt === 2, "DRAG placeholder follows pointer (between B and C)", `slotAt=${mid.slotAt}`);
+  ok( "DRAG placeholder follows pointer (between B and C)",mid.slotAt === 2, `slotAt=${mid.slotAt}`);
 
   // ② 松手中插
   await page.evaluate(() => {
@@ -94,7 +86,7 @@ await installLayoutGuard(page);
   const after = await page.evaluate(() =>
     [...document.querySelectorAll("[data-card-id]")].map((c) => c.textContent.trim().slice(0, 3)),
   );
-  ok(after.join() === "卡B,卡A,卡C", "DRAG drop inserts at placeholder position", after.join());
+  ok( "DRAG drop inserts at placeholder position",after.join() === "卡B,卡A,卡C", after.join());
 } catch (e) {
   fail += 1;
   console.log("FAIL  DRAG journey crashed:", e instanceof Error ? e.message : String(e));
@@ -102,5 +94,4 @@ await installLayoutGuard(page);
 
 await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
-console.log(`\n${pass}/${pass + fail} passed`);
-process.exit(fail > 0 ? 1 : 0);
+process.exit(summarize(results) ? 0 : 1);

@@ -5,14 +5,11 @@
  * Run: node scripts/verify-i6.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
+import { login, makeOk, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
-const ok = (name, pass, detail = "") => {
-  results.push({ name, pass, detail });
-  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const ok = makeOk(results); // TST-14/15：公共库（签名/输出/非布尔告警统一）
 
 let todoHits = 0;
 let eventHits = 0;
@@ -40,11 +37,7 @@ try {
   });
 
   await page.goto(WEB, { waitUntil: "networkidle0" });
-  await page.waitForSelector("input[autocomplete=username]", { timeout: 8000 });
-  await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
-  await page.click("button[type=submit]");
-  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  await login(page); // TST-14：登录块单点（选择器变更只改 verify-kit）
   await sleep(1500);
 
   ok("I6 SSE endpoint attempted then dead (500)", eventHits >= 1, `eventHits=${eventHits}`);

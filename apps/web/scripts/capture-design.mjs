@@ -7,6 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "node:http";
+import { ADMIN_PASSWORD } from "./lib/verify-kit.mjs";
 
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
@@ -205,7 +206,7 @@ try {
   });
 
   await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上

@@ -9,14 +9,11 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
+import { ADMIN_PASSWORD, makeOk, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
-const ok = (name, pass, detail = "") => {
-  results.push({ name, pass, detail });
-  console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`);
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const ok = makeOk(results); // TST-14/15：公共库（签名/输出/非布尔告警统一）
 const uniq = Date.now().toString(36).slice(-4);
 
 const json = (obj) => JSON.stringify(obj);
@@ -296,7 +293,7 @@ try {
   );
   await page.waitForSelector("input[autocomplete=username]", { timeout: 8000 });
   await page.type("input[autocomplete=username]", "admin");
-  await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+  await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 15000 });
 // TST-19（Q97b）：测前快照布局 —— 跑完还原，不把测试卡片留在真机盘上

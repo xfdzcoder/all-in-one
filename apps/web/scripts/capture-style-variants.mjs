@@ -7,6 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
+import { ADMIN_PASSWORD } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const OUT = join(import.meta.dirname, "../../../docs/design-audit/style-v2");
@@ -103,7 +104,7 @@ await page.setViewport({ width: 1400, height: 900 });
 
 await page.goto(WEB, { waitUntil: "networkidle0" });
 await page.type("input[autocomplete=username]", "admin");
-await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
+await page.type("input[autocomplete=current-password]", ADMIN_PASSWORD);
 await page.click("button[type=submit]");
 await page.waitForSelector(".grid-stack", { timeout: 15000 });
 await sleep(2500);
