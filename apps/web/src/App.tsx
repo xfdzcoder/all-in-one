@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppShell,
   Button,
@@ -19,6 +19,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 
 import { api, DASHBOARD_COLUMNS, type Dashboard, type DashboardColumns, type Me } from "./api";
 import { rescaleLayout } from "./grid-rescale";
+import {
+  accumulateSwipe,
+  chainOf,
+  loadScrollTop,
+  saveScrollTop,
+  shouldSwitchPages,
+  type SwipeState,
+} from "./page-switch";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
 import { IconAction, WbAlert } from "./ui";
@@ -137,6 +145,130 @@ function Workbench({
     }
     window.history.replaceState(null, "", url.toString());
   };
+
+  // ── 横向多页面切换（Q119，用户需求 2026-10-03）────────────────
+  // 参考 GNOME/Windows 多桌面：横滑/滚轮横移切页，动画「缩小凹入 → 换页 → 铺满」，
+  // 每页滚动位置跨刷新保持；冲突规则 = 按指针作用域（下方有横滚容器则不切页）。
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  const swipeRef = useRef<SwipeState>({ acc: 0, lastAt: 0 });
+  const animatingRef = useRef(false);
+  const pendingDirRef = useRef<0 | 1 | -1>(0); // 动画期最多排队一条（后到覆盖，防一次手势连跳多页）
+  const scrollTimerRef = useRef<number | null>(null);
+  const [anim, setAnim] = useState<{ phase: "out" | "in" | "settle"; dir: 1 | -1 } | null>(null);
+
+  const activeIdRef = useRef(activeId);
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
+
+  /** 选中页面（下拉切换与横滑切换共用）：写 URL 深链 + 恢复该页滚动位置。 */
+  const selectPage = useCallback((id: string) => {
+    // 取消未落盘的滚动保存 —— 否则旧计时器在切页后触发，会把**新页**的滚动写进**旧页**的键
+    // （Q119 踩坑：滚到底→快速切页→回来位置丢失，实测 ls 里旧页键被写成 0）
+    if (scrollTimerRef.current) {
+      window.clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = null;
+    }
+    saveScrollTop(activeId ?? "", mainRef.current?.scrollTop ?? 0); // 切走前记下当前页滚动
+    setActiveId(id);
+    window.history.replaceState(null, "", `?page=${id}`);
+  }, [activeId]);
+
+  // 切到新页后恢复它的滚动位置（跨刷新：localStorage）。
+  // 布局（gridstack 初始化/图片撑高）未就绪时 scrollTop 会被夹住 —— 随帧 + 短定时器有界重试。
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el || view !== "workspace" || !activeId) return;
+    const target = loadScrollTop(activeId);
+    el.scrollTop = target;
+    let tries = 0;
+    let timer = 0;
+    const again = () => {
+      if (el.scrollTop !== target && tries++ < 12) {
+        el.scrollTop = target;
+        timer = window.setTimeout(again, 100);
+      }
+    };
+    const raf = requestAnimationFrame(again);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, view]);
+
+  const switchPageRef = useRef<(dir: 1 | -1) => void>(() => {});
+  const switchPage = useCallback(
+    (dir: 1 | -1) => {
+      if (!dashboards || dashboards.length < 2 || layoutEdit) return;
+      if (animatingRef.current) {
+        pendingDirRef.current = dir; // 动画中：排队一条，播完接着走（不硬丢用户的第二次手势）
+        return;
+      }
+      const idx = dashboards.findIndex((d) => d.id === activeId);
+      const target = idx + dir;
+      // 首尾页：回弹（循环切换开关在 Q120）
+      if (idx < 0 || target < 0 || target >= dashboards.length) return;
+      const nextId = dashboards[target].id;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced) {
+        selectPage(nextId); // 降级：瞬时切换
+        return;
+      }
+      animatingRef.current = true;
+      setAnim({ phase: "out", dir });
+      window.setTimeout(() => {
+        selectPage(nextId);
+        setAnim({ phase: "in", dir });
+        // 双 rAF：让「缩小入场」态先落一帧，再过渡到铺满（否则同帧合成无过渡）
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            setAnim({ phase: "settle", dir });
+            window.setTimeout(() => {
+              setAnim(null);
+              animatingRef.current = false;
+              const pending = pendingDirRef.current;
+              pendingDirRef.current = 0;
+              if (pending !== 0) switchPageRef.current(pending);
+            }, 260);
+          }),
+        );
+      }, 150);
+    },
+    [activeId, dashboards, layoutEdit, selectPage],
+  );
+  useEffect(() => {
+    switchPageRef.current = switchPage;
+  }, [switchPage]);
+
+  const onWheelSwitch = useCallback(
+    (e: React.WheelEvent) => {
+      // 注意：动画期**不能在这里丢事件** —— 排队在 switchPage 里做（pendingDirRef），
+      // 否则用户的第二次手势根本进不了队列（Q119 踩坑：回滑被硬吞）
+      if (view !== "workspace" || layoutEdit) return;
+      const ne = e.nativeEvent;
+      // Shift+纵向滚轮 = 横向（鼠标没有横滚轮时的等价操作）
+      const dx = ne.shiftKey && Math.abs(ne.deltaY) > Math.abs(ne.deltaX) ? ne.deltaY : ne.deltaX;
+      if (!dx) return;
+      // 冲突规则（用户拍板）：指针下方有横向滚动条容器 → 交给它，不切页
+      if (!shouldSwitchPages(chainOf(e.target as Element, window))) return;
+      const r = accumulateSwipe(swipeRef.current, dx, Date.now());
+      swipeRef.current = r.state;
+      if (r.fire !== 0) switchPage(r.fire);
+    },
+    [layoutEdit, switchPage, view],
+  );
+
+  // 滚动位置：滚动停 200ms 后落盘（防每帧写 localStorage）。
+  // 记账按**触发时的当前页**（activeIdRef）——安排时的页面可能已经切走（同上串页坑）。
+  const onScrollSave = useCallback(() => {
+    if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = window.setTimeout(() => {
+      if (view === "workspace" && activeIdRef.current) {
+        saveScrollTop(activeIdRef.current, mainRef.current?.scrollTop ?? 0);
+      }
+    }, 200);
+  }, [view]);
 
   // 退出登录（B1 起入口在设置页 · 账户）：清会话 + 清客户端缓存
   const handleLogout = useCallback(() => {
@@ -318,9 +450,8 @@ function Workbench({
                         data-page-item={d.title}
                         className={`wb-pageitem${d.id === activeId ? " wb-pageitem--active" : ""}`}
                         onClick={() => {
-                          setActiveId(d.id);
+                          selectPage(d.id);
                           setMenuOpen(false);
-                          window.history.replaceState(null, "", `?page=${d.id}`);
                         }}
                       >
                         {d.icon ? `${d.icon} ` : ""}
@@ -396,6 +527,9 @@ function Workbench({
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
       <AppShell.Main
         className="wb-main"
+        ref={mainRef}
+        onWheel={onWheelSwitch}
+        onScroll={onScrollSave}
         style={{
           background: view === "workspace" ? active?.background ?? "transparent" : "transparent",
         }}
@@ -493,18 +627,31 @@ function Workbench({
               </WbAlert>
             )}
             {active && (
-              <WidgetErrorBoundary name="看板">
-                <Board
-                  key={`${active.id}-${active.columns}`}
-                  dashboardId={active.id}
-                  layoutJson={active.layoutJson}
-                  columns={active.columns}
-                  cellHeight={active.cellHeight}
-                  canEdit={isDesktop}
-                  editMode={layoutEdit}
-                  onLayoutSaved={handleLayoutSaved}
-                />
-              </WidgetErrorBoundary>
+              // Q119 动画壳：「缩小凹入 → 换页 → 铺满」只动 transform/opacity（合成层）
+              <div
+                className={`wb-page-viewport${
+                  anim
+                    ? anim.phase === "out"
+                      ? ` anim-out anim-out-${anim.dir === 1 ? "next" : "prev"}`
+                      : anim.phase === "in"
+                        ? ` anim-in anim-in-${anim.dir === 1 ? "next" : "prev"}`
+                        : " anim-settle"
+                    : ""
+                }`}
+              >
+                <WidgetErrorBoundary name="看板">
+                  <Board
+                    key={`${active.id}-${active.columns}`}
+                    dashboardId={active.id}
+                    layoutJson={active.layoutJson}
+                    columns={active.columns}
+                    cellHeight={active.cellHeight}
+                    canEdit={isDesktop}
+                    editMode={layoutEdit}
+                    onLayoutSaved={handleLayoutSaved}
+                  />
+                </WidgetErrorBoundary>
+              </div>
             )}
           </>
         )}

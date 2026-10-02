@@ -1310,6 +1310,51 @@ a.wb-widget__title-link:focus-visible {
   max-width: 760px;
 }
 
+/* ── 横向多页面切换（Q119，用户需求 2026-10-03）：「缩小凹入 → 换页 → 铺满」──
+ * 只动 transform / opacity（合成层，不触发布局）；三段时序由 JS 相位驱动：
+ * anim-out（当前页凹入）→ 换页 + anim-in（新页从对侧缩小态入场，无过渡）→ anim-settle（铺满）。
+ * prefers-reduced-motion 时 JS 直接瞬切，不挂这些类。 */
+.wb-page-viewport {
+  transform-origin: 50% 45%;
+}
+
+.wb-page-viewport.anim-out {
+  transition:
+    transform 150ms var(--wb-ease-out),
+    opacity 150ms var(--wb-ease-out);
+}
+
+.wb-page-viewport.anim-out-next {
+  transform: scale(0.93) translateX(-1.5%);
+  opacity: 0.55;
+}
+
+.wb-page-viewport.anim-out-prev {
+  transform: scale(0.93) translateX(1.5%);
+  opacity: 0.55;
+}
+
+.wb-page-viewport.anim-in {
+  transition: none;
+  opacity: 0.55;
+}
+
+.wb-page-viewport.anim-in-next {
+  transform: scale(0.93) translateX(1.5%);
+}
+
+.wb-page-viewport.anim-in-prev {
+  transform: scale(0.93) translateX(-1.5%);
+}
+
+.wb-page-viewport.anim-settle {
+  transition:
+    transform 240ms var(--wb-ease-out),
+    opacity 240ms var(--wb-ease-out);
+  transform: none;
+  opacity: 1;
+}
+
 /* Q118：左上角标题 = 可点回工作台的页面名（原 Logo/用户名/返回按钮的职能合并于此） */
 .wb-header__brand {
   max-width: min(42vw, 420px);
