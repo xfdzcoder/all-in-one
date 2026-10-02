@@ -150,7 +150,7 @@ function Workbench({
   // 参考 GNOME/Windows 多桌面：横滑/滚轮横移切页，动画「缩小凹入 → 换页 → 铺满」，
   // 每页滚动位置跨刷新保持；冲突规则 = 按指针作用域（下方有横滚容器则不切页）。
   const mainRef = useRef<HTMLDivElement | null>(null);
-  const swipeRef = useRef<SwipeState>({ acc: 0, lastAt: 0 });
+  const swipeRef = useRef<SwipeState>({ acc: 0, lastAt: 0, fired: false });
   const animatingRef = useRef(false);
   const pendingDirRef = useRef<0 | 1 | -1>(0); // 动画期最多排队一条（后到覆盖，防一次手势连跳多页）
   const scrollTimerRef = useRef<number | null>(null);

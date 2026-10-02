@@ -61,6 +61,33 @@ const swipeOver = async (selector, deltaX) => {
   return true;
 };
 
+/** 明确的「下一次手势」：等过手势边界（300ms）再滑 —— 快速连发属于同一手势（Q121）。 */
+const swipeFresh = async (selector, deltaX) => {
+  await sleep(400);
+  return swipeOver(selector, deltaX);
+};
+
+/** 一次手势的连发（应只切一页）：定位一次、快速滚 N 下。 */
+const swipeBurst = async (selector, count, deltaX) => {
+  const box = await page.evaluate((sel) => {
+    const els = [...document.querySelectorAll(sel)].filter((el) => !el.querySelector(".wb-kanban__board"));
+    const el = els.find((e) => {
+      const r = e.getBoundingClientRect();
+      return r.bottom > 60 && r.top < window.innerHeight - 10 && r.width > 0 && r.height > 0;
+    }) ?? els[0];
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: Math.min(Math.max(r.y + r.height / 2, 70), window.innerHeight - 20) };
+  }, selector);
+  if (!box) return false;
+  await page.mouse.move(box.x, box.y);
+  for (let i = 0; i < count; i++) {
+    await page.mouse.wheel({ deltaX, deltaY: 0 });
+    await sleep(30); // 远小于手势边界 → 同一手势
+  }
+  return true;
+};
+
 const setScrollTop = (top) =>
   page.evaluate((t) => {
     const el = document.querySelector(".wb-main");
@@ -85,6 +112,7 @@ const tallLayout = (extras = []) => [
 
 let dashA = null;
 let dashB = null;
+let dashC = null;
 let boardId = null;
 let firstPageTitle = "";
 
@@ -96,6 +124,7 @@ try {
   // ── 前置：两个临时草稿盘（超高内容）+ 一个 6 列看板（横滚冲突用）──
   dashA = await createScratchDashboard(apiFetch);
   dashB = await createScratchDashboard(apiFetch);
+  dashC = await createScratchDashboard(apiFetch);
   const board = JSON.parse(
     (await apiFetch("/api/kanban/boards", { method: "POST", body: JSON.stringify({ title: `tmp-verify-pages-board` }) })).body,
   );
@@ -122,7 +151,8 @@ try {
   ok(
     "PAGES seed tall pages + kanban board",
     (await putLayout(dashA, tallLayout([{ id: "pg-kanban", x: 0, y: 0, w: 8, h: 5, component: "kanban", props: { boardId } }]))).status === 200 &&
-      (await putLayout(dashB, tallLayout())).status === 200,
+      (await putLayout(dashB, tallLayout())).status === 200 &&
+      (await putLayout(dashC, tallLayout())).status === 200,
   );
 
   // ── ① 横滑切页 + 深链 + 动画 ──
@@ -149,7 +179,18 @@ try {
     await page.evaluate((id) => new URL(location.href).searchParams.get("page") === id, dashB.id),
   );
 
-  ok("PAGES swipe back", await swipeOver(".grid-stack-item", -160));
+  // ── Q121 回归：一次手势（连续多事件/惯性尾巴）只切一页 —— 修复「滚一次切两页」──
+  await page.goto(`${WEB}/?page=${dashA.id}`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 10000 });
+  ok("PAGES gesture burst fired", await swipeBurst(".grid-stack-item", 3, 120));
+  await sleep(800);
+  ok(
+    "PAGES one gesture burst switches exactly ONE page (Q121)",
+    (await pageTitle()) === dashB.title,
+    `landed=${await pageTitle()}（切到 C 就是又「一次切两页」了）`,
+  );
+
+  ok("PAGES swipe back", await swipeFresh(".grid-stack-item", -160));
   ok(
     "PAGES swipe backward returns to page A",
     await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, dashA.title, {
@@ -172,10 +213,10 @@ try {
   ok("PAGES back on page A before scroll test", (await pageTitle()) === dashA.title, await pageTitle());
   const saved = await setScrollTop(900);
   ok("PAGES scroll position set on A", saved > 0, `scrollTop=${saved}`);
-  ok("PAGES swipe to B", await swipeOver(".grid-stack-item", 160));
+  ok("PAGES swipe to B", await swipeFresh(".grid-stack-item", 160));
   await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, dashB.title, { timeoutMs: 3000 });
   await setScrollTop(300);
-  ok("PAGES swipe back to A", await swipeOver(".grid-stack-item", -160));
+  ok("PAGES swipe back to A", await swipeFresh(".grid-stack-item", -160));
   await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, dashA.title, { timeoutMs: 3000 });
   // 恢复是「布局就绪后重试」——用 waitFor 等到位（换页瞬间读值会早于恢复完成）
   ok(
@@ -244,9 +285,9 @@ try {
     return Boolean(sw);
   }));
   ok("PAGES back to workspace", await backToWorkspace(page));
-  await page.goto(`${WEB}/?page=${dashB.id}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${WEB}/?page=${dashC.id}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 10000 });
-  ok("PAGES lands on last page", (await pageTitle()) === dashB.title, await pageTitle());
+  ok("PAGES lands on last page", (await pageTitle()) === dashC.title, await pageTitle());
   ok("PAGES swipe forward past the end", await swipeOver(".grid-stack-item", 160));
   ok(
     "PAGES wrap-around enabled (Q120) — 到头切到另一头",
@@ -265,7 +306,7 @@ try {
     body: JSON.stringify({ username: "admin", password: ADMIN_PASSWORD }),
   });
   const cookie = loginRes.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
-  for (const d of [dashA, dashB]) {
+  for (const d of [dashA, dashB, dashC]) {
     if (d) await fetch(`${WEB}/api/dashboards/${d.id}`, { method: "DELETE", headers: { cookie } });
   }
   if (boardId) await fetch(`${WEB}/api/kanban/boards/${boardId}`, { method: "DELETE", headers: { cookie } });

@@ -6,6 +6,7 @@ import {
   loadScrollTop,
   saveScrollTop,
   shouldSwitchPages,
+  type SwipeState,
   type XScrollInfo,
 } from "./page-switch";
 
@@ -45,23 +46,51 @@ describe("shouldSwitchPages（指针作用域冲突规则）", () => {
   });
 });
 
-describe("accumulateSwipe（触控板小 delta 累积）", () => {
-  it("单次越过阈值才触发，方向按符号", () => {
-    let s = { acc: 0, lastAt: 0 };
-    let r = accumulateSwipe(s, 30, 1000);
-    expect(r.fire).toBe(0);
-    s = r.state;
-    r = accumulateSwipe(s, 35, 1050);
-    expect(r.fire).toBe(1); // 30+35 ≥ 60
-    expect(r.state.acc).toBe(0); // 触发后清零
+// Q121（用户反馈「滚一次切两页」太灵敏）：**一次手势最多切一页**。
+describe("accumulateSwipe（手势状态机：一次手势最多一页）", () => {
+  const S: SwipeState = { acc: 0, lastAt: 0, fired: false };
+
+  it("单个大 delta 事件 = 一页（鼠标一格 100–120px 触发一次）", () => {
+    const r = accumulateSwipe(S, 120, 1000);
+    expect(r.fire).toBe(1);
+    expect(r.state.fired).toBe(true);
   });
 
-  it("反向累积触发上一页；手势间歇 >250ms 重新开始", () => {
-    let r = accumulateSwipe({ acc: 0, lastAt: 0 }, -61, 1000);
-    expect(r.fire).toBe(-1);
-    r = accumulateSwipe({ acc: 50, lastAt: 0 }, -10, 3000); // 新手势：累积清零，不触发
-    expect(r.fire).toBe(0);
-    expect(r.state.acc).toBe(-10);
+  it("连续小事件（高分辨率滚轮/触控板惯性）累积触发一次后，余量全部吞掉", () => {
+    let s: SwipeState = S;
+    let fires = 0;
+    for (let i = 0; i < 20; i++) {
+      const r = accumulateSwipe(s, 30, 1000 + i * 20); // 20 个事件 ×30px = 600px 的一次手势
+      s = r.state;
+      if (r.fire !== 0) fires++;
+    }
+    expect(fires).toBe(1); // 修复前会切 ~6 页
+  });
+
+  it("同一手势内反向余量也不触发（防误触抖动）", () => {
+    const first = accumulateSwipe(S, 120, 1000);
+    const second = accumulateSwipe(first.state, -200, 1100);
+    expect(first.fire).toBe(1);
+    expect(second.fire).toBe(0);
+  });
+
+  it("停顿超过手势边界 = 新手势，才能切下一页", () => {
+    const first = accumulateSwipe(S, 120, 1000);
+    const same = accumulateSwipe(first.state, 120, 1250); // 250ms < 300ms：同一手势
+    const next = accumulateSwipe(same.state, 120, 1700); // 停顿 450ms：新手势
+    expect(first.fire).toBe(1);
+    expect(same.fire).toBe(0);
+    expect(next.fire).toBe(1);
+  });
+
+  it("反向新手势 = 切上一页（有意的回滑不被吞）", () => {
+    const first = accumulateSwipe(S, 120, 1000);
+    const back = accumulateSwipe(first.state, -120, 1500);
+    expect(back.fire).toBe(-1);
+  });
+
+  it("低于阈值的单次轻扫不触发", () => {
+    expect(accumulateSwipe(S, 60, 1000).fire).toBe(0);
   });
 });
 

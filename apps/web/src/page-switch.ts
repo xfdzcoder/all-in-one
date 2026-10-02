@@ -39,23 +39,36 @@ export function chainOf(el: Element | null, win: Window): XScrollInfo[] {
   return out;
 }
 
-export type SwipeState = { acc: number; lastAt: number };
+export type SwipeState = { acc: number; lastAt: number; fired: boolean };
+
+/** 触发阈值（px）：普通鼠标一格 ≈100–120 → 恰好一页；触控板轻扫也够，但不连跳。 */
+const SWIPE_THRESHOLD = 100;
+/** 手势边界（ms）：事件间隔超过它 = 新手势（有意的「再来一下」）；连续流（含惯性尾巴）= 同一手势。 */
+const SWIPE_GESTURE_GAP_MS = 300;
 
 /**
- * 纯函数：横滑增量累积（触控板惯性会产生大量小 delta）。
- * 手势间歇 >250ms 视为新手势（清累积）；累积越过阈值触发一次切换（-1 前一页 / 1 后一页）。
+ * 纯函数：横滑手势状态机（Q121 调参 —— 用户反馈「滚一次切两页」太灵敏）。
+ *
+ * **一次手势最多切一页**：同一串连续事件流（含触控板/高分辨率滚轮的惯性尾巴）触发一次后，
+ * 余量全部吞掉；停顿 >`gestureGapMs` 才算新手势、才能切下一页。
+ * （此前每累积 60px 就触发一次，高分辨率滚轮一格被拆成多个小事件 → 一格切好几页。）
  */
 export function accumulateSwipe(
   state: SwipeState,
   delta: number,
   now: number,
-  threshold = 60,
+  opts: { threshold?: number; gestureGapMs?: number } = {},
 ): { state: SwipeState; fire: -1 | 0 | 1 } {
-  const fresh = now - state.lastAt > 250;
-  const acc = (fresh ? 0 : state.acc) + delta;
-  if (acc >= threshold) return { state: { acc: 0, lastAt: now }, fire: 1 };
-  if (acc <= -threshold) return { state: { acc: 0, lastAt: now }, fire: -1 };
-  return { state: { acc, lastAt: now }, fire: 0 };
+  const threshold = opts.threshold ?? SWIPE_THRESHOLD;
+  const gap = opts.gestureGapMs ?? SWIPE_GESTURE_GAP_MS;
+  const sameGesture = now - state.lastAt <= gap;
+  const fired = sameGesture && state.fired;
+  const acc = (sameGesture ? state.acc : 0) + delta;
+  // 手势内已切过：吞掉余量（含惯性尾巴），但继续记时 —— 尾巴不应被判成新手势
+  if (fired) return { state: { acc, lastAt: now, fired: true }, fire: 0 };
+  if (acc >= threshold) return { state: { acc: 0, lastAt: now, fired: true }, fire: 1 };
+  if (acc <= -threshold) return { state: { acc: 0, lastAt: now, fired: true }, fire: -1 };
+  return { state: { acc, lastAt: now, fired }, fire: 0 };
 }
 
 /* ── 每页滚动位置记忆（跨刷新，localStorage）────────────────────── */
