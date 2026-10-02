@@ -30,4 +30,5 @@ apps/server/data-*.zip
 
 # 运行时数据（数据库/上传图标/插件包等，随 ./data 备份，不入库）
 apps/server/data/
-data/
+# ⚠️ 必须根锚定：裸 data/ 会连 apps/server/src/data/（源码）一起忽略
+/data/
