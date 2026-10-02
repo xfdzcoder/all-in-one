@@ -11,10 +11,11 @@ docker compose up -d --build
 # 首次访问 http://<宿主IP>:3000，用 ADMIN_USERNAME/ADMIN_PASSWORD 登录
 ```
 
-- 数据（SQLite）持久化在 `./data/app.db`（含 `-wal`/`-shm`）；**插件安装目录 `./data/plugins`** 也在该卷下——备份 `./data` 即覆盖一切。
+- 数据（SQLite）持久化在 `./data/app.db`（含 `-wal`/`-shm`）；**插件安装目录 `./data/plugins`** 也在该卷下——备份 `./data` 即覆盖一切。自定义 CSS 与其历史备份也在该目录（`custom.css`、`custom-css-history/`）。
+- **数据目录由 `DATABASE_URL` 决定**（默认 `file:./data/app.db`，dataDir = DB 所在目录）——并跑多实例（如验收脚本用的一次性实例）用 `DATABASE_URL=file:/tmp/…/app.db` 隔离；**没有 `DATA_DIR` 这个变量**（2026-10-02 踩坑留档：误设 `DATA_DIR` 不生效、实例会落到默认库）。
 - `CREDENTIALS_MASTER_KEY` **必须妥善保存**：丢失后已存第三方凭证无法解密（只能重录）。
 - 健康检查：`GET /api/health`（compose 内置 HEALTHCHECK）。
-- **内网出站（SEC4）**：应用入口探活 / iframe 禁嵌检测 / OpenCode 探测**默认放行内网目标**（服务聚合核心场景，D22/D32）；**custom-api、邮件组件**以本机/内网服务为目标时需设 `ALLOW_PRIVATE_OUTBOUND=1`，否则被 SSRF 基线拒绝。
+- **内网出站（SEC4）**：应用入口探活 / iframe 禁嵌检测**默认放行内网目标**（服务聚合核心场景，D22/D36；OpenCode 探测已随 D66 退役）；**custom-api、邮件组件**以本机/内网服务为目标时需设 `ALLOW_PRIVATE_OUTBOUND=1`，否则被 SSRF 基线拒绝。
 
 ## 备份 / 恢复
 
