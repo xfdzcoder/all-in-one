@@ -43,8 +43,19 @@ configSchema: [
 ]
 ```
 
-字段类型：`text | number | boolean | select | json | secret`。
-`secret` 字段的值永远是 `{ credentialRef: string }`，明文只在服务端 connector 内解密。
+字段类型：`text | textarea | number | boolean | select | json | multiselect | secret`。
+`secret` 字段的值永远是 `{ credentialRef: string }`，明文只在服务端 connector 内解密（SEC3）；
+`multiselect` 的值是 `string[]`；`textarea` 用于多行源码（如受限 JSX 模板，D35）。
+
+**字段属性**（configSchema 每项可带，宿主 `ConfigForm` 按此渲染）：
+
+| 属性 | 适用 | 说明 |
+|---|---|---|
+| `required` / `default` / `placeholder` / `help` | 全部 | 校验 / 初值 / 占位 / 说明 |
+| `options` | select | 静态选项 `{ value, label }[]` |
+| `dynamic` | select · multiselect | **动态选项源 key**（与 `options` 二选一，Q26b/D42）：`kanban-boards` / `todo-names` / `tags` / `data-source:monitor|opencode|http|immich|navidrome|portainer|mihomo` / `immich-albums` / `navidrome-artists` |
+| `dependsOn` | dynamic | 选项源**依赖另一字段**（Q72/**D57**）：被依赖字段值变化 → 宿主带参重取选项（如「只看某相册」的列表跟着「数据连接」走） |
+| `creatable` | select + dynamic | 允许输入新值创建（Q29b，如 Todo 名称「选已有或新建」） |
 
 **标准字段（宿主自动附加）**：manifest 声明 `capabilities.refresh` 时，表单尾部自动
 出现「刷新频率（秒）」（存 `props.refreshSec`，下限 = `minRefreshSec`，留空 = 用

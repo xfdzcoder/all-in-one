@@ -11,7 +11,7 @@
 | [12-sdk-contracts.md](12-sdk-contracts.md) | 0 | 6 | 17 | 23 |
 | [13-tests-verify.md](13-tests-verify.md) | 1 | 8 | 14 | 23 |
 | [14-deps-security-lint.md](14-deps-security-lint.md) | 0 | 5 | 8 | 13 |
-| [15-docs.md](15-docs.md) | 0 | 2 | 26 | 28 |
+| [15-docs.md](15-docs.md) | 0 | Q101b ✅ / DOC-13 ⏳ | 26 | 28 |
 | **合计** | **3** | **41** | **102** | **146** |
 
 另：已定项 QA-001（P1）/ QA-002（P2）；存疑约 8 条见各报告末节（不入台账）。
