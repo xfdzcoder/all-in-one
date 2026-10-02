@@ -29,6 +29,7 @@
 
 - 安装：根目录 `pnpm install`（`packageManager` 固定 pnpm@12.6.0；本机无 corepack，缺 pnpm 时 `npm i -g pnpm`）
 - 根脚本（覆盖三包）：`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm test` / `pnpm typecheck`
+- **`pnpm dev` 的参数只被 apps/web（vite）消费**：pnpm 会把多余 CLI 参数追加到每个子包的 dev 命令，`tsc --watch`/`node --watch` 都会丢弃它们（widget-sdk 的 dev 用 `sh -c` 包一层吞参）。所以 `pnpm dev --host` 只把 web 开到局域网（vite :5173），server 仍监听 `127.0.0.1:3000`，局域网访问 `/api` 走 vite 代理，不需要也不应该把 :3000 暴露到局域网。
 - 分包：`pnpm dev:web`、`pnpm dev:server`；`pnpm --filter @all-in-one/web build` 等
 - 测试：Vitest 单元/契约测试（`pnpm test`，M1/M2 起真实生效）；UI 行为验证用 puppeteer-core + 系统 Chrome，验收脚本在 `apps/web/scripts/verify-*.mjs`（需 server :3000 + preview :4173；J5 另需 `ALLOW_PRIVATE_OUTBOUND=1` 与 `CREDENTIALS_MASTER_KEY`）。M3 计划 Playwright J1–J4。
 - `apps/server`：M1 已完成（Fastify + Drizzle + libsql(`file:` SQLite WAL, D16) + 鉴权 + Dashboard CRUD + zod/OpenAPI）。schema 见 `apps/server/src/db/schema.ts`，**迁移由 drizzle-kit 生成**（D18：`pnpm --filter @all-in-one/server exec drizzle-kit generate`，启动时自动 apply；改 schema 必须重新 generate，勿手写 DDL）。入口 `src/index.ts`（Node 26 直跑 TS，相对 import 用 `.ts`）。**首启账号必须设 `ADMIN_PASSWORD` 环境变量**（D17，否则启动失败）；凭证加密需 `CREDENTIALS_MASTER_KEY`（base64 32 字节，`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` 生成）；可选 `ADMIN_USERNAME`（默认 admin）、`COOKIE_SECURE=1`、`ALLOW_PRIVATE_OUTBOUND=1`（E2E 访问本机 mock 时放行内网出站，默认拒绝 —— SEC4）。
