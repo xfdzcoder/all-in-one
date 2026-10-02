@@ -1,0 +1,125 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  # 构建镜像 + 冷启动健康冒烟（/api/health、登录、SPA）——每个 PR / push 都跑
+  build:
+    name: Build image + health smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: all-in-one:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Health smoke test
+        run: |
+          set -euo pipefail
+          docker run -d --name smoke -p 3000:3000 \
+            -e ADMIN_PASSWORD=ci-smoke-password \
+            -e CREDENTIALS_MASTER_KEY="$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" \
+            all-in-one:ci
+
+          echo "waiting for /api/health ..."
+          ok=0
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/health; then ok=1; break; fi
+            sleep 2
+          done
+          if [ "$ok" != 1 ]; then echo "health endpoint never became ready" >&2; exit 1; fi
+
+          curl -fsS -X POST http://127.0.0.1:3000/api/auth/login \
+            -H 'content-type: application/json' \
+            -d '{"username":"admin","password":"ci-smoke-password"}'
+          echo
+          curl -fsS http://127.0.0.1:3000/ | grep -qi '<!doctype html'
+          echo "smoke test passed"
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker logs smoke || true
+
+  # 仅 v* tag：推 GHCR（latest + 版本号）并创建 GitHub Release
+  release:
+    name: Push GHCR + GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write   # 创建 Release
+      packages: write   # 推送 GHCR
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate tag is vMAJOR.MINOR.PATCH
+        run: |
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tag ${GITHUB_REF_NAME} 不符合 vMAJOR.MINOR.PATCH，拒绝发布" >&2
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          body: |
+            镜像：`ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
+
+            ```bash
+            docker run -d --name all-in-one -p 3000:3000 \
+              -e ADMIN_PASSWORD='你的口令' \
+              -e CREDENTIALS_MASTER_KEY='你的主密钥' \
+              -v "$PWD/data:/app/data" \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```
+
+            变更记录见 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)。
