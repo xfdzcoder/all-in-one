@@ -7,7 +7,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { backToWorkspace, login, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -194,9 +194,7 @@ await installLayoutGuard(page);
   await page.keyboard.press("Enter");
   await sleep(800);
   ok("KAN board created in manager", await page.evaluate((t) => (document.body.textContent ?? "").includes(t), boardTitle));
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(500);
 
   // 添加看板组件（Q26c#3：看板在「配置」里选，头部只显标题）
@@ -265,9 +263,7 @@ await installLayoutGuard(page);
     await fillNth("列名", 0, name);
     await page.keyboard.press("Enter");
     await sleep(600);
-    await page.evaluate(() =>
-      [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-    );
+    await backToWorkspace(page);
     await sleep(500);
     return true;
   };

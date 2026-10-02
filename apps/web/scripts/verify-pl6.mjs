@@ -6,7 +6,7 @@
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { login, makeClickBtn, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
+import { backToWorkspace, login, makeClickBtn, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
 
 import { strToU8, zipSync } from "fflate";
 import puppeteer from "puppeteer-core";
@@ -111,7 +111,7 @@ try {
   ok("PL6 enable plugin", await clickBtn("启用"));
   await sleep(800);
   ok("PL6 status becomes 已启用", (await adminText()).includes("已启用"));
-  ok("PL6 back to workspace", await clickBtn("返回工作台")); // B1：设置页返回入口
+  ok("PL6 back to workspace", await backToWorkspace(page)); // Q118：返回入口在左上角标题
   await sleep(300);
   ok("PL6 enter edit", await clickBtn("编辑页面"));
   await sleep(300);

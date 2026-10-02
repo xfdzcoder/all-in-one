@@ -9,7 +9,7 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, openSettings, summarize } from "./lib/verify-kit.mjs";
+import { backToWorkspace, login, makeClickBtn, makeOk, openSettings, summarize } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -174,9 +174,7 @@ await installLayoutGuard(page);
   );
 
   // ②（Q29b：ToDo 去标签/去筛选 —— 标签仅用于信息源，旅程改为源级）
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(500);
 
   // ④ RSS 组件筛选（Q29c/二.3：筛选并入配置 —— 配置表单 multiselect 选标签）

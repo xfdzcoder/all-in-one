@@ -38,7 +38,6 @@ export function isSettingsTab(v: string | null): v is SettingsTab {
 export function SettingsAdmin(props: {
   tab: SettingsTab;
   onTab: (t: SettingsTab) => void;
-  onBack: () => void;
   me: Me;
   themeMode: "dark" | "light";
   onToggleTheme: () => void;
@@ -50,15 +49,13 @@ export function SettingsAdmin(props: {
   /** 改用户名后刷新会话（头部 `me.username` 跟着变）。 */
   onProfileChanged: () => void;
 }) {
-  const { tab, onTab, onBack, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab, onProfileChanged } = props;
+  const { tab, onTab, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab, onProfileChanged } = props;
   const items = SETTINGS_TABS.filter((t) => t.key !== "plugins" || isDesktop);
 
   return (
     <div className="wb-settings">
+      {/* Q118：返回入口移至左上角标题（aria-label="返回工作台"），此处不再放返回按钮 */}
       <div className="wb-admin__bar">
-        <Button variant="default" size="xs" onClick={onBack}>
-          ← 返回工作台
-        </Button>
         <Title order={4} className="wb-admin__title">
           设置
         </Title>
@@ -121,7 +118,7 @@ export function SettingsAdmin(props: {
 function DataPanel({ dataTab }: { dataTab: string | undefined }) {
   return (
     <div className="wb-settings__data">
-      <DataAdmin embedded initialTab={dataTab} />
+      <DataAdmin initialTab={dataTab} />
     </div>
   );
 }

@@ -52,13 +52,16 @@ export function WidgetTitle({
     </>
   );
 
-  const head = href ? (
+  // Q118（用户反馈「别整行点击都跳转」）：链接只占**文本宽**，行内剩余区域不可点。
+  // 布局占位由 `.wb-widget__title-fit`（flex:1）承担 —— 视觉不变、动作簇仍靠右。
+  const linked = href ? (
     <a className="wb-widget__title-link" href={href} target="_blank" rel="noopener noreferrer" title={href}>
       {inner}
     </a>
   ) : (
     <span className="wb-widget__title-link wb-widget__title-link--plain">{inner}</span>
   );
+  const head = <span className="wb-widget__title-fit">{linked}</span>;
 
   // 不传 actions = 只渲染左段（可作为现有 `<Group>` 头部行里的直接子元素，flex:1 占满剩余宽度）
   if (!actions) return head;

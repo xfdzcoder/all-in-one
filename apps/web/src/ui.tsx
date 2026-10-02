@@ -1,35 +1,45 @@
 import type { ReactNode } from "react";
 import { ActionIcon, Button, Text, Tooltip } from "@mantine/core";
+import { forwardRef } from "react";
 
 /** 图标动作按钮（Q65/D52「文字按钮尽量 icon 化」）：图标 + tooltip + aria-label + sr-only 文本。
  *  sr-only 保留可访问名与 verify 文本匹配兼容（视觉上只剩图标）——
- *  因此 `label` 必须与原文字按钮一致，verify-* 脚本的 textContent 选择器可零迁移。 */
-export function IconAction({
-  label,
-  tooltip,
-  onClick,
-  href,
-  danger,
-  disabled,
-  variant = "subtle",
-  size = "sm",
-  children,
-}: {
-  label: string;
-  tooltip?: string;
-  onClick?: () => void;
-  /** 外链：渲染成 `<a>`（新标签 + noopener），如「在 Immich 中打开」。 */
-  href?: string;
-  danger?: boolean;
-  disabled?: boolean;
-  /** 顶部工具栏等处用 "default" 保持与原文字按钮同观感；默认 "subtle"（卡片内动作簇）。 */
-  variant?: "subtle" | "default" | "light" | "outline" | "filled" | "transparent";
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
-  children: ReactNode;
-}) {
+ *  因此 `label` 必须与原文字按钮一致，verify-* 脚本的 textContent 选择器可零迁移。
+ *  Q118：改 forwardRef —— 可直接当 Mantine `Popover.Target`（需要 ref 转发）。 */
+
+export const IconAction = forwardRef<
+  HTMLButtonElement,
+  {
+    label: string;
+    tooltip?: string;
+    onClick?: () => void;
+    /** 外链：渲染成 `<a>`（新标签 + noopener），如「在 Immich 中打开」。 */
+    href?: string;
+    danger?: boolean;
+    disabled?: boolean;
+    /** 顶部工具栏等处用 "default" 保持与原文字按钮同观感；默认 "subtle"（卡片内动作簇）。 */
+    variant?: "subtle" | "default" | "light" | "outline" | "filled" | "transparent";
+    size?: "xs" | "sm" | "md" | "lg" | "xl";
+    children: ReactNode;
+  }
+>(function IconAction(
+  {
+    label,
+    tooltip,
+    onClick,
+    href,
+    danger,
+    disabled,
+    variant = "subtle",
+    size = "sm",
+    children,
+  },
+  ref,
+) {
   return (
     <Tooltip label={tooltip ?? label} withinPortal>
       <ActionIcon
+        ref={ref}
         {...(href
           ? ({ component: "a", href, target: "_blank", rel: "noopener noreferrer" } as object)
           : {})}
@@ -45,7 +55,7 @@ export function IconAction({
       </ActionIcon>
     </Tooltip>
   );
-}
+});
 
 /** 骨架屏（D52 批3）：替换"加载中…"文本 —— shimmer 占位条（宽度档位在 CSS 中按序定义）。 */
 export function WbLoading({ rows = 3 }: { rows?: number }) {

@@ -13,7 +13,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconCheck, IconPencil, IconSettings } from "./icons";
+import { IconCheck, IconLayoutDashboard, IconPencil, IconSettings } from "./icons";
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -280,24 +280,34 @@ function Workbench({
     <AppShell header={{ height: 56 }} padding="md">
       <AppShell.Header className="wb-header">
         <Group h="100%" px="md" justify="space-between">
-          <Group gap="md">
-            <Group gap={6}>
-              <img src="/favicon.svg" alt="" width={18} height={18} />
-              <Text fw={700}>个人工作台</Text>
-            </Group>
-            <Text size="sm" c="dimmed">
-              {me.username}
-            </Text>
-          </Group>
+          {/* Q118（用户指令）：左上角只留标题 = 当前页面名（设置页显示「设置」）；
+              点击回工作台（取代原「← 返回工作台」按钮）；Logo/用户名已移除。
+              可访问名固定「返回工作台」= 随页面名变化的可见文本的语义锚点（verify 亦按它定位）。 */}
+          <Text
+            component="button"
+            fw={700}
+            className="wb-btn-reset wb-header__brand"
+            aria-label="返回工作台"
+            title="返回工作台"
+            onClick={() => gotoView("workspace")}
+          >
+            {view === "settings" ? "设置" : active?.title ?? "个人工作台"}
+          </Text>
           <Group gap="xs">
             {/* Q27d#1：页面切换 = 右上角弹出下拉（页面管理一并收纳） */}
             {view === "workspace" && (
               <Popover opened={menuOpen} onChange={setMenuOpen} width={280} shadow="md" position="bottom-end">
                 <Popover.Target>
-                  <Button variant="default" size="xs" aria-label="切换页面" onClick={() => setMenuOpen((o) => !o)}>
-                    {active?.icon ? `${active.icon} ` : ""}
-                    {active?.title ?? "页面"} ▾
-                  </Button>
+                  {/* Q118：页面下拉收敛为 icon（原文字按钮）；可访问名保持「切换页面」 */}
+                  <IconAction
+                    label="切换页面"
+                    tooltip="切换页面"
+                    variant="default"
+                    size="md"
+                    onClick={() => setMenuOpen((o) => !o)}
+                  >
+                    <IconLayoutDashboard size={18} />
+                  </IconAction>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <div className="wb-pagelist">
@@ -395,7 +405,6 @@ function Workbench({
             <SettingsAdmin
               tab={settingsTab}
               onTab={(t) => gotoView("settings", t)}
-              onBack={() => gotoView("workspace")}
               me={me}
               themeMode={themeMode}
               onToggleTheme={onToggleTheme}

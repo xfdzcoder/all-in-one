@@ -13,7 +13,7 @@
  * Run: node scripts/verify-settings.mjs（server :3000/:3001 + preview :4173）
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, login, makeApiFetch, makeOk, openSettings, sleep, summarize, uniqId } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, backToWorkspace, login, makeApiFetch, makeOk, openSettings, sleep, summarize, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173";
 const results = [];
@@ -88,11 +88,7 @@ try {
   ok("SET data panel embeds data admin (7 tabs)", await page.evaluate(() => Boolean(document.querySelector(".wb-admin"))));
   ok("SET open settings · 关于", await openSettings(page, "关于"));
   ok("SET about panel has product info", (await panelText()).includes("个人工作台"));
-  ok("SET back to workspace", await page.evaluate(() => {
-    const b = [...document.querySelectorAll("button")].find((x) => (x.textContent ?? "").includes("返回工作台"));
-    b?.click();
-    return Boolean(b);
-  }));
+  ok("SET back to workspace", await backToWorkspace(page));
   await sleep(400);
   ok("SET workspace rendered after back", await page.evaluate(() => Boolean(document.querySelector(".wb-settings")) === false));
 

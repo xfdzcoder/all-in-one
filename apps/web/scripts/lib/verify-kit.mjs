@@ -128,6 +128,21 @@ export async function openSettings(page, tab) {
   return clickBtn(tab);
 }
 
+/**
+ * 回工作台（**Q118**：原「← 返回工作台」按钮已移除，职能在**左上角标题**上 ——
+ * 可见文本 = 当前页面名（会变），可访问名固定「返回工作台」）。
+ */
+export async function backToWorkspace(page) {
+  const hit = await page.evaluate(() => {
+    const el = document.querySelector('[aria-label="返回工作台"]');
+    if (!el) return false;
+    el.click();
+    return true;
+  });
+  await sleep(300);
+  return hit;
+}
+
 // ── 临时草稿盘（**TST-23**：verify 脚本零接触用户页面）────────────────────
 //
 // 背景（用户反馈②，2026-10-02）：历史脚本普遍 `find(title === "首页") ?? list[0]`

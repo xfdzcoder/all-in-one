@@ -7,7 +7,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, openSettings, sleep, uniqId, waitFor, waitForText } from "./lib/verify-kit.mjs";
+import { backToWorkspace, login, makeClickBtn, makeOk, openSettings, sleep, uniqId, waitFor, waitForText } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -144,9 +144,7 @@ await installLayoutGuard(page);
   ok("D31 source gone after confirm", await waitForText(page, sourceTitle, { present: false })); // TST-13
 
   // Q25c：退订旅程在数据源管理页 —— 先返回工作台再验 fixture
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(500);
   ok(
     "D31 首页 fixture untouched",

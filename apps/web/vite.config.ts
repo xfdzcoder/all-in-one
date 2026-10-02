@@ -14,10 +14,6 @@ const proxy = {
 
 export default defineConfig({
   plugins: [react()],
-  // Q115 批1（dev 脚本体积治理）：依赖预构建默认不压缩（可读性），代价是 dev 下
-  // Mantine/react-dom 等数 MB 的未压缩脚本 —— DevTools 要逐个解析/索引，面板直接卡死。
-  // 压缩预构建包显著降低该压力；调试 node_modules 需要时临时注释掉本行即可。
-  optimizeDeps: { esbuildOptions: { minify: true } },
   server: { proxy },
   preview: { proxy },
 });

@@ -5,7 +5,7 @@
  * Run: node scripts/verify-j3.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, backToWorkspace, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -67,9 +67,7 @@ try {
     "J3/D41 data admin page opens on mobile",
     await page.evaluate(() => Boolean(document.querySelector(".wb-admin"))),
   );
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(400);
 
   // NFR2: 可交互元素触控目标 ≥44px（高度）
@@ -111,11 +109,21 @@ try {
     ok("J3 todo create on mobile", false, "no todo input found");
   }
 
-  // J3: RSS 卡可浏览（Q85 后卡片标题 = 「RSS」——原「信息流」断言自改名起陈旧）
-  const hasRss = await page.evaluate(() =>
-    [...document.querySelectorAll(".wb-widget")].some((w) => (w.textContent ?? "").includes("RSS")),
+  // J3: RSS 卡可浏览（Q85 后卡片标题 = 「RSS」）。移动端纯浏览、不能加组件（D10）——
+  // 页面上有没有 RSS 卡取决于用户布局；**没有则跳过**（Q118：内容依赖断言改条件式，
+  // 明确标 skipped 而非假绿；j3 改自建草稿盘的整改入 TST-19 欠账）
+  const rssCheck = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll(".wb-widget")].filter(
+      (w) => (w.querySelector(".wb-widget__title-fit")?.textContent ?? "").trim() === "RSS",
+    );
+    if (cards.length === 0) return { present: false, ok: false };
+    return { present: true, ok: (cards[0].textContent ?? "").length > 10 }; // 在场就断言真渲染了
+  });
+  ok(
+    "J3 rss content visible on mobile",
+    !rssCheck.present || rssCheck.ok,
+    rssCheck.present ? "" : "页面无 RSS 卡 — 跳过（内容依赖断言）",
   );
-  ok("J3 rss content visible on mobile", hasRss);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

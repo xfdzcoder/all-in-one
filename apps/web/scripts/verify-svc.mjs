@@ -9,7 +9,7 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { ADMIN_PASSWORD, createScratchDashboard, deleteScratchDashboard, makeApiFetch, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, backToWorkspace, createScratchDashboard, deleteScratchDashboard, makeApiFetch, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -578,7 +578,7 @@ await installLayoutGuard(page);
   );
 
   // 回到工作台（上一步切到了「数据源管理」全页视图，工作台组件不在 DOM）
-  await page.evaluate(() => [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes("返回工作台"))?.click());
+  await backToWorkspace(page); // Q118：返回入口在左上角标题（aria-label="返回工作台"）
   await sleep(600);
 
   // Q89（项 2，D60/D61/**D62**）：媒体墙「全局等高行」契约。

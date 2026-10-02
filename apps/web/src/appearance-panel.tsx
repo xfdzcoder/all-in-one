@@ -84,71 +84,83 @@ export function AppearancePanel({
   };
 
   return (
-    <Stack gap="md" className="wb-settings__section">
+    <Stack gap="lg" className="wb-settings__section">
       <Title order={5}>外观</Title>
       {msg && (
         <WbAlert tone={msg.tone} size="sm" onClose={() => setMsg(null)}>
           {msg.text}
         </WbAlert>
       )}
-      <Group gap="xs">
-        <Text size="sm" c="dimmed">
-          主题
-        </Text>
-        <SegmentedControl
-          size="xs"
-          value={themeMode}
-          onChange={(v) => {
-            if ((v === "dark") !== (themeMode === "dark")) onToggleTheme();
-          }}
-          data={[
-            { label: "深色", value: "dark" },
-            { label: "浅色", value: "light" },
-          ]}
-        />
-      </Group>
-      <Stack gap="xs">
-        <Text size="sm" c="dimmed">
-          自定义 CSS（保存即生效；令牌与类名见提示，或参考
-          <code> docs/design-audit/02-custom-css.md</code>）
-        </Text>
-        <Suspense fallback={<WbLoading />}>
-          <CssEditor value={css} onChange={setCss} />
-        </Suspense>
-        <Group gap="xs">
-          <Button size="xs" disabled={busy} onClick={() => void save()}>
-            保存 CSS
-          </Button>
-          <ConfirmAction
-            label="清空并保存"
-            size="compact-xs"
-            title="清空自定义 CSS？"
-            message="当前自定义样式会被清空（清空前自动备份，可从历史回滚）。"
-            onConfirm={() => {
-              setCss("");
-              void api.saveCustomCss("").then((r) => {
-                setBackups(r.backups);
-                reloadCustomCss();
-                setMsg({ tone: "success", text: "已清空（旧版已自动备份）" });
-                return true; // promise(always-return)
-              });
-            }}
-          />
-          <Select
+      {/* Q118（用户反馈「太挤」）：主题 / 自定义 CSS 分成两个留白充分的区块 */}
+      <div className="wb-settings__card">
+        <Stack gap="sm">
+          <div>
+            <Title order={6}>主题</Title>
+            <Text size="sm" c="dimmed">
+              深浅色切换，全站即时生效。
+            </Text>
+          </div>
+          <SegmentedControl
             size="xs"
-            className="wb-flex-1"
-            placeholder={backups.length ? "回滚到历史版本…" : "暂无历史版本"}
-            data={backups.map((b) => ({ value: b.id, label: `${b.at}（${b.size} 字节）` }))}
-            value={restoreId}
-            onChange={(v) => setRestoreId(v)}
-            disabled={!backups.length}
-            searchable
+            w="fit-content"
+            value={themeMode}
+            onChange={(v) => {
+              if ((v === "dark") !== (themeMode === "dark")) onToggleTheme();
+            }}
+            data={[
+              { label: "深色", value: "dark" },
+              { label: "浅色", value: "light" },
+            ]}
           />
-          <Button size="xs" variant="default" disabled={!restoreId || busy} onClick={() => void restore()}>
-            回滚
-          </Button>
-        </Group>
-      </Stack>
+        </Stack>
+      </div>
+      <div className="wb-settings__card">
+        <Stack gap="sm">
+          <div>
+            <Title order={6}>自定义 CSS</Title>
+            <Text size="sm" c="dimmed">
+              保存即生效；<code>--wb-*</code> 令牌与 <code>.wb-*</code> 类名有提示，或参考
+              <code> docs/design-audit/02-custom-css.md</code>。
+            </Text>
+          </div>
+          <Suspense fallback={<WbLoading />}>
+            <CssEditor value={css} onChange={setCss} />
+          </Suspense>
+          <Group gap="xs">
+            <Button size="xs" disabled={busy} onClick={() => void save()}>
+              保存 CSS
+            </Button>
+            <ConfirmAction
+              label="清空并保存"
+              size="compact-xs"
+              title="清空自定义 CSS？"
+              message="当前自定义样式会被清空（清空前自动备份，可从历史回滚）。"
+              onConfirm={() => {
+                setCss("");
+                void api.saveCustomCss("").then((r) => {
+                  setBackups(r.backups);
+                  reloadCustomCss();
+                  setMsg({ tone: "success", text: "已清空（旧版已自动备份）" });
+                  return true; // promise(always-return)
+                });
+              }}
+            />
+            <Select
+              size="xs"
+              className="wb-flex-1"
+              placeholder={backups.length ? "回滚到历史版本…" : "暂无历史版本"}
+              data={backups.map((b) => ({ value: b.id, label: `${b.at}（${b.size} 字节）` }))}
+              value={restoreId}
+              onChange={(v) => setRestoreId(v)}
+              disabled={!backups.length}
+              searchable
+            />
+            <Button size="xs" variant="default" disabled={!restoreId || busy} onClick={() => void restore()}>
+              回滚
+            </Button>
+          </Group>
+        </Stack>
+      </div>
     </Stack>
   );
 }

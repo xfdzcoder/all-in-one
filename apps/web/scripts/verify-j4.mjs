@@ -7,7 +7,7 @@
  * 选择器/文案/流程改动两处同改（本文件是超集：多 SSE 同步断言；矩阵见 scripts/README.md）。
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, backToWorkspace, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -155,9 +155,7 @@ try {
     return Boolean(btn);
   });
   ok("J4 add task via data admin", sseAdded);
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(1200);
   ok(
     "J4 admin-created task syncs to widget (SSE, no reload)",
@@ -178,7 +176,8 @@ try {
   ok("J4 exit edit B (browse to operate cards)", await clickBtn("完成编辑"));
   await sleep(400);
   const isolated = await page.evaluate((t) => {
-    const onB = document.querySelector('[aria-label="切换页面"]')?.textContent ?? "";
+    // Q118：页面切换器 icon 化后，「当前页面名」的家在左上角标题（aria-label=返回工作台）
+    const onB = document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "";
     return { activeTab: onB, taskVisible: document.body.textContent.includes(t) };
   }, title);
   ok(

@@ -10,7 +10,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { createScratchDashboard, deleteScratchDashboard, login, makeApiFetch, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { backToWorkspace, createScratchDashboard, deleteScratchDashboard, login, makeApiFetch, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -239,9 +239,7 @@ await installLayoutGuard(page);
   );
 
   // 返回工作台 → 刷新列表（scoped：页面上其它组件也有「刷新」按钮）
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.includes("返回工作台"))?.click(),
-  );
+  await backToWorkspace(page);
   await sleep(500);
   ok(
     "MAIL refresh list",

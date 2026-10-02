@@ -54,12 +54,20 @@
   display: flex;
   align-items: center;
   gap: var(--wb-space-1);
-  flex: 1;
+  /* Q118：链接只占文本宽（点击区收窄）；行内占位由 .wb-widget__title-fit 承担 */
+  flex: 0 1 auto;
   min-width: 0;
   color: inherit;
   text-decoration: none;
   border-radius: var(--wb-radius-sm);
   cursor: default;
+}
+
+/* 标题区布局占位（不可点）：flex:1 推动作簇靠右，视觉与原「整行链接」一致 */
+.wb-widget__title-fit {
+  display: flex;
+  flex: 1;
+  min-width: 0;
 }
 a.wb-widget__title-link {
   cursor: pointer;
@@ -1300,6 +1308,27 @@ a.wb-widget__title-link:focus-visible {
 
 .wb-settings__section {
   max-width: 760px;
+}
+
+/* Q118：左上角标题 = 可点回工作台的页面名（原 Logo/用户名/返回按钮的职能合并于此） */
+.wb-header__brand {
+  max-width: min(42vw, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.wb-header__brand:hover {
+  text-decoration: underline;
+}
+
+/* Q118：设置面板的分组区块（主题 / 自定义 CSS …）——留白充分、层次清晰 */
+.wb-settings__card {
+  border: var(--wb-border);
+  border-radius: var(--wb-radius-md);
+  background: var(--wb-color-surface);
+  padding: var(--wb-space-4);
 }
 
 .wb-settings__data {

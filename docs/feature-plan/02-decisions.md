@@ -681,3 +681,22 @@
   3. **标题 URL 可点击、新标签页打开**：iframe 头部的 URL 文本改用 **D59 的 `WidgetTitle` 链接形态**（`href={url}` → `target="_blank" rel="noopener noreferrer"`，`.wb-widget__title-link` 样式），同源自嵌拒绝分支同改；URL 仍以 `.wb-url` 等宽弱化样式展示（观感基本不变，字重跟全站标题统一 fw 600）。
 - **被否备选**：① 自己手写 `<a>`（重复 D59 已有形态）；② 把「默认值显示」做成 iframe 专属硬编码（通用 `valuesWithDefaults` 对所有组件一致生效，行为可解释）。
 - **验证**：`config-form-utils` +2 单测（回填规则/空串回落）、`iframe-widget` 单测随新默认值更新；**verify-j7 13/13**（默认沙箱三令牌断言、自定义沙箱优先、同源拒绝、框内 Origin 非 null）+ **verify-iframe-live 5/5（真机）**；smoke 5/5。
+
+## D73 · 头部信息架构收敛 + 标题点击区收窄 + 编辑器光标随主题（2026-10-03）
+
+- **背景**：用户反馈 6 项页面样式问题：① 移除「返回工作台」按钮、点左上角 Logo/Title 回工作台；② 外观面板太挤；③ 左上角去 Logo/用户名只留 Title（展示当前页面名），右侧页面下拉收敛为 icon；④ 头部 icon 间距不一致；⑤ 深色模式下 CSS 编辑器光标看不清；⑥ iframe 标题别整行可点（用户追加拍板：**全站统一收窄**）。
+- **决策**：
+  1. **左上角标题 = 唯一的品牌位与返回入口**：可见文本 = 当前页面名（设置页显示「设置」），**可访问名固定 `aria-label="返回工作台"`**（可见文本会变、语义锚点不变 —— verify 脚本与读屏都按它定位）；Logo、用户名移除；两处「← 返回工作台」按钮删除。
+  2. **页面下拉收敛为 icon**（`IconLayoutDashboard`，vendored 第 17 个图标），`aria-label="切换页面"` 不变（verify 零迁移）；下拉内容（页面列表/新建/上移/下移/删除）不变。
+  3. **头部三 icon 统一** `IconAction` + 同一 `Group gap`（页面管理改用 IconAction 后与编辑/设置同构，间距一致）；`IconAction` 改 **forwardRef**（可直接当 Mantine `Popover.Target`）。
+  4. **标题链接点击区收窄（全站）**：`WidgetTitle` 的链接从「整行 `flex:1`」改为 **`.wb-widget__title-fit` 占位 + 链接只占文本宽** —— 视觉不变（动作簇仍靠右），行内空白不再跳转。
+  5. **光标随应用主题**（根因：CodeMirror 按**系统** `prefers-color-scheme` 选 `&light .cm-content { caret-color: black }`，与我们的 `data-theme` 主题脱钩 —— 系统浅色 + 应用深色 = 黑光标）：主题显式钉 `caret-color: var(--wb-color-text)`。
+  6. **外观面板分组卡片化**：主题 / 自定义 CSS 各成 `.wb-settings__card` 区块（留白、层次、说明文案分行）。
+- **测试基建（TST-23）**：kit 增 `backToWorkspace(page)`（点 `[aria-label="返回工作台"]`）——9 个脚本的「找返回按钮」收口；`verify-j4` 的当前页名改从标题读（切换器 icon 化后语义搬家）；`verify-j3` 的 RSS 内容断言改**条件式**（D10 移动端不能加组件，页面有没有 RSS 卡取决于用户布局 —— 没有则明确标"跳过"而非假绿；j3 自建草稿盘整改入 TST-19 欠账）；`verify-css` +1 光标回归断言（caret 必须等于主题文本色）。
+- **影响**：`App.tsx` 头部、`widget-title.tsx` + widgets.css（`.wb-widget__title-fit`）、`ui.tsx`（IconAction forwardRef）、`css-editor.tsx`、`appearance-panel.tsx`、`settings-admin.tsx`/`data-admin.tsx`（返回按钮下线）、`icons.tsx`（+IconLayoutDashboard）。
+
+> **D71 勘误（2026-10-03）**：第 3 项「依赖预构建压缩（`optimizeDeps.esbuildOptions.minify`）」**已撤回**——
+> 本 Vite 版（8.x，依赖优化走 Rolldown）该选项**已弃用**（dev 终端打印弃用告警），而
+> `optimizeDeps.rolldownOptions` 没有等价压缩位（`minify` 与 `transform.minify` 实测均被忽略）。
+> 为 ~12% 的体积不值得留弃用 API + 终端噪音，故移除该配置；dev 首屏最终口径 **40.9MB → 13.3MB（-67%）**
+> （主要来自图标 vendored 与重依赖懒加载）。若未来 Rolldown 提供压缩位可再评估。

@@ -87,6 +87,23 @@ try {
   await sleep(800);
   ok("CSS appearance panel opens", (await panelText()).includes("自定义 CSS"));
   ok("CSS editor rendered (CodeMirror)", await page.evaluate(() => Boolean(document.querySelector(".wb-css-editor .cm-content"))));
+  // Q118：光标必须随主题可见 —— CM6 默认按**系统**配色给 caret（&light=黑），
+  // 应用深色 + 系统浅色时黑光标看不见；主题里已钉 caret-color=--wb-color-text
+  ok(
+    "CSS editor caret follows app theme (Q118)",
+    await page.evaluate(() => {
+      const content = document.querySelector(".wb-css-editor .cm-content");
+      if (!content) return false;
+      const caret = getComputedStyle(content).caretColor;
+      const text = getComputedStyle(document.documentElement).getPropertyValue("--wb-color-text").trim();
+      const probe = document.createElement("span");
+      probe.style.color = text;
+      document.body.appendChild(probe);
+      const want = getComputedStyle(probe).color;
+      probe.remove();
+      return caret === want; // caret 必须等于主题文本色（深/浅都成立）
+    }),
+  );
 
   // ── ① 代码提示（?raw → 提取 → 补全 UI 全链路）──
   const valueLabels = await typeInEditor("--wb-");

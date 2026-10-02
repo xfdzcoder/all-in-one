@@ -5,7 +5,7 @@
  * Run: node scripts/verify-dark.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { login, makeClickBtn, makeOk, openSettings, sleep, waitFor } from "./lib/verify-kit.mjs";
+import { backToWorkspace, login, makeClickBtn, makeOk, openSettings, sleep, waitFor } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -117,7 +117,7 @@ try {
     await openSettings(page, "插件");
     await sleep(600);
     report(`${label} settings surface AA`, await page.evaluate(AUDIT_FN));
-    await clickBtn("返回工作台");
+    await backToWorkspace(page);
     await sleep(400);
 
     // 选择器表面：添加组件

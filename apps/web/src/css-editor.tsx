@@ -42,7 +42,13 @@ const theme = EditorView.theme({
     fontSize: "var(--wb-text-xs)",
   },
   "&.cm-focused": { outline: "none", borderColor: "var(--wb-color-accent)" },
-  ".cm-content": { fontFamily: "var(--wb-font-mono)", padding: "var(--wb-space-2) 0" },
+  ".cm-content": {
+    fontFamily: "var(--wb-font-mono)",
+    padding: "var(--wb-space-2) 0",
+    // Q118 修（用户反馈）：CM6 按**系统** prefers-color-scheme 选 caret 颜色（&light = 黑），
+    // 而我们主题跟 data-theme 走 —— 系统浅色 + 应用深色 = 黑光标看不见。显式钉死。
+    caretColor: "var(--wb-color-text)",
+  },
   ".cm-gutters": {
     backgroundColor: "transparent",
     color: "var(--wb-color-text-muted)",
