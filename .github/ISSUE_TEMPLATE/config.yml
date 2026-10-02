@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 需求与决策记录
+    url: https://github.com/xfdzcoder/all-in-one/tree/main/docs/feature-plan
+    about: 提需求前先看需求规格、非目标清单与决策日志（ADR）。
+  - name: 部署与备份文档
+    url: https://github.com/xfdzcoder/all-in-one/blob/main/docs/deploy.md
+    about: Docker 部署、环境变量、备份恢复、公网化前必做的问题优先看这里。

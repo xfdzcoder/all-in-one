@@ -1,0 +1,56 @@
+name: 缺陷报告
+description: 报告一个可复现的问题
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！**请勿在 Issue 中粘贴真实凭证、密钥、cookie 或个人数据**（日志请先脱敏）。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概述
+      description: 一句话说明问题现象。
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 从干净状态开始的最小复现步骤。
+      placeholder: |
+        1. 打开 '...'
+        2. 点击 '...'
+        3. 看到 '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 包括报错信息、截图或脱敏后的日志片段。
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 部署方式（Docker 镜像 tag / 本地 pnpm dev）、浏览器与版本、操作系统。
+      placeholder: "GHCR latest / Chrome 141 / Linux"
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已搜索既有 Issue，没有重复报告
+          required: true
+        - label: 已确认不属于文档中列出的已知限制（如公网化前必做清单）
+          required: false
