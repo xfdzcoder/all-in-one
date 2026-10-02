@@ -171,8 +171,4 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
     return { ok: true };
   });
 
-  // GET /api/data-sources/kinds —— 字段契约（供管理表单动态渲染）
-  app.get("/api/data-sources/kinds", { preHandler: authGuard }, async () =>
-    DATA_SOURCE_KINDS.map((kind) => ({ kind, configKeys: DATA_SOURCE_CONFIG_KEYS[kind] })),
-  );
 }

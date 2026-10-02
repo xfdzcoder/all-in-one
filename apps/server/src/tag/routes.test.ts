@@ -5,9 +5,11 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 
+import { eq } from "drizzle-orm";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
+import { tagTarget } from "../db/schema.ts";
 
 let dir: string;
 let client: Client;
@@ -38,6 +40,12 @@ afterAll(async () => {
 });
 
 const json = (res: { json: () => unknown }) => res.json() as Record<string, never>;
+
+/** CON-8：`GET /api/tags/targets/:t/:id` 已删（孤儿端点）—— 测试 oracle 改 DB 直查。 */
+const tagIdsOf = async (targetId: string): Promise<string[]> => {
+  const rows = await db.select().from(tagTarget).where(eq(tagTarget.targetId, targetId));
+  return rows.map((r) => r.tagId);
+};
 
 describe("tags API（FR-D1/D4，D40）", () => {
   let techId = "";
@@ -113,12 +121,8 @@ describe("tags API（FR-D1/D4，D40）", () => {
     });
     expect(set1.statusCode).toBe(200);
 
-    const got = await app.inject({
-      method: "GET",
-      url: `/api/tags/targets/todo/${todoId}`,
-      cookies: { sid },
-    });
-    expect((json(got).tagIds as string[]).toSorted()).toEqual([techId, homeId].toSorted());
+    // CON-8：GET /api/tags/targets/:t/:id 已删（孤儿端点）—— oracle 改 DB 直查
+    expect((await tagIdsOf(todoId)).toSorted()).toEqual([techId, homeId].toSorted());
 
     // 覆盖语义：再设 [homeId] → 只剩一个
     await app.inject({
@@ -127,12 +131,7 @@ describe("tags API（FR-D1/D4，D40）", () => {
       cookies: { sid },
       payload: { targetType: "todo", targetId: todoId, tagIds: [homeId] },
     });
-    const got2 = await app.inject({
-      method: "GET",
-      url: `/api/tags/targets/todo/${todoId}`,
-      cookies: { sid },
-    });
-    expect(json(got2).tagIds).toEqual([homeId]);
+    expect(await tagIdsOf(todoId)).toEqual([homeId]);
 
     // 列表内嵌
     const todos = await app.inject({ method: "GET", url: "/api/todos?list=inbox", cookies: { sid } });
@@ -178,12 +177,7 @@ describe("tags API（FR-D1/D4，D40）", () => {
 
     // 删标签 → 关联级联消失（FK），Todo 本身保留
     await app.inject({ method: "DELETE", url: `/api/tags/${techId}`, cookies: { sid } });
-    const afterTag = await app.inject({
-      method: "GET",
-      url: `/api/tags/targets/todo/${todoId}`,
-      cookies: { sid },
-    });
-    expect(json(afterTag).tagIds).toEqual([]);
+    expect(await tagIdsOf(todoId)).toEqual([]);
     const todos = await app.inject({ method: "GET", url: "/api/todos?list=inbox", cookies: { sid } });
     expect((todos.json() as Array<{ id: string }>).some((r) => r.id === todoId)).toBe(true);
 

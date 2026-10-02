@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 
+import { eq } from "drizzle-orm";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
+import { feedRead } from "../db/schema.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
 
@@ -145,20 +147,9 @@ describe("rss connector (multi-source + read state)", () => {
       cookies: { sid },
       payload: { itemKey },
     });
-    const readList = await app.inject({ method: "GET", url: "/api/feeds/read", cookies: { sid } });
-    expect(readList.json().length).toBe(1);
-  });
-
-  it("batch mark-read works", async () => {
-    const res = await app.inject({
-      method: "POST",
-      url: "/api/feeds/read-batch",
-      cookies: { sid },
-      payload: { itemKeys: ["x1", "x2"] },
-    });
-    expect(res.statusCode).toBe(200);
-    const readList = await app.inject({ method: "GET", url: "/api/feeds/read", cookies: { sid } });
-    expect(readList.json().length).toBe(3);
+    // CON-8：GET /api/feeds/read、POST /api/feeds/read-batch 均为孤儿端点已删 —— oracle 改 DB 直查
+    const rows = await db.select().from(feedRead).where(eq(feedRead.itemKey, itemKey));
+    expect(rows.length).toBe(1);
   });
 
   it("tolerates a failing source (per-source isolation)", async () => {

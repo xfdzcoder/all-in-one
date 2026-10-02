@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
@@ -58,12 +58,6 @@ export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void):
     return { ok: true };
   });
 
-  /** 已读标记（任一组件标记 → SSE 通知其它组件同步）。 */
-  app.get("/api/feeds/read", { preHandler: authGuard }, async (req) => {
-    const rows = await app.db.select().from(feedRead).where(eq(feedRead.userId, req.user!.id));
-    return rows.map((r) => r.itemKey);
-  });
-
   app.post("/api/feeds/read", { preHandler: authGuard }, async (req, reply) => {
     const parsed = readBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid body" });
@@ -83,21 +77,4 @@ export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void):
     return { ok: true };
   });
 
-  app.post("/api/feeds/read-batch", { preHandler: authGuard }, async (req, reply) => {
-    const parsed = z.object({ itemKeys: z.array(z.string().min(1).max(128)).max(500) }).safeParse(req.body);
-    if (!parsed.success) return reply.code(400).send({ error: "invalid body" });
-    const existing = await app.db
-      .select({ itemKey: feedRead.itemKey })
-      .from(feedRead)
-      .where(and(eq(feedRead.userId, req.user!.id), inArray(feedRead.itemKey, parsed.data.itemKeys)));
-    const have = new Set(existing.map((e) => e.itemKey));
-    const now = new Date();
-    await app.db.insert(feedRead).values(
-      parsed.data.itemKeys
-        .filter((k) => !have.has(k))
-        .map((k) => ({ id: crypto.randomUUID(), userId: req.user!.id, itemKey: k, readAt: now })),
-    );
-    onChanged();
-    return { ok: true };
-  });
 }

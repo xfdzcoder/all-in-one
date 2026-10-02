@@ -194,7 +194,11 @@ export const api = {
     req<Me>("POST", "/api/auth/login", { username, password }),
   logout: () => req<{ ok: boolean }>("POST", "/api/auth/logout"),
   listDashboards: () => req<Dashboard[]>("GET", "/api/dashboards"),
-  createDashboard: (title: string) => req<Dashboard>("POST", "/api/dashboards", { title }),
+  // CON-10：与服务端 dashboardCreateBody 对齐（icon/columns/cellHeight 此前漏传）
+  createDashboard: (
+    title: string,
+    extra?: { icon?: string | null; columns?: DashboardColumns; cellHeight?: number },
+  ) => req<Dashboard>("POST", "/api/dashboards", { title, ...extra }),
   patchDashboard: (
     id: string,
     patch: Partial<
@@ -216,7 +220,7 @@ export const api = {
     req<TodoItem>("POST", "/api/todos", { title, list }),
   deleteTodoGroup: (name: string) =>
     req<{ ok: boolean; deleted: number }>("POST", "/api/todos/delete-group", { name }),
-  patchTodo: (id: string, patch: { done?: boolean; title?: string; archived?: boolean }) =>
+  patchTodo: (id: string, patch: { done?: boolean; title?: string; archived?: boolean; list?: string; sortOrder?: number }) =>
     req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
   widgetData: (type: string, config: Record<string, unknown>, force = false) =>
@@ -297,8 +301,9 @@ export const api = {
       username?: string;
       folder?: string;
       password?: string;
+      credentialId?: string | null;
     },
-  ) => req<unknown>("PATCH", `/api/mail/accounts/${id}`, patch),
+  ) => req<MailAccountRow>("PATCH", `/api/mail/accounts/${id}`, patch),
   deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
   gmailAuthorize: (redirectUri: string) =>
     req<{ url: string }>("POST", "/api/mail/gmail/authorize", { redirectUri }),
@@ -306,7 +311,8 @@ export const api = {
     const q = new URLSearchParams();
     if (opts.accountIds && opts.accountIds.length > 0) q.set("accountIds", opts.accountIds.join(","));
     if (opts.account) q.set("account", opts.account);
-    if (opts.limit) q.set("limit", String(opts.limit));
+    // CON-10：服务端 limit 上限 50（超即 400）—— 客户端封顶，别把调用方的 100 直接怼过去
+    if (opts.limit) q.set("limit", String(Math.min(opts.limit, 50)));
     if (opts.force) q.set("force", "1");
     const suffix = q.toString() ? `?${q.toString()}` : "";
     return req<MailAgg>("GET", `/api/mail/messages${suffix}`);

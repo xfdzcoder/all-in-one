@@ -10,6 +10,7 @@
  */
 import { strToU8, zipSync } from "fflate";
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -108,6 +109,28 @@ try {
   await page.type("input[autocomplete=current-password]", process.env.ADMIN_PASSWORD ?? "m1-e2e-pass");
   await page.click("button[type=submit]");
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  // TST-19/Q101c-2c：清历史残留的本脚本测试卡（pl5-*）——失败轮次曾因布局保存 800ms 防抖
+  // 盖掉还原而累积；清完重载让网格拿到干净布局，断言才定位到「本轮新加的」卡。
+  {
+    const list = JSON.parse((await apiFetch("/api/dashboards")).body);
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // TST-10：无「首页」回落首屏
+    const items = JSON.parse(home.layoutJson ?? "[]");
+    const kept = items.filter(
+      (it) => !(it.component === "hello-plugin" && String(it.props?.title ?? "").startsWith("pl5-")),
+    );
+    if (kept.length !== items.length) {
+      const put = await apiFetch(`/api/dashboards/${home.id}/layout`, {
+        method: "PUT",
+        body: JSON.stringify({ layoutJson: JSON.stringify(kept) }), // apiFetch 的 body 传已序列化串
+      });
+      if (put.status !== 200) throw new Error(`残留清理失败：HTTP ${put.status} ${put.body.slice(0, 120)}`);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".grid-stack", { timeout: 8000 });
+      await sleep(400);
+    }
+  }
+  // TST-19：测前快照布局 —— 跑完还原，不把插件测试卡留在真机盘上
+  await installLayoutGuard(page);
 
   // ① 安装（同名残留先卸载，保证可重复）
   const existing = JSON.parse((await apiFetch("/api/plugins")).body);
@@ -229,6 +252,9 @@ try {
   ok("flow completed", false, String(e).slice(0, 200));
 }
 
+// 测后还原布局（TST-19）：等布局保存防抖落盘后再还原，避免迟到的 PUT 盖掉还原
+await sleep(1000);
+await restoreLayouts(page).catch(() => {});
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);

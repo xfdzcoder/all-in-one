@@ -31,11 +31,6 @@ const targetsBody = z.object({
   tagIds: z.array(z.string().min(1).max(64)).max(64),
 });
 
-const targetParams = z.object({
-  targetType: z.enum(TAG_TARGET_TYPES),
-  targetId: z.string().min(1).max(64),
-});
-
 /** 目标实体删除时清理关联（D40：SQLite 无多态外键，应用层统一清理）。 */
 export async function deleteTargetLinks(
   db: Db,
@@ -153,14 +148,6 @@ export function registerTagRoutes(app: FastifyInstance): void {
     if (rows.length === 0) return reply.code(404).send({ error: "tag not found" });
     await app.db.delete(tag).where(and(eq(tag.userId, userId), eq(tag.id, params.data.id)));
     return { ok: true };
-  });
-
-  // GET /api/tags/targets/:targetType/:targetId —— 取目标的标签
-  app.get("/api/tags/targets/:targetType/:targetId", { preHandler: authGuard }, async (req, reply) => {
-    const params = targetParams.safeParse(req.params);
-    if (!params.success) return reply.code(400).send({ error: "invalid target" });
-    const links = await tagLinksFor(app.db, req.user!.id, params.data.targetType, [params.data.targetId]);
-    return { tagIds: links.get(params.data.targetId) ?? [] };
   });
 
   // PUT /api/tags/targets —— 覆盖式设置目标标签（UI 勾选保存一次成套）

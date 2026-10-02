@@ -62,14 +62,6 @@ export function registerPluginRoutes(
     return listPlugins(app.db, req.user!.id);
   });
 
-  app.get("/api/plugins/:id", { preHandler: authGuard }, async (req, reply) => {
-    const params = idParams.safeParse(req.params);
-    if (!params.success) return reply.code(400).send({ error: "invalid request" });
-    const row = await getPlugin(app.db, req.user!.id, params.data.id);
-    if (!row) return reply.code(404).send({ error: "not found" });
-    return row;
-  });
-
   /** 入口模块源码 + manifest（宿主沙箱加载器消费，D25）。 */
   app.get("/api/plugins/:id/entry", { preHandler: authGuard }, async (req, reply) => {
     const params = idParams.safeParse(req.params);

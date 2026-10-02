@@ -7,9 +7,11 @@ import { strToU8, zipSync } from "fflate";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 
+import { eq } from "drizzle-orm";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
+import { plugin } from "../db/schema.ts";
 import { config } from "../config.ts";
 
 let dir: string;
@@ -90,13 +92,10 @@ describe("plugins API (FR-W6 install/uninstall)", () => {
     expect(existsSync(join(config.dataDir, "plugins", row.dir, "widget.js"))).toBe(true);
     expect(existsSync(join(config.dataDir, "plugins", row.dir, "manifest.json"))).toBe(true);
 
-    const detail = await app.inject({
-      method: "GET",
-      url: `/api/plugins/${pluginId}`,
-      cookies: { sid },
-    });
-    expect(detail.statusCode).toBe(200);
-    expect(detail.json().manifestJson).toContain("hello-plugin");
+    // CON-8：GET /api/plugins/:id 为孤儿端点已删 —— oracle 改 DB 直查
+    const rows = await db.select().from(plugin).where(eq(plugin.id, pluginId));
+    expect(rows.length).toBe(1);
+    expect(rows[0]!.manifestJson).toContain("hello-plugin");
   });
 
   it("rejects duplicate type with 409", async () => {

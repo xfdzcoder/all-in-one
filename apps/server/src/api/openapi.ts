@@ -116,11 +116,7 @@ export const openApiDoc = {
     "/api/feeds/{id}": {
       delete: op("Unsubscribe feed（已读记录保留）", { params: ["id"] }),
     },
-    "/api/feeds/read": {
-      get: op("List read marks"),
-      post: op("Mark entry read", { ok: "ok" }),
-    },
-    "/api/feeds/read-batch": { post: op("Mark entries read（批量）") },
+    "/api/feeds/read": { post: op("Mark entry read", { ok: "ok" }) },
 
     // ── 标签（FR-D1~D4 / D40：多态关联）──
     "/api/tags": {
@@ -130,9 +126,6 @@ export const openApiDoc = {
     "/api/tags/{id}": {
       patch: op("Rename / recolor tag", { params: ["id"] }),
       delete: op("Delete tag（FK 级联清关联）", { params: ["id"] }),
-    },
-    "/api/tags/targets/{targetType}/{targetId}": {
-      get: op("List tag ids of a target", { params: ["targetType", "targetId"] }),
     },
     "/api/tags/targets": { put: op("Set tags of a target（覆盖式）") },
 
@@ -152,7 +145,6 @@ export const openApiDoc = {
       patch: op("Update data source（合并语义；secret 留空 = 不改）", { params: ["id"] }),
       delete: op("Delete data source（连带回收孤儿凭证）", { params: ["id"] }),
     },
-    "/api/data-sources/kinds": { get: op("字段契约（管理表单动态渲染）") },
 
     // ── 自定义图标库（D45）──
     "/api/icons": {
@@ -170,7 +162,6 @@ export const openApiDoc = {
       post: op("Install plugin（zip → validatePluginManifest）", { ok: "created" }),
     },
     "/api/plugins/{id}": {
-      get: op("Plugin detail", { params: ["id"] }),
       delete: op("Uninstall plugin（不动业务数据）", { params: ["id"] }),
     },
     "/api/plugins/{id}/entry": { get: op("Entry source（JSON 下发，进 iframe 沙箱）", { params: ["id"] }) },
