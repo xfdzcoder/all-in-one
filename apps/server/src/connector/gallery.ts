@@ -82,6 +82,79 @@ export function normalizeImmichGallery(
   return out;
 }
 
+/** Q105（用户反馈④，2026-10-02）：灯箱**预览大图**（点开时按需取一张，不进墙的批量取数）。
+ *  真机实测（Immich v3.2.2）：墙用 `size=thumbnail` 仅 **444×250 webp（11–25KB）** —— 灯箱按
+ *  原始像素呈现即「太小」；`size=preview` **2560×1440 JPEG（326–589KB）**，撑满可用区域。
+ *  preview 404（视频/预览任务未生成）→ **回落 thumbnail 并标 `fallback`**（组件继续显示图，
+ *  并提示到 Immich 看原片）；两级都失败才抛错（原因 + 怎么修，D47）。 */
+export interface ImmichPreviewData {
+  /** data URI（mime 按字节头，QA-001）。 */
+  src: string;
+  /** true = preview 不可得，已回落缩略图。 */
+  fallback: boolean;
+  /** 原始宽高（字节头解析，D60 §1）。 */
+  width?: number;
+  height?: number;
+}
+
+/** preview 尺寸上限（真机实测最大 589KB；含余量防超大 JPEG 被截断）。 */
+const PREVIEW_MAX_BYTES = 2_500_000;
+
+export const immichPreviewConnector: WidgetConnector = {
+  type: "immich-preview",
+  async fetch(query: WidgetDataQuery, ctx: FetchContext): Promise<ImmichPreviewData> {
+    const sourceId = typeof query.config.sourceId === "string" ? query.config.sourceId : "";
+    const assetId = typeof query.config.assetId === "string" ? query.config.assetId : "";
+    if (!sourceId) throw new Error("未选择数据连接");
+    if (!assetId) throw new Error("缺少照片 id");
+    const rows = await ctx.db.select().from(dataSource).where(eq(dataSource.id, sourceId)).limit(1);
+    const row = rows[0];
+    if (!row || row.userId !== ctx.userId) throw new Error("数据连接不存在");
+    if (row.kind !== "immich") throw new Error(`预览大图需要 Immich 连接（当前：${row.kind}）`);
+    const rawConfig = loadSourceConfig(row.configJson);
+    const config = await resolveSecretRefs(rawConfig, ctx);
+    const base = (str(config.url) ?? "").replace(/\/+$/, "");
+    if (!base) throw new Error("连接缺少地址");
+    const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
+
+    const grab = async (size: "preview" | "thumbnail") => {
+      const res = await outboundRequest(`${base}/api/assets/${encodeURIComponent(assetId)}/thumbnail?size=${size}`, {
+        headers: apiKey,
+        timeoutMs: TIMEOUT_MS,
+        maxBytes: size === "preview" ? PREVIEW_MAX_BYTES : THUMB_MAX_BYTES,
+        allowPrivate: true,
+      });
+      const body = (res.text ?? "").slice(0, 120).replace(/\s+/g, " ").trim();
+      if (res.status >= 400 || res.bytes.byteLength === 0) {
+        throw new Error(body ? `HTTP ${res.status} · ${body}` : `HTTP ${res.status}`);
+      }
+      return res.bytes;
+    };
+
+    let bytes: Uint8Array;
+    let fallback = false;
+    try {
+      bytes = await grab("preview");
+    } catch (previewErr) {
+      try {
+        bytes = await grab("thumbnail");
+        fallback = true;
+      } catch (thumbErr) {
+        throw new Error(
+          `预览大图与缩略图都取不到（preview：${previewErr instanceof Error ? previewErr.message : "未知"}；thumbnail：${thumbErr instanceof Error ? thumbErr.message : "未知"}）—— 检查 API Key 是否具备 asset.view 权限，或到 Immich 后台「任务」生成缩略图/预览后重试`,
+          { cause: thumbErr },
+        );
+      }
+    }
+    const size = imageSize(bytes);
+    return {
+      src: `data:${imageMimeOf(bytes)};base64,${Buffer.from(bytes).toString("base64")}`,
+      fallback,
+      ...(size ? { width: size.width, height: size.height } : {}),
+    };
+  },
+};
+
 /** Q72/D57：**相册清单**（配置表单「只看某相册」的选项源，随 sourceId 变化）。
  *  形状直接是 select 选项 `{items:[{value,label}]}`，前端零转换。 */
 export const immichAlbumsConnector: WidgetConnector = {

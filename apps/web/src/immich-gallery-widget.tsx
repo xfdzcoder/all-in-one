@@ -2,7 +2,7 @@ import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react
 import { useState } from "react";
 import { Badge, Text } from "@mantine/core";
 
-import { useImmichGallery, useMediaOptionLabel, useSourceMeta } from "./data-hooks";
+import { useImmichGallery, useImmichPreview, useMediaOptionLabel, useSourceMeta } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { WidgetTitle } from "./widget-title";
@@ -40,7 +40,7 @@ export function ImmichGalleryWidget({
   albumId?: string;
 }) {
   const { data, loading, error, refresh } = useImmichGallery(sourceId, limit, refreshSec, albumId);
-  const [preview, setPreview] = useState<{ thumb: string; href: string; at: string } | null>(null);
+  const [preview, setPreview] = useState<{ id: string; thumb: string; href: string; at: string } | null>(null);
   // Q73（项 8）：铺开模式预览支持左右切换（循环）
   const [previewIdx, setPreviewIdx] = useState(0);
   const step = (d: number) => {
@@ -49,8 +49,11 @@ export function ImmichGalleryWidget({
     const next = (previewIdx + d + items.length) % items.length;
     setPreviewIdx(next);
     const it = items[next];
-    setPreview({ thumb: it.thumb, href: it.href, at: it.at });
+    setPreview({ id: it.id, thumb: it.thumb, href: it.href, at: it.at });
   };
+  // Q105（用户反馈④）：灯箱**预览大图** —— 点开按需取一张（缩略图先顶上，大图到了替换）。
+  // 墙上缩略图实测仅 444×250，灯箱按原始像素呈现即「太小」；preview 为 2560×1440。
+  const { data: big, error: bigError } = useImmichPreview(sourceId, preview?.id);
   // WEB-12：连接元信息一次订阅（Q86/D59 标题区跳转到 Immich 站点）
   const { row, homeUrl } = useSourceMeta(undefined, sourceId);
   // Q94（反馈④）：标题带上**所选相册名**（配置只存 id，这里解析成名称）
@@ -102,7 +105,7 @@ export function ImmichGalleryWidget({
           onOpen={(it, i) => {
             setPreviewIdx(i);
             const src = data.items.find((x) => x.id === it.id);
-            if (src) setPreview({ thumb: src.thumb, href: src.href, at: src.at });
+            if (src) setPreview({ id: src.id, thumb: src.thumb, href: src.href, at: src.at });
           }}
         />
       )}
@@ -118,8 +121,19 @@ export function ImmichGalleryWidget({
 
       {preview && (
         <MediaLightbox
-          src={preview.thumb || undefined}
-          meta={preview.at ? <RelativeTime value={preview.at} /> : undefined}
+          // Q105（用户反馈④）：优先预览大图（到货即替换墙上的小缩略图）；取不到回落缩略图并说明
+          src={(big?.src ?? "") || preview.thumb || undefined}
+          meta={
+            <>
+              {preview.at ? <RelativeTime value={preview.at} /> : null}
+              {(bigError || big?.fallback) && (
+                <Text size="xs" c="dimmed">
+                  {" "}
+                  · 预览大图不可用，显示缩略图 —— 可到 Immich 看原片
+                </Text>
+              )}
+            </>
+          }
           footer={
             /* Q84（项 1）：不再展示「照片预览（只读）」标题；「在 Immich 中打开」改 icon 按钮 */
             <IconAction label="在 Immich 中打开" tooltip="在 Immich 中打开原片" href={preview.href}>

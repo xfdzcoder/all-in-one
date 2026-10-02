@@ -191,6 +191,15 @@ const mock = createServer((req, res) => {
   if (url.startsWith("/api/assets/") && url.includes("/thumbnail")) {
     res.setHeader("Content-Type", "image/jpeg");
     // 每个资产返回**声明尺寸不同**的最小 JPEG（含 SOF）→ 服务端字节头解析出对应宽高（D60 §1）
+    const m = /\/api\/assets\/([^/]+)\//.exec(url);
+    const id = m ? String(m[1]) : "";
+    // Q105（用户反馈④）：`size=preview` 回 **4× 尺寸**大图（灯箱预览用）；
+    // t3 的 preview 404 → 连接器回落缩略图 + 提示（降级分支的 UI 面）
+    const isPreview = url.includes("size=preview");
+    if (isPreview && id === "t3") {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ message: "preview not found" }));
+    }
     const shapes = [
       [640, 480],
       [480, 640],
@@ -199,14 +208,13 @@ const mock = createServer((req, res) => {
       [640, 480],
       [480, 640],
     ];
-    const m = /\/api\/assets\/([^/]+)\//.exec(url);
-    const id = m ? String(m[1]) : "";
     // Q81：相册夹具的缩略图有**专属形状**（alb-A 320×240 / alb-B 240×320），
     // 与默认清单的 6 形状循环不重叠 —— 有没有泄漏未筛选项，看 naturalWidth/Height 即知
     const byPrefix = { a: [320, 240], b: [240, 320] };
     const n = Number(id.replace(/^t/, ""));
     const wh = byPrefix[id.slice(0, 1)] ?? (Number.isFinite(n) ? shapes[n % shapes.length] : [400, 400]);
-    return res.end(Buffer.from(miniJpeg(wh[0], wh[1], markerOf(id))));
+    const scale = isPreview ? 4 : 1;
+    return res.end(Buffer.from(miniJpeg(wh[0] * scale, wh[1] * scale, markerOf(id))));
   }
   res.writeHead(404).end();
 });
@@ -715,6 +723,34 @@ await installLayoutGuard(page);
     JSON.stringify(lb),
   );
   ok("Q82 lightbox has prev/next (项 8)", Boolean(lb.hasPrev && lb.hasNext), JSON.stringify(lb));
+  // ── Q105（用户反馈④）：灯箱应显示**预览大图**（mock 对 size=preview 回 4× 尺寸）──
+  // 夹具 JPEG 浏览器不完整解码（naturalWidth=0）⇒ 从 data URI 的 SOF 头读声明宽高；
+  // 先等「缩略图 → 大图」异步替换完成，下面 Q83 的 src 比较才不受干扰。
+  const lbSofDims = () =>
+    page.evaluate(() => {
+      const src = document.querySelector(".wb-lightbox__img")?.getAttribute("src") ?? "";
+      if (!src.startsWith("data:")) return null;
+      const bin = atob(src.slice(src.indexOf(",") + 1));
+      for (let i = 0; i < bin.length - 9; i += 1) {
+        if (bin.charCodeAt(i) === 0xff && [0xc0, 0xc2].includes(bin.charCodeAt(i + 1))) {
+          return {
+            h: (bin.charCodeAt(i + 5) << 8) | bin.charCodeAt(i + 6),
+            w: (bin.charCodeAt(i + 7) << 8) | bin.charCodeAt(i + 8),
+          };
+        }
+      }
+      return null;
+    });
+  let bigDims = null;
+  for (let i = 0; i < 20 && !(bigDims && bigDims.w >= 1200); i += 1) {
+    await sleep(250);
+    bigDims = await lbSofDims();
+  }
+  ok(
+    "Q105 灯箱显示预览大图（SOF 声明宽 ≥1200，4× 墙上缩略图）",
+    Boolean(bigDims && bigDims.w >= 1200),
+    JSON.stringify(bigDims),
+  );
   // Q83：**严格内容断言**（Q82 欠账收口）—— 夹具 JPEG 按资产 id 掺 COM 标记字节，
   // 同尺寸也不同字节 ⇒ 「切换后内容真的变了」可以直接比较 src（原先字节重复只能验派发）。
   const lbSrc = () => page.evaluate(() => document.querySelector(".wb-lightbox__img")?.getAttribute("src") ?? "");
@@ -788,6 +824,37 @@ await installLayoutGuard(page);
   );
   await sleep(300);
   ok("Q82 lightbox closed", await page.evaluate(() => !document.querySelector(".wb-lightbox")));
+
+  // Q105 降级面：preview 404 → 回落缩略图 +「原因 + 怎么修」提示（D47，不整卡空白）
+  ok(
+    "Q105 open the cell whose preview 404s",
+    await page.evaluate(() => {
+      const cells = [...document.querySelectorAll(".wb-gallery__cell")];
+      const target = cells[3] ?? cells[0]; // t3：mock 对它的 size=preview 回 404
+      target?.click();
+      return Boolean(target);
+    }),
+  );
+  await sleep(1200);
+  const fbState = await page.evaluate(() => {
+    const root = document.querySelector(".wb-lightbox");
+    const t = root?.textContent ?? "";
+    return {
+      open: Boolean(root),
+      img: Boolean(root?.querySelector(".wb-lightbox__img")?.getAttribute("src")?.startsWith("data:")),
+      hint: t.includes("预览大图不可用") && t.includes("Immich"),
+    };
+  });
+  ok(
+    "Q105 preview 404 → 回落缩略图 + 提示（原因+怎么修，不空白）",
+    fbState.open && fbState.img && fbState.hint,
+    JSON.stringify(fbState),
+  );
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    return true;
+  });
+  await sleep(300);
 
   // Q84（项 5）：状态徽标不加粗 —— Mantine Badge 根类默认 700，须被 .wb-status-badge 压到非粗
   const sb = await page.evaluate(() => {

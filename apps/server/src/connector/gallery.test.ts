@@ -6,7 +6,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 
-import { immichGalleryConnector, normalizeImmichGallery, IMMICH_MAX_PAGES, IMMICH_PAGE_SIZE } from "./gallery.ts";
+import {
+  immichGalleryConnector,
+  immichPreviewConnector,
+  normalizeImmichGallery,
+  IMMICH_MAX_PAGES,
+  IMMICH_PAGE_SIZE,
+} from "./gallery.ts";
 import { miniJpeg } from "./image-size.fixture.ts";
 import type { FetchContext } from "./registry.ts";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
@@ -90,9 +96,16 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
           res.writeHead(404, { "Content-Type": "application/json" });
           return res.end(JSON.stringify({ message: "Asset media not found" }));
         }
+        // Q105（用户反馈④）：`size=preview` 回**大图**（1280×720）；p-fallback 的
+        // preview 404 但 thumbnail 可取（回落分支）；a3 两级都 404（已置顶处理）
+        const isPreview = url.includes("size=preview");
+        if (isPreview && url.includes("/api/assets/p-fallback/")) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ message: "preview not found" }));
+        }
         res.setHeader("Content-Type", "image/jpeg");
-        // 真 JPEG 头（含 SOF）→ `imageSize()` 能解析出 64×48（D60 §1）
-        return res.end(Buffer.from(miniJpeg(64, 48)));
+        // 真 JPEG 头（含 SOF）→ `imageSize()` 能解析出声明宽高（D60 §1）
+        return res.end(Buffer.from(isPreview ? miniJpeg(1280, 720) : miniJpeg(64, 48)));
       }
       if (url.startsWith("/api/search/metadata")) {
         // 按请求体的 page 分页返回 —— 用来验「翻页补足到选中数量」
@@ -184,6 +197,65 @@ describe("immich-gallery 数据通道（sourceId 派发 + 缩略图代取）", (
     await expect(
       immichGalleryConnector.fetch({ type: "immich-gallery", config: { sourceId: wrongKind } }, ctx),
     ).rejects.toThrow("照片墙需要 Immich 连接");
+  });
+
+  it("Q105（用户反馈④）：灯箱预览大图 —— preview 大图 / 404 回落缩略图 / 两级全失败抛错（原因+怎么修）", async () => {
+    const [user] = await db.select().from((await import("../db/schema.ts")).user).limit(1);
+    ctx.userId = user.id;
+    const id = crypto.randomUUID();
+    await db.insert(dataSource).values({
+      id,
+      userId: user.id,
+      kind: "immich",
+      name: "mock-immich-preview",
+      configJson: JSON.stringify({ url: base, apiKey: { credentialRef: "cred:none" } }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // ① preview 可得：大图（1280×720）+ fallback=false
+    const big = (await immichPreviewConnector.fetch(
+      { type: "immich-preview", config: { sourceId: id, assetId: "a1" } },
+      ctx,
+    )) as { src: string; fallback: boolean; width?: number; height?: number };
+    expect(big.fallback).toBe(false);
+    expect(big.src.startsWith("data:image/jpeg;base64,")).toBe(true);
+    expect(big.width).toBe(1280);
+    expect(big.height).toBe(720);
+
+    // ② preview 404 → 回落 thumbnail（64×48）且标 fallback（组件提示到 Immich 看原片）
+    const fb = (await immichPreviewConnector.fetch(
+      { type: "immich-preview", config: { sourceId: id, assetId: "p-fallback" } },
+      ctx,
+    )) as { src: string; fallback: boolean; width?: number };
+    expect(fb.fallback).toBe(true);
+    expect(fb.width).toBe(64);
+
+    // ③ 两级都失败 → 抛错且「原因 + 怎么修」（D47 禁甩锅）
+    await expect(
+      immichPreviewConnector.fetch({ type: "immich-preview", config: { sourceId: id, assetId: "a3" } }, ctx),
+    ).rejects.toThrow(/预览大图与缩略图都取不到.*asset\.view/s);
+
+    // ④ 入参/连接类型防呆
+    await expect(immichPreviewConnector.fetch({ type: "immich-preview", config: { sourceId: id } }, ctx)).rejects.toThrow(
+      "缺少照片 id",
+    );
+    await expect(
+      immichPreviewConnector.fetch({ type: "immich-preview", config: { assetId: "a1" } }, ctx),
+    ).rejects.toThrow("未选择数据连接");
+    const wrongKind = crypto.randomUUID();
+    await db.insert(dataSource).values({
+      id: wrongKind,
+      userId: user.id,
+      kind: "mihomo",
+      name: "mock-mihomo-for-preview",
+      configJson: JSON.stringify({ url: base }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await expect(
+      immichPreviewConnector.fetch({ type: "immich-preview", config: { sourceId: wrongKind, assetId: "a1" } }, ctx),
+    ).rejects.toThrow("预览大图需要 Immich 连接");
   });
 
   it("Q88（项 10）：翻页累加补足到选中张数，且全程滤掉视频（项 3）", async () => {

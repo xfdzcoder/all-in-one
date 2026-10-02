@@ -407,6 +407,33 @@ try {
   } else {
     console.log("  （跳过 Q104 真机裁剪对账：无 NAVIDROME_* 凭证，mock 面已由 verify-svc Q104 覆盖）");
   }
+
+  // ── Q105（用户反馈④）：灯箱**预览大图**（真机对账）──
+  // 实测：墙上缩略图 `size=thumbnail` 444×250（灯箱按原始像素呈现即「太小」），
+  // `size=preview` 2560×1440。真图可解码 ⇒ 直接看 naturalWidth（换大图是异步的，轮询等待）。
+  const openedPhoto = await page.evaluate(() => {
+    const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes("照片墙"));
+    const cell = item?.querySelector(".wb-gallery__cell");
+    cell?.click();
+    return Boolean(cell);
+  });
+  let natW = 0;
+  if (openedPhoto) {
+    for (let i = 0; i < 24 && natW < 1000; i += 1) {
+      await sleep(300);
+      natW = await page.evaluate(() => document.querySelector(".wb-lightbox__img")?.naturalWidth ?? 0);
+    }
+  }
+  ok(
+    "Q105 真机灯箱预览大图（naturalWidth ≥ 1000；墙上缩略图仅 444 宽）",
+    openedPhoto && natW >= 1000,
+    `opened=${openedPhoto} naturalWidth=${natW}`,
+  );
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    return true;
+  });
+  await sleep(300);
 } finally {
   await browser?.close();
   // 无论成败都删掉临时草稿盘 —— 不污染真机数据。清理失败要报出来，但不能吞掉测试结论

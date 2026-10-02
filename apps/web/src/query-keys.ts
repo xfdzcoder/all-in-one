@@ -29,6 +29,7 @@ export const qkRoot = {
   serviceOverview: ["service-overview"] as const,
   mediaOptions: ["media-options"] as const,
   immichGallery: ["immich-gallery"] as const,
+  immichPreview: ["immich-preview"] as const,
   navidromeLibrary: ["navidrome-library"] as const,
   portainerContainers: ["portainer-containers"] as const,
   portainerLogs: ["portainer-logs"] as const,
@@ -65,6 +66,8 @@ export const qk = {
     [...qkRoot.mediaOptions, scope ?? "", sourceId] as const,
   immichGallery: (sourceId: string, limit: number, albumId: string) =>
     [...qkRoot.immichGallery, sourceId, limit, albumId] as const,
+  immichPreview: (sourceId: string, assetId: string) =>
+    [...qkRoot.immichPreview, sourceId, assetId] as const,
   navidromeLibrary: (sourceId: string, limit: number, artistId: string) =>
     [...qkRoot.navidromeLibrary, sourceId, limit, artistId] as const,
   portainerContainers: (sourceId: string) => [...qkRoot.portainerContainers, sourceId] as const,

@@ -461,6 +461,31 @@ export function useImmichGallery(
   };
 }
 
+/** Q105（用户反馈④）：灯箱**预览大图** —— 点开才取（单张，服务端代取 `size=preview`，SEC3）。
+ *  实测墙用缩略图仅 444×250（灯箱按原始像素呈现即「太小」），preview 为 2560×1440；
+ *  preview 404 服务端回落缩略图并标 `fallback`。组件端优先 `data.src`，取不到继续显示墙上缩略图。 */
+export interface ImmichPreviewData {
+  src: string;
+  fallback: boolean;
+  width?: number;
+  height?: number;
+}
+
+export function useImmichPreview(sourceId: string | undefined, assetId: string | undefined) {
+  const query = useQuery({
+    queryKey: qk.immichPreview(sourceId ?? "", assetId ?? ""),
+    queryFn: () => api.widgetData<ImmichPreviewData>("immich-preview", { sourceId, assetId }),
+    enabled: Boolean(sourceId && assetId),
+    staleTime: 300_000,
+    structuralSharing: false, // WEB-8：payload 是整张 base64，深比较纯浪费
+  });
+  return {
+    data: query.data?.data,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error.message : undefined,
+  };
+}
+
 /** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加，封面服务端代取。
  *  Q94（反馈②）：「正在播放」已按用户要求移除。
  *  `artistId`（Q87 项 4）= 「只看艺人」——同上，必须进 queryKey 与请求体。 */

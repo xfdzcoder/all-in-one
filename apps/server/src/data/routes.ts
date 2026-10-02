@@ -23,7 +23,7 @@ import { iframeEmbedConnector } from "../connector/iframe.ts";
 import { opencodeConnector } from "../connector/opencode.ts";
 import { monitorConnector } from "../connector/monitor.ts";
 import { serviceOverviewConnector } from "../connector/service.ts";
-import { immichGalleryConnector, immichAlbumsConnector } from "../connector/gallery.ts";
+import { immichGalleryConnector, immichAlbumsConnector, immichPreviewConnector } from "../connector/gallery.ts";
 import { navidromeLibraryConnector, navidromeArtistsConnector } from "../connector/navidrome-library.ts";
 import { portainerContainersConnector, portainerLogsConnector } from "../connector/portainer-containers.ts";
 import { mihomoNodesConnector } from "../connector/mihomo-nodes.ts";
@@ -62,6 +62,8 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(navidromeLibraryConnector);
   // Q72/D57：配置表单的「只看某相册 / 某艺人」选项源（随 sourceId 变化）
   registry.register(immichAlbumsConnector);
+  // Q105（用户反馈④）：灯箱预览大图（点开按需取一张）
+  registry.register(immichPreviewConnector);
   registry.register(navidromeArtistsConnector);
   registry.register(portainerContainersConnector);
   registry.register(portainerLogsConnector);
