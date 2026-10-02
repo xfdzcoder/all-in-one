@@ -614,3 +614,14 @@
 - **兼容口径**：旧布局 JSON 里的 `opencode` 实例走 gridstack `components[component]` 未命中 → **渲染空卡**（与插件卸载后同语义），编辑态可配置/移除；`plugin/install.ts` 类型表同步收窄，插件不能再声明 `opencode` 类型。
 - **被否备选**：① 留作隐藏组件（用户明确「移除」，且依赖 experimental API 的代码本就是维护负担）；② 只删前端留 connector（孤儿 API 面，无消费方，knip 必清）。
 - **影响**：apps/web 9 文件 + apps/server 5 文件 + verify 脚本 4 份（`verify-opc.mjs` 整删、`verify-i4.mjs` ④段、`verify-j8.mjs` 期望名、`capture-design.mjs` fixture）+ `legacy-cleanup` 新模块与测试；契约文档（widget-sdk README/config.ts）同步。
+
+## D67 · iframe 默认沙箱加 `allow-same-origin` + 同源地址拒绝嵌入（2026-10-02）
+
+- **背景**：用户反馈「iframe 中添加地址后，iframe 里的请求的 Origin 是 null，导致报错跨域」。根因：旧默认沙箱 `allow-scripts`（不含 `allow-same-origin`）使 iframe 文档成为**不透明源**——框内所有 fetch/XHR/表单请求 `Origin` 头是字符串 `"null"`，且不带 cookie/登录态，目标站按 Origin/白名单校验即报跨域。
+- **决策（用户拍板，方案 A）**：
+  1. **默认沙箱 = `allow-scripts allow-same-origin`**：框内页面拿回**它自己的正常源**（Origin = 目标站自身、cookie/登录态可用）；仍禁顶层导航/表单/弹窗。`sandbox` 自定义字段保留为高级项，placeholder/help 写清「去掉 allow-same-origin 会让请求 Origin 变 null 并丢登录态」。
+  2. **同源自嵌一律拒绝**：`new URL(url).origin === location.origin` 时直接不加载、给出明确提示 + 新标签页逃生口——同源内容配 `allow-scripts allow-same-origin` 等价于**解除沙箱**（框内脚本可读写宿主 DOM/localStorage/会话），必须拦。
+- **纯函数化**：`resolveSandbox(custom)` / `isSameOriginAsHost(url, hostOrigin)`（+4 单测，含空串回落与同源三要素）。
+- **被否备选**：① 加显式开关、默认仍最小沙箱（用户选了默认可用）；② 服务端反代 iframe 内容（工程量大、破坏 Origin 语义、与 SSRF 基线耦合）。
+- **兼容**：显式配过 `sandbox` 的旧组件不受影响（配置优先）；插件沙箱（D25）**保持 `allow-scripts` 不透明源不变**（插件是不可信代码，语义相反）。
+- **验证**：`verify-j7` 扩 3 断言（框内 `location.origin` 非 null、框内请求回显真实 Origin 头、同源拒绝）——13/13；**真机** `verify-iframe-live`（新增）5/5：Immich 真机框内 origin = `https://immich.xfdzcoder.space`（原为 "null"）、Navidrome 真机 `X-Frame-Options: DENY` 出明确提示。

@@ -3,7 +3,8 @@
  * embed-blocked hint when the target forbids framing (X-Frame-Options / CSP
  * frame-ancestors), with "open in new tab" escape hatch.
  * 禁嵌判定由 iframe-embed connector 读响应头完成（浏览器禁嵌时 load 事件照常触发）。
- * mock A: embeddable page; mock B: X-Frame-Options: DENY + frame-ancestors 'none'.
+ * D67：默认沙箱含 allow-same-origin（框内请求 Origin 非 null）+ 同源地址拒绝嵌入。
+ * mock A: embeddable page（自证 doc/请求 Origin）; mock B: X-Frame-Options: DENY + frame-ancestors 'none'.
  * Run: node scripts/verify-j7.mjs (server :3000, preview :4173)
  */
 import { createServer } from "node:http";
@@ -14,9 +15,23 @@ const WEB = "http://localhost:4173/";
 const results = [];
 const ok = makeOk(results); // TST-14/15：公共库（签名/输出/非布尔告警统一）
 
-const embeddable = createServer((_req, res) => {
+const embeddable = createServer((req, res) => {
+  if (req.url === "/origin-echo") {
+    // 回显请求的 Origin 头（POST 必带 Origin）——框内页面据此自证源是否不透明（D67）
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end(req.headers.origin ?? "(no-origin-header)");
+    return;
+  }
   res.writeHead(200, { "Content-Type": "text/html" });
-  res.end("<!doctype html><title>embed-ok</title><h1>embed-ok</h1>");
+  res.end(`<!doctype html><title>embed-ok</title><h1>embed-ok</h1>
+<div id="doc-origin">?</div><div id="req-origin">?</div>
+<script>
+document.getElementById("doc-origin").textContent = "ORIGIN=" + location.origin;
+fetch("/origin-echo", { method: "POST" })
+  .then((r) => r.text())
+  .then((t) => { document.getElementById("req-origin").textContent = "ECHO=" + t; })
+  .catch(() => { document.getElementById("req-origin").textContent = "ECHO=FETCH_FAILED"; });
+</script>`);
 });
 await new Promise((r) => embeddable.listen(0, "127.0.0.1", r));
 const embedUrl = `http://127.0.0.1:${embeddable.address().port}/`;
@@ -74,12 +89,17 @@ const addIframe = async (url, sandbox) => {
 const frameState = (url) =>
   page.evaluate((u) => {
     const frame = [...document.querySelectorAll("iframe")].find((f) => f.getAttribute("src") === u);
+    // 作用域到本卡（D67 后同屏可有多张 iframe 卡，全文档查找会命中别的卡的提示/逃生口）
+    const widget = [...document.querySelectorAll(".wb-widget")].find(
+      (w) => w.querySelector(".wb-url")?.textContent?.trim() === u,
+    );
+    const scope = widget ?? document.body;
     return {
       exists: Boolean(frame),
       sandbox: frame?.getAttribute("sandbox") ?? null,
       hidden: frame ? getComputedStyle(frame).display === "none" : null,
-      hint: (document.body.textContent ?? "").includes("无法嵌入此页面"),
-      escapeHref: [...document.querySelectorAll("a")].find((a) => a.textContent.includes("在新标签页打开"))
+      hint: (scope.textContent ?? "").includes("无法嵌入此页面"),
+      escapeHref: [...scope.querySelectorAll("a")].find((a) => a.textContent.includes("在新标签页打开"))
         ?.getAttribute("href") ?? null,
     };
   }, url);
@@ -101,11 +121,36 @@ try {
   const a2 = await frameState(embedUrl);
   ok("J7 embeddable page loads without blocked hint", !a2.hint && !a2.hidden, JSON.stringify(a2));
 
+  // D67：框内请求 Origin 不是 null（默认沙箱含 allow-same-origin → 框内页面拿回自己的正常源）
+  const frame = page.frames().find((f) => f.url().startsWith(embedUrl));
+  const frameText = frame ? await frame.evaluate(() => document.body.innerText) : "";
+  ok(
+    "J7 in-frame origin is not null (D67)",
+    frameText.includes(`ORIGIN=http://127.0.0.1:${embeddable.address().port}`),
+    frameText.slice(0, 160),
+  );
+  ok(
+    "J7 in-frame request carries real Origin header (D67)",
+    frameText.includes(`ECHO=http://127.0.0.1:${embeddable.address().port}`),
+    frameText.slice(0, 160),
+  );
+
+  // D67：同源地址拒绝嵌入（同源 + allow-scripts + allow-same-origin = 绕过沙箱）
+  const hostOrigin = new URL(WEB).origin;
+  ok("J7 add iframe via picker (same-origin url, must be refused)", await addIframe(hostOrigin + "/", null));
+  await sleep(600);
+  const c1 = await frameState(hostOrigin + "/");
+  ok(
+    "J7 same-origin embed refused with explicit hint (D67)",
+    !c1.exists && (await page.evaluate(() => (document.body.textContent ?? "").includes("不能嵌入工作台自身的地址"))),
+    JSON.stringify(c1),
+  );
+
   // 禁嵌页面：X-Frame-Options / frame-ancestors 拒绝 → 明确提示 + 新标签页逃生口
   ok("J7 add iframe via picker (blocked url, default sandbox)", await addIframe(blockedUrl, null));
   await sleep(500);
   const b1 = await frameState(blockedUrl);
-  ok("J7 default sandbox = minimal allow-scripts", b1.sandbox === "allow-scripts", `sandbox="${b1.sandbox}"`);
+  ok("J7 default sandbox = allow-scripts + allow-same-origin (D67)", b1.sandbox === "allow-scripts allow-same-origin", `sandbox="${b1.sandbox}"`);
   let b2 = b1;
   for (let i = 0; i < 16 && !b2.hint; i++) {
     await sleep(500);
