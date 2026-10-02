@@ -6,7 +6,8 @@ import { isIP } from "node:net";
  * 校验顺序：URL 解析 → 协议白名单 → host IP/CNAME 解析 → 内网段判定。
  */
 
-const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
+// D56/Q77：WS 数据源出站同走 SSRF 基线（ws/wss 与 http/https 同源判定、同 IP 钉死）
+const ALLOWED_PROTOCOLS = new Set(["http:", "https:", "ws:", "wss:"]);
 
 /** RFC1918 / 回环 / 链路本地 / 组播 / 保留段 —— 默认拒绝。 */
 function isPrivateIp(ip: string): boolean {

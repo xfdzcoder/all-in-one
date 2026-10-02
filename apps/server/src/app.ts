@@ -22,6 +22,7 @@ import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerTagRoutes } from "./tag/routes.ts";
 import { registerDataSourceRoutes } from "./data-source/routes.ts";
+import { loadWsSourceRows, WsSourceManager } from "./ws/manager.ts";
 import { registerIconRoutes } from "./icon/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
@@ -91,7 +92,20 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
   // RSS 变更（源管理/标已读）→ 失效缓存 + SSE（FR：任一组件标已读，其余同步）
   registerTagRoutes(app);
-  registerDataSourceRoutes(app);
+  // D56/Q77：WS 数据源管理器 —— 启动对账、连接变更对账、退出全停
+  const wsManager = new WsSourceManager(dataChannel.bus, { log: (m) => app.log.warn(m) });
+  const syncWs = async () => {
+    try {
+      await wsManager.sync(await loadWsSourceRows(app.db));
+    } catch (e) {
+      app.log.error({ err: e }, "ws sources sync failed");
+    }
+  };
+  registerDataSourceRoutes(app, { onSourcesChanged: () => void syncWs() });
+  app.addHook("onClose", async () => {
+    wsManager.stop(); // D56/Q77：app.close 时 WS 全停（不再重连）
+  });
+  void syncWs(); // 启动对账（幂等）
   registerIconRoutes(app);
   registerFeedRoutes(app, () => {
     dataChannel.cache.clear();

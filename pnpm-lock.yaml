@@ -208,6 +208,9 @@ importers:
       mailparser:
         specifier: ^3.9.31
         version: 3.9.31
+      ws:
+        specifier: ^8.22.0
+        version: 8.22.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -218,6 +221,9 @@ importers:
       '@types/node':
         specifier: ^24.19.0
         version: 24.19.0
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
@@ -1400,6 +1406,9 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
   '@vitejs/plugin-react@6.1.1':
     resolution: {integrity: sha512-yxLaQV9gkhS8ezJqCM6+ndU7mDY6gqAg75NQ+0IjwEI8IYOmQCgkRwHKVSfWXW076DsqMo0Dk+0FK1U+M5RgFw==}
@@ -3131,6 +3140,10 @@ snapshots:
       csstype: 3.2.3
 
   '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 24.19.0
+
+  '@types/ws@8.18.2':
     dependencies:
       '@types/node': 24.19.0
 

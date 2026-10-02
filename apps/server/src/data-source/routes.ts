@@ -8,7 +8,7 @@ import { deleteCredentialIfOrphan } from "../credentials/store.ts";
 import { dataSource } from "../db/schema.ts";
 
 /** D42：连接类型白名单 —— 扩展 = 加枚举值。 */
-const DATA_SOURCE_KINDS = ["monitor", "opencode", "http", "immich", "navidrome", "portainer", "mihomo"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）
+const DATA_SOURCE_KINDS = ["monitor", "opencode", "http", "immich", "navidrome", "portainer", "mihomo", "ws"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）；ws=D56/Q77
 type DataSourceKind = (typeof DATA_SOURCE_KINDS)[number];
 
 /** 各类连接的 config 允许键（secret 字段与表单同名，值为凭证库 SecretRef，SEC3）。 */
@@ -21,6 +21,8 @@ const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> = {
   navidrome: ["url", "username", "password"],
   portainer: ["url", "apiToken", "restartAllow"], // restartAllow=容器重启白名单（Q56/D51，逗号分隔或数组，空=禁止重启）
   mihomo: ["url", "secret"],
+  // D56/Q77：WS 数据源（认证头注入，凭证引用 SEC3）
+  ws: ["url", "authHeader", "apiToken"],
 };
 
 const kindField = z.enum(DATA_SOURCE_KINDS);
@@ -63,7 +65,7 @@ function configOk(kind: DataSourceKind, config: Record<string, unknown>): string
   return null;
 }
 
-export function registerDataSourceRoutes(app: FastifyInstance): void {
+export function registerDataSourceRoutes(app: FastifyInstance, opts: { onSourcesChanged?: () => void } = {}): void {
   // GET /api/data-sources?kind= —— 命名连接列表（config 解析后原样返回，secret 均为引用）
   // Q31：行须带解析后的 config 对象 —— 只回 configJson 字符串会让前端 r.config.url 崩（监控源详情空白）
   app.get("/api/data-sources", { preHandler: authGuard }, async (req) => {
@@ -112,6 +114,7 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
       updatedAt: now,
     };
     await app.db.insert(dataSource).values(row);
+    opts.onSourcesChanged?.(); // D56/Q77：连接清单变更 → WS 管理器对账
     return reply.code(201).send({ ...row, config });
   });
 
@@ -148,6 +151,7 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
         updatedAt: new Date(),
       })
       .where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)));
+    opts.onSourcesChanged?.(); // D56/Q77：连接清单变更 → WS 管理器对账
     return { ok: true };
   });
 
@@ -168,6 +172,7 @@ export function registerDataSourceRoutes(app: FastifyInstance): void {
     for (const id of [...(row.configJson ?? "").matchAll(/"credentialId"\s*:\s*"([^"]+)"/g)].map((m) => m[1])) {
       await deleteCredentialIfOrphan(app.db, userId, id);
     }
+    opts.onSourcesChanged?.(); // D56/Q77：连接清单变更 → WS 管理器对账
     return { ok: true };
   });
 
