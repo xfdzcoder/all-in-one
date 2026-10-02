@@ -10,6 +10,7 @@
 .idea
 .mimocode
 .github
+.forgejo
 
 # --- 依赖与构建产物（镜像内重新生成）---
 node_modules

@@ -5,6 +5,9 @@
 > **仓库形态**：源仓库托管在内部 Forgejo，**单向镜像**到 GitHub（公开）。
 > GitHub 侧实质只读：Issue / 讨论欢迎，但 **PR 不会回流到源仓库**；
 > 较大的改动请先开 Issue 对齐方案，由维护者移植落地（镜像同步后你仍会看到自己的署名）。
+>
+> **CI 只在 GitHub 镜像侧运行**（`.github/workflows/`）：Forgejo 侧由 `.forgejo/workflows/`
+> 空占位目录主动让出 workflow 解析（见该目录内说明），不产生任何 CI run。
 
 ## 开发环境
 

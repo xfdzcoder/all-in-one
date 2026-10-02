@@ -728,6 +728,8 @@
 - **验证（真机）**：worktree 干净上下文 `docker compose up -d --build` 构建成功（端口 3000 被本机 dev server 占用，运行验证改走 `docker run -p 3100` 同镜像）；冷启动 `/api/health` 200、SPA 200、favicon mime 正确、`/api/*` 404 JSON、首启建号 + drizzle 自动迁移 + 登录 200、**备份/还原演练**（tar `./data` → 清空 → 还原 → 重启仍以同一账号登录）、`health=healthy`、路径穿越三变体（`..` / `..%2f` / `%2e%2e%2f`）均落 SPA 不外泄、镜像探针确认无 `.git`/`.opencode`/`data` 残留。门禁：typecheck 0 / lint 0 / test **394 项全绿**（sdk 45 + web 57 + server 292）；workflow `actionlint` exit 0。**待 GitHub 侧验证**：workflow 实跑绿勾与 GHCR 推送（仓库建立后由 tag 触发）。
 - **编号勘误**：本系列早批提交信息写作 `D74`（彼时该号未分配，随后被「横向多页面切换」占用），文件内引用统一更正为 **D75**；提交历史保留不改写。
 
+> **D75 补记（2026-10-03）· CI 运行侧收敛到 GitHub 镜像**：仓库实际形态是**内部 Forgejo → GitHub 单向镜像**（Forgejo 为推送源）。Forgejo Actions 会把 `.github/workflows/` 当成自己的 workflow 去跑（`ListWorkflows` 按 `.forgejo/workflows` → `.gitea/workflows` → `.github/workflows` 找**第一个存在的目录**、且"是否含 workflow 无关"）→ 实测镜像推送后 Forgejo 侧排队 3 条 run。处置：放 `.forgejo/workflows/` **空占位目录**（内含说明 README，非 yml 不算 workflow）让 Forgejo 侧发现 0 个 workflow、彻底让出解析；GitHub 只读 `.github/workflows` 不受影响。**CI 与 GHCR 发布由此确定只在 GitHub 侧运行**（`docker.yml` release job 的 `github.server_url` 守卫仍保留作兜底）。
+
 ## D76 · 横向多页面切换·收口：键盘 / 指示器 / 循环开关 / 触屏（2026-10-03）
 
 - **背景**：D74 落地切页核心后，按用户「触发方式全要（手势/触屏/键盘/指示器）」与「回弹 + **循环切换开关，这一期一起做，属于外观设置**」收口。
