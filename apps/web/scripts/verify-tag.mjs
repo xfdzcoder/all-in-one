@@ -217,23 +217,25 @@ await installLayoutGuard(page);
   }, { s1: seeded.s1, tName: tagName });
   ok(linked, "TAG link source A to tag (API seeding)");
   await sleep(600);
-  ok("TAG enter edit for config filter", await clickBtn("编辑页面"));
+  ok(
+    await clickBtn("编辑页面"),
+    "TAG enter edit for config filter",
+  );
   await sleep(400);
   ok(
-    "TAG open rss config",
     await page.evaluate(() => {
       const title = [...document.querySelectorAll(".wb-widget *")].find(
-        (n) => n.children.length === 0 && n.textContent.trim() === "信息流",
+        (n) => n.children.length === 0 && n.textContent.trim() === "RSS", // Q85 起信息流标题为「RSS」（原「信息流」字面量漂移）
       );
       const chrome = title?.closest(".wb-chrome");
       const btn = [...(chrome?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "配置");
       btn?.click();
       return Boolean(btn);
     }),
+    "TAG open rss config",
   );
   await sleep(400);
   ok(
-    "TAG open tag multiselect in config",
     await page.evaluate(() => {
       const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
         (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
@@ -245,23 +247,28 @@ await installLayoutGuard(page);
       wrapper?.querySelector("input")?.click();
       return Boolean(wrapper);
     }),
+    "TAG open tag multiselect in config",
   );
   await sleep(400);
+  // 用**真实鼠标事件**点选项（合成 `.click()` 对 portal 下拉 + Modal 的组合不可靠，实测选不上值）
   ok(
+    await (async () => {
+      const handle = await page.evaluateHandle((n) => {
+        return [...document.querySelectorAll("[data-combobox-option]")].find(
+          (e) => e.offsetParent !== null && e.textContent.includes(n),
+        );
+      }, tagName);
+      const el = handle.asElement();
+      if (!el) return false;
+      await el.click();
+      return true;
+    })(),
     "TAG pick tag in config filter",
-    await page.evaluate((n) => {
-      const opt = [...document.querySelectorAll("[data-combobox-option]")].find(
-        (e) => e.offsetParent !== null && e.textContent.includes(n),
-      );
-      opt?.click();
-      return Boolean(opt);
-    }, tagName),
   );
   await sleep(300);
   await page.keyboard.press("Escape"); // 收起下拉（保留已选项）
-  await sleep(200);
+  await sleep(500);
   ok(
-    "TAG save rss config",
     await page.evaluate(() => {
       const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter(
         (r) => r.offsetParent !== null && r.textContent.trim().length > 0,
@@ -273,9 +280,13 @@ await installLayoutGuard(page);
       btn?.click();
       return Boolean(btn);
     }),
+    "TAG save rss config",
   );
   await sleep(1500);
-  ok("TAG exit edit", await clickBtn("完成编辑"));
+  ok(
+    await clickBtn("完成编辑"),
+    "TAG exit edit",
+  );
   await sleep(600);
   const rssFiltered = await page.evaluate(
     ({ a, b }) => ({

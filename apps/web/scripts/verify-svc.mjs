@@ -1180,6 +1180,16 @@ await installLayoutGuard(page);
     [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").trim() === "编辑页面")?.click(),
   );
   await sleep(500);
+  // 自足 fixture：「名称」下拉的选项来自现存清单名 —— 先造一条 inbox 任务，
+  // 否则空库时 creatable 选不上（本用例曾靠历史残留数据凑数，TST 家族）
+  await page.evaluate(async () => {
+    await fetch("/api/todos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: `seed-${Date.now().toString(36)}`, list: "inbox" }),
+    });
+  });
+  await sleep(600);
   const t1 = await addTodo("inbox");
   const t2 = await addTodo("inbox");
   ok(
