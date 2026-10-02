@@ -8,7 +8,7 @@ const mixedDns = async () => [{ address: "93.184.216.34" }, { address: "10.0.0.5
 
 describe("SSRF baseline (SEC4)", () => {
   it("allows public https URLs", async () => {
-    const url = await assertSafeOutboundUrl("https://example.com/api", false, publicDns);
+    const { url } = await assertSafeOutboundUrl("https://example.com/api", false, publicDns);
     expect(url.hostname).toBe("example.com");
   });
 
@@ -58,8 +58,19 @@ describe("SSRF baseline (SEC4)", () => {
   });
 
   it("allowPrivate opt-out works (tests / future user whitelist)", async () => {
-    const url = await assertSafeOutboundUrl("http://192.168.31.133/", true);
+    const { url } = await assertSafeOutboundUrl("http://192.168.31.133/", true);
     expect(url.hostname).toBe("192.168.31.133");
+  });
+
+  it("SEC-3: 返回已验证的落地 IP（校验结果与连接目标绑定，防 DNS rebinding TOCTOU）", async () => {
+    // 字面量 IP → 钉自身
+    expect((await assertSafeOutboundUrl("http://93.184.216.34/x", false, publicDns)).pinnedIp).toBe("93.184.216.34");
+    // 域名 → 钉解析出的第一个地址（全部地址已验安全）
+    expect((await assertSafeOutboundUrl("https://example.com/api", false, publicDns)).pinnedIp).toBe("93.184.216.34");
+    // allowPrivate 也钉（放行校验但仍绑定连接目标）
+    expect((await assertSafeOutboundUrl("http://192.168.31.133/", true)).pinnedIp).toBe("192.168.31.133");
+    // 解析失败（allowPrivate）→ null = 退回系统解析
+    expect((await assertSafeOutboundUrl("http://no-such-host.invalid/", true, async () => { throw new Error("nx"); })).pinnedIp).toBeNull();
   });
 });
 

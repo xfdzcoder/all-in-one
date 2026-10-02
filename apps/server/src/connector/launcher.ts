@@ -25,7 +25,7 @@ function timeoutMs(): number {
 
 async function probeHttp(url: string): Promise<boolean> {
   try {
-    const u = await assertSafeOutboundUrl(url, true); // D22: 内网探测
+    const { url: u } = await assertSafeOutboundUrl(url, true); // D22: 内网探测
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs());
     try {

@@ -82,7 +82,7 @@ export const iframeEmbedConnector: WidgetConnector = {
     try {
       let current = rawUrl;
       for (let hop = 0; hop < MAX_HOPS; hop++) {
-        const u = await assertSafeOutboundUrl(current, true); // D22: 内网面板是核心场景
+        const { url: u } = await assertSafeOutboundUrl(current, true); // D22: 内网面板是核心场景
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {

@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 
 import type { Db } from "../db/client.ts";
 import type { SecretRef } from "@all-in-one/widget-sdk";
@@ -149,49 +152,66 @@ export async function outboundRequest(
     allowPrivate?: boolean;
   } = {},
 ): Promise<{ status: number; text: string; bytes: Uint8Array }> {
-  const url = await assertSafeOutboundUrl(rawUrl, opts.allowPrivate ?? config.allowPrivateOutbound);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000);
-  try {
-    const res = await fetch(url, {
-      method: opts.method ?? "GET",
-      headers: opts.headers,
-      body: opts.body,
-      signal: controller.signal,
-      redirect: "manual", // 不跟随跳转，防 redirect 到内网绕过 SSRF 检查
+  const { url, pinnedIp } = await assertSafeOutboundUrl(
+    rawUrl,
+    opts.allowPrivate ?? config.allowPrivateOutbound,
+  );
+  const maxBytes = opts.maxBytes ?? 1_000_000;
+  const timeoutMs = opts.timeoutMs ?? 10_000;
+  const isHttps = url.protocol === "https:";
+  const host = url.hostname.replace(/^\[/, "").replace(/\]$/, "");
+
+  // SEC-3：**按已验证 IP 建连** —— fetch 会自行再解析 DNS（校验与连接目标解绑 →
+  // DNS rebinding 的 TOCTOU 窗口）。core http(s).request 的 `lookup` 直接回填验证过的地址；
+  // SNI / 证书校验仍按原 hostname（host 头不变），功能语义与 fetch 一致。
+  // `accept-encoding: identity`：fetch 原本自动解压，裸流不解 —— 显式要原文（连接器只吃纯文本/JSON）。
+  const lookupPinned = pinnedIp
+    ? (_h: string, _o: unknown, cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) =>
+        cb(null, pinnedIp, isIP(pinnedIp) === 6 ? 6 : 4)
+    : undefined;
+
+  return await new Promise<{ status: number; text: string; bytes: Uint8Array }>((resolve, reject) => {
+    const req = (isHttps ? httpsRequest : httpRequest)(
+      {
+        protocol: url.protocol,
+        hostname: host,
+        port: url.port || (isHttps ? 443 : 80),
+        path: `${url.pathname}${url.search}`,
+        method: opts.method ?? "GET",
+        // redirect 永不跟随（http.request 天然不跟）—— 防 redirect 到内网绕过 SSRF 检查
+        headers: { accept: "*/*", "accept-encoding": "identity", ...opts.headers, host: url.host },
+        lookup: lookupPinned,
+      },
+      (res) => {
+        // SEC-2/SRV-04：**边读边判** —— 整包进内存再判大小等于没限（恶意上游回 2GB 先打爆内存）
+        const chunks: Uint8Array[] = [];
+        let total = 0;
+        res.on("data", (c: Buffer) => {
+          total += c.byteLength;
+          if (total > maxBytes) {
+            res.destroy();
+            reject(new Error(`response too large (> ${maxBytes} bytes)`));
+            return;
+          }
+          chunks.push(new Uint8Array(c));
+        });
+        res.on("end", () => {
+          const bytes = new Uint8Array(total);
+          let off = 0;
+          for (const c of chunks) {
+            bytes.set(c, off);
+            off += c.byteLength;
+          }
+          resolve({ status: res.statusCode ?? 0, text: new TextDecoder().decode(bytes), bytes });
+        });
+        res.on("error", reject);
+      },
+    );
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`request timed out after ${timeoutMs}ms`));
     });
-    const maxBytes = opts.maxBytes ?? 1_000_000;
-    // SEC-2/SRV-04：**边读边判** —— 先 `arrayBuffer()` 整包进内存再判大小等于没限
-    // （恶意/异常上游回 2GB 会先把进程内存打爆；maxBytes 各处只给 1–5MB）
-    const reader = res.body?.getReader();
-    let bytes: Uint8Array;
-    if (reader) {
-      const chunks: Uint8Array[] = [];
-      let total = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        total += value.byteLength;
-        if (total > maxBytes) {
-          await reader.cancel().catch(() => undefined);
-          throw new Error(`response too large (> ${maxBytes} bytes)`);
-        }
-        chunks.push(value);
-      }
-      bytes = new Uint8Array(total);
-      let off = 0;
-      for (const c of chunks) {
-        bytes.set(c, off);
-        off += c.byteLength;
-      }
-    } else {
-      bytes = new Uint8Array(await res.arrayBuffer());
-      if (bytes.byteLength > maxBytes) {
-        throw new Error(`response too large (> ${maxBytes} bytes)`);
-      }
-    }
-    return { status: res.status, text: new TextDecoder().decode(bytes), bytes };
-  } finally {
-    clearTimeout(timer);
-  }
+    req.on("error", reject);
+    if (opts.body !== undefined) req.write(opts.body);
+    req.end();
+  });
 }

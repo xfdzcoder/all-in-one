@@ -113,7 +113,9 @@ export async function assertSafeOutboundUrl(
   rawUrl: string,
   allowPrivate = false,
   resolve: HostResolver = (host) => lookup(host, { all: true }),
-): Promise<URL> {
+): Promise<{ url: URL; pinnedIp: string | null }> {
+  // SEC-3：返回**已验证的落地 IP** —— 调用方按它建连（DNS rebinding 的 TOCTOU 窗口：
+  // 校验时解析一次、fetch 再解析一次，两次之间可翻转到内网；IP 钉死后「校验结果 = 连接目标」）。
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -123,7 +125,17 @@ export async function assertSafeOutboundUrl(
   if (!ALLOWED_PROTOCOLS.has(url.protocol)) {
     throw new SsrfBlockedError(rawUrl, `protocol ${url.protocol} not allowed`);
   }
-  if (allowPrivate) return url;
+  if (allowPrivate) {
+    // 放行模式（测试/白名单）也尽量钉 IP；解析失败退回系统解析（pinnedIp=null）
+    const h = url.hostname.replace(/^\[/, "").replace(/\]$/, "");
+    if (isIP(h) || ipv6Groups(h)) return { url, pinnedIp: h };
+    try {
+      const addrs = await resolve(h);
+      return { url, pinnedIp: addrs[0]?.address ?? null };
+    } catch {
+      return { url, pinnedIp: null };
+    }
+  }
 
   // WHATWG URL 的 hostname 对 IPv6 带方括号（`[::ffff:808:808]`）——先剥掉再判字面量，
   // 否则 `isIP` 判 0、被当域名走 DNS（[::1] 等此前是「碰巧被 DNS 失败拦住」）。
@@ -135,7 +147,7 @@ export async function assertSafeOutboundUrl(
   // 否则会错走 DNS 路径被误拦（fail-closed 但语义不对）。
   if (isIP(host) || ipv6Groups(host)) {
     if (isPrivateIp(host)) throw new SsrfBlockedError(rawUrl, `private IP ${host}`);
-    return url;
+    return { url, pinnedIp: host };
   }
   if (host === "localhost") {
     throw new SsrfBlockedError(rawUrl, "localhost not allowed");
@@ -153,5 +165,5 @@ export async function assertSafeOutboundUrl(
       throw new SsrfBlockedError(rawUrl, `resolves to private IP ${address}`);
     }
   }
-  return url;
+  return { url, pinnedIp: addrs[0]!.address }; // 全部地址已验安全；钉第一个（SEC-3）
 }
