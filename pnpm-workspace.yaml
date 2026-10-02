@@ -1,6 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+# DEP-1：drizzle-kit>@esbuild-kit/* 拖入 esbuild<=0.24.2（GHSA-67mh-4wv8-2f99，dev 树中危）
+# —— 强制解析到 >=0.25（已实测 drizzle-kit generate 正常）
+overrides:
+  esbuild: ">=0.25.0"
 allowBuilds:
   better-sqlite3: false
   esbuild: true

@@ -60,7 +60,9 @@ window.addEventListener("message", (e) => {
   if (d.t === "props") call(d.props);
 });
 try {
-  const mod = await import("data:text/javascript," + encodeURIComponent(CODE));
+  // SEC-6：blob: 模块导入（原 data: 需要 CSP script-src 放行 data: —— 任意 data: 脚本都过白名单）。
+  // blob 键在本不透明源（sandbox 无 allow-same-origin），出不了框。
+  const mod = await import(URL.createObjectURL(new Blob([CODE], { type: "text/javascript" })));
   renderFn = mod && mod.default;
   if (typeof renderFn !== "function") throw new Error("entry module must default-export render(props, ctx)");
   post({ t: "waiting" });
@@ -73,7 +75,8 @@ try {
 function buildSrcDoc(nonce: string, code: string): string {
   const csp = [
     "default-src 'none'",
-    `script-src 'nonce-${nonce}' data:`,
+    // SEC-6：script-src 只信 nonce + blob:（模块导入用）——不再放行 data:
+    `script-src 'nonce-${nonce}' blob:`,
     "style-src 'unsafe-inline'",
     "img-src data:",
     "connect-src 'none'",
@@ -105,7 +108,7 @@ export function PluginFrame({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const propsRef = useRef<PluginRuntimeProps>({ config, data });
   propsRef.current = { config, data };
-  // 每次挂载一个随机 nonce —— 框内脚本仅限 bootstrap（插件代码经 data: 模块导入）
+  // 每次挂载一个随机 nonce —— 框内脚本仅限 bootstrap（插件代码经 blob: 模块导入，SEC-6）
   // Q80：randomNonce() 自带降级，HTTP 下 crypto.randomUUID 不可用
   const nonce = useMemo(() => randomNonce(), []);
   const srcDoc = useMemo(() => (code === null ? "" : buildSrcDoc(nonce, code)), [nonce, code]);

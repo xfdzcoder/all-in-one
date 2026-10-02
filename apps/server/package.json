@@ -16,10 +16,10 @@
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.19.0",
     "drizzle-kit": "^0.31.11",
-    "oxlint": "^1.81.0",
-    "typescript": "~6.0.2",
+    "oxlint": "^1.85.0",
+    "typescript": "~6.0.3",
     "vitest": "^5.0.2"
   },
   "dependencies": {

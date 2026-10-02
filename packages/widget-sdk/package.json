@@ -23,8 +23,8 @@
     "dev": "sh -c 'exec tsc --watch --preserveWatchOutput'"
   },
   "devDependencies": {
-    "oxlint": "^1.81.0",
-    "typescript": "~6.0.2",
+    "oxlint": "^1.85.0",
+    "typescript": "~6.0.3",
     "vitest": "^5.0.2"
   },
   "dependencies": {

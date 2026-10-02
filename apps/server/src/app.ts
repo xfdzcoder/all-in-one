@@ -165,6 +165,14 @@ export async function startServer(): Promise<FastifyInstance> {
   const app = buildApp({ db });
   await app.listen({ port: config.port, host: config.host });
 
+  // SEC-7：会话 cookie 的 Secure 默认关（LAN/HTTP MVP 有意，D17 口径）——
+  // 公网/HTTPS 部署忘配即明文通道可截获会话，启动日志强提示（不静默）。
+  if (process.env.COOKIE_SECURE !== "1") {
+    console.warn(
+      "[@all-in-one/server] ⚠ COOKIE_SECURE 未设（会话 cookie 不带 Secure）——仅限可信局域网/HTTP 开发；公网/HTTPS 部署**必须**设 COOKIE_SECURE=1",
+    );
+  }
+
   // Graceful shutdown (retro P2): close HTTP + DB on SIGINT/SIGTERM.
   const shutdown = async (signal: string) => {
     console.log(`[@all-in-one/server] ${signal} received, shutting down`);
