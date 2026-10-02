@@ -1,5 +1,6 @@
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
 import { useMonitorData, useResolvedSourceConfig, useSourceMeta } from "./data-hooks";
@@ -25,9 +26,30 @@ function fmtBytes(n?: number): string {
   return `${v.toFixed(v >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-function MetricCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function MetricCard({
+  label,
+  value,
+  hint,
+  fill,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  /** Q74 批G：液面高度 0–100（无数据不传 = 不画液面，D47 降级）。 */
+  fill?: number;
+}) {
   return (
-    <Card withBorder padding="xs" radius="sm" style={{ flex: 1, minWidth: 90 }}>
+    <Card
+      withBorder
+      padding="xs"
+      radius="sm"
+      className={fill === undefined ? undefined : "wb-metric-fill"}
+      style={
+        fill === undefined
+          ? { flex: 1, minWidth: 90 }
+          : ({ flex: 1, minWidth: 90, "--wb-fill": Math.max(0, Math.min(100, fill)) } as CSSProperties)
+      }
+    >
       <Text size="xs" c="dimmed">
         {label}
       </Text>
@@ -112,14 +134,24 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
       {data?.probe?.ok && (
         <Stack gap={6} className="wb-scroll-area">
           <Group gap="xs" wrap="nowrap" align="stretch">
-            <MetricCard label="CPU" value={data.cpu ? `${data.cpu.percent.toFixed(1)}%` : "—"} />
+            <MetricCard
+              label="CPU"
+              value={data.cpu ? `${data.cpu.percent.toFixed(1)}%` : "—"}
+              fill={data.cpu?.percent}
+            />
             <MetricCard
               label="内存"
               value={data.mem ? `${data.mem.percent.toFixed(1)}%` : "—"}
               hint={data.mem?.totalBytes ? `${fmtBytes(data.mem.usedBytes)} / ${fmtBytes(data.mem.totalBytes)}` : undefined}
+              fill={data.mem?.percent}
             />
             <MetricCard
               label="负载"
+              fill={
+                data.load?.min1 !== undefined && data.cores
+                  ? (data.load.min1 / data.cores) * 100 // Q74：load1/cores 归一（1.0/核 = 满载）
+                  : undefined
+              }
               value={data.load?.min1 !== undefined ? data.load.min1.toFixed(2) : "—"}
               hint={
                 data.load?.min5 !== undefined

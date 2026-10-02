@@ -41,6 +41,8 @@
   --wb-color-danger: #e35d5d;
   --wb-color-info: #2f9fc4;
   --wb-color-accent-glow: rgba(63, 99, 232, 0.35);
+  /* Q74 批G：监控卡液面填充色（半透明覆在 surface 上，不压文字对比度） */
+  --wb-fill-color: rgba(79, 125, 255, 0.22);
 
   /* ── 间距（8pt 网格） ───────────────────────────────────── */
   --wb-space-1: 4px;
@@ -100,6 +102,7 @@
   --wb-color-surface: rgba(255, 255, 255, 0.72);
   --wb-color-surface-hover: rgba(255, 255, 255, 0.86);
   --wb-color-surface-raised: #ffffff;
+  --wb-fill-color: rgba(79, 125, 255, 0.16);
   --wb-color-border: rgba(30, 48, 90, 0.1);
   --wb-color-border-strong: rgba(30, 48, 90, 0.2);
   --wb-color-overlay: rgba(20, 28, 48, 0.32);
