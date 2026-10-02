@@ -3,6 +3,7 @@ import type { WidgetManifest } from "@all-in-one/widget-sdk";
 import { Placeholder, StatBox } from "./widgets";
 import { TodoWidget } from "./todo-widget";
 import { CustomApiWidget } from "./custom-api-widget";
+import { ChartWidget } from "./chart-widget";
 import { RssWidget } from "./rss-widget";
 import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
@@ -407,6 +408,43 @@ const mailManifest: WidgetManifest = {
   },
 };
 
+/** 自定义图表 v1（批H2 / **Q76，D47 + D57**）：配置即 spec（非预设指标）——
+ *  取数路径 + X/Y 字段 + 图表形态编译成 ECharts option；HTTP 数据源复用 httpConnector（零服务端改动）。 */
+const chartManifest: WidgetManifest = {
+  type: "chart",
+  name: "图表",
+  description: "自定义图表（折线/柱状/饼图）：自己声明取数路径与 X/Y 字段，编译成 ECharts 图表",
+  icon: "api",
+  category: "数据",
+  defaultSize: { w: 6, h: 4 },
+  minSize: { w: 3, h: 2 },
+  configSchema: [
+    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌（D42）；留空 = 使用下方内联配置" },
+    { key: "url", label: "接口地址", type: "text", required: true, placeholder: "https://api.example.com/…" },
+    { key: "method", label: "方法", type: "select", default: "GET", options: [
+      { value: "GET", label: "GET" },
+      { value: "POST", label: "POST" },
+    ] },
+    { key: "path", label: "取数路径", type: "text", placeholder: "data.items（点路径，指向**数组**）", help: "图表按行取数：该路径必须指向数组字段" },
+    { key: "chartType", label: "图表类型", type: "select", default: "line", options: [
+      { value: "line", label: "折线" },
+      { value: "bar", label: "柱状" },
+      { value: "pie", label: "饼图" },
+    ] },
+    { key: "xField", label: "X 轴字段", type: "text", default: "x", help: "分类轴（饼图 = 名称列）" },
+    { key: "yFields", label: "Y 系列字段", type: "text", placeholder: "a,b（逗号分隔）", help: "数值列，可多列（饼图取第一个）" },
+    { key: "unit", label: "单位", type: "text", placeholder: "GB / % / 次…" },
+    { key: "stack", label: "堆叠", type: "boolean" },
+    { key: "smooth", label: "平滑曲线", type: "boolean" },
+    { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
+    { key: "authHeader", label: "认证头名", type: "text", placeholder: "Authorization（可空 = Bearer）" },
+  ],
+  capabilities: {
+    data: { source: "http-connector" },
+    refresh: { minRefreshSec: 5, defaultRefreshSec: 300, supportsManualRefresh: true },
+  },
+};
+
 /** gridstack components 映射（key = manifest.type）。 */
 export const widgetComponents = {
   todo: TodoWidget,
@@ -423,6 +461,7 @@ export const widgetComponents = {
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
   "custom-api": CustomApiWidget,
+  chart: ChartWidget,
   // manifest.type 别名：组件选择器按 type 添加（placeholder/stat-box）；
   // 旧布局 JSON 用类名 key（Placeholder/StatBox），保留兼容（seed/历史布局）。
   placeholder: Placeholder,
@@ -447,6 +486,7 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   "app-launcher": launcherManifest,
   iframe: iframeManifest,
   "custom-api": customApiManifest,
+  chart: chartManifest,
   placeholder: placeholderManifest,
   Placeholder: placeholderManifest,
   "stat-box": statBoxManifest,
@@ -473,6 +513,7 @@ export const builtinManifests: WidgetManifest[] = [
   launcherManifest,
   iframeManifest,
   customApiManifest,
+  chartManifest,
   placeholderManifest,
   statBoxManifest,
 ];

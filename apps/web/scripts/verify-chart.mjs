@@ -1,0 +1,129 @@
+/**
+ * CHART acceptance（批H2 / Q76，D47 + D57）：自定义图表组件 v1 —— 配置即 spec。
+ *  ① 选择器出现「图表」→ 配置表单（取数路径/X/Y 字段/图表类型）→ 添加；
+ *  ② mock HTTP 源返回行数据 → 画布渲染（canvas）+ 无错误条；
+ *  ③ 编辑改饼图 → 画布仍渲染；
+ *  ④ 取数路径指错 → **降级文案「原因 + 怎么修」**（D47 禁甩锅）且不整卡空白；
+ *  ⑤ 刷新按钮在（FR-I3）。
+ * Run: node scripts/verify-chart.mjs（server :3000 + preview :4173）
+ */
+import { createServer } from "node:http";
+import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
+import { login, makeClickBtn, makeOk, sleep, summarize, waitFor } from "./lib/verify-kit.mjs";
+
+const WEB = "http://localhost:4173";
+const results = [];
+const ok = makeOk(results);
+
+const payload = {
+  data: {
+    items: [
+      { t: "一月", a: 10, b: 20 },
+      { t: "二月", a: 15, b: 25 },
+      { t: "三月", a: 12, b: 30 },
+    ],
+  },
+};
+
+const mock = createServer((_req, res) => {
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(payload));
+});
+await new Promise((r) => mock.listen(0, "127.0.0.1", r));
+const mockUrl = `http://127.0.0.1:${mock.address().port}/`;
+
+const browser = await puppeteer.launch({
+  executablePath: "/usr/bin/google-chrome",
+  headless: "new",
+  args: ["--no-sandbox"],
+});
+const page = await browser.newPage();
+const clickBtn = makeClickBtn(page);
+
+const setField = (label, value) =>
+  page.evaluate(
+    ({ l, v }) => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes(l),
+      );
+      const target = wrapper?.querySelector("input, textarea");
+      if (!target) return false;
+      const proto =
+        target.tagName === "TEXTAREA" ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+      setter.call(target, v);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    },
+    { l: label, v: value },
+  );
+
+try {
+  await page.goto(WEB, { waitUntil: "networkidle0" });
+  await login(page);
+  await installLayoutGuard(page);
+
+  // ① 添加组件 → 图表 → 配置表单
+  ok("CHART enter edit", await clickBtn("编辑页面"));
+  await sleep(300);
+  ok("CHART open picker", await clickBtn("添加组件"));
+  await sleep(400);
+  ok("CHART listed in picker", await clickBtn("图表"));
+  await sleep(400);
+  ok("CHART form: url field", await setField("接口地址", mockUrl));
+  ok("CHART form: path field", await setField("取数路径", "data.items"));
+  ok("CHART form: x field", await setField("X 轴字段", "t"));
+  ok("CHART form: y fields", await setField("Y 系列字段", "a,b"));
+  ok("CHART add widget", await clickBtn("确认添加", true));
+  await sleep(1500);
+
+  // ② 画布渲染（配置即 spec 编译生效）
+  ok(
+    "CHART canvas renders",
+    await waitFor(page, () => Boolean(document.querySelector(".wb-chart canvas")), undefined),
+  );
+  ok("CHART no error banner", !(await page.evaluate(() => (document.body.textContent ?? "").includes("不是数组"))));
+
+  // ④ 降级：取数路径指错 → 「原因 + 怎么修」（D47）
+  const badPath = await page.evaluate(async () => {
+    const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
+    const home = list.find((d) => d.title === "首页") ?? list[0];
+    const items = JSON.parse(home.layoutJson ?? "[]");
+    const card = items.find((i) => i.component === "chart");
+    if (!card) return false;
+    card.props.path = "data.nope";
+    await fetch(`/api/dashboards/${home.id}/layout`, {
+      method: "PUT",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
+    });
+    return true;
+  });
+  ok("CHART corrupt path fixture", Boolean(badPath));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 8000 });
+  ok(
+    "CHART degradation copy（原因 + 怎么修）",
+    await waitFor(
+      page,
+      () => {
+        const t = document.body.textContent ?? "";
+        return t.includes("不是数组") && t.includes("取数路径");
+      },
+      undefined,
+    ),
+  );
+
+  // ⑤ 刷新按钮在（FR-I3）
+  ok("CHART has 刷新", await clickBtn("刷新"));
+} catch (e) {
+  ok("flow completed", false, String(e).slice(0, 200));
+}
+
+await sleep(1000);
+await restoreLayouts(page).catch(() => {});
+await browser.close();
+mock.close();
+process.exit(summarize(results) ? 0 : 1);

@@ -212,6 +212,13 @@ a.wb-widget__title-link:focus-visible {
   border-color: var(--wb-color-border-strong);
 }
 
+.wb-chart {
+  /* Q76 批H2：图表画布容器（echarts 实例挂载面；高度随卡片） */
+  flex: 1;
+  min-height: 160px;
+  width: 100%;
+}
+
 .wb-metric {
   flex: 1;
   min-width: 90px;
