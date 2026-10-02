@@ -44,8 +44,14 @@ export function MediaLightbox({
   }, [hasNav, onPrev, onNext, onClose]);
 
   return (
+    // A11Y-1 豁免留因：① `role="dialog"` 保留 div —— native <dialog> 的 top-layer 会破
+    // 全屏遮罩的 fixed 定位/淡入动画，ARIA `div role=dialog` 是标准做法；② 遮罩点击关闭
+    // 不给键盘事件 —— 键盘通道已有（Esc 关闭 / ←→ 切换，window keydown），把遮罩做成
+    // tabbable 反而劣化键盘流。
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 见上：键盘通道在 window keydown（Esc/←→）
     <div
       className="wb-lightbox"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- 见上：native <dialog> top-layer 破全屏遮罩，ARIA div role=dialog 是标准做法
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "预览"}

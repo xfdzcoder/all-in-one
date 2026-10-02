@@ -83,7 +83,7 @@
 | [14-deps-security-lint.md](14-deps-security-lint.md) | DEP-1, DEP-3, SEC-3, SEC-6, SEC-7, LNT-1 ✅, LNT-2 ✅, LNT-3 ✅ | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
 | [15-docs.md](15-docs.md) | DOC-3 ✅, DOC-4 ✅, DOC-5 ✅, DOC-6 ✅, DOC-17 ✅, DOC-18 ✅, DOC-19 ✅, DOC-21 ✅, DOC-22 ✅, DOC-23 ✅, DOC-24 ✅, DOC-25 ✅, DOC-26 ✅, DOC-27 ✅, DOC-28 ✅；余 DOC-7, DOC-8, DOC-9, DOC-10, DOC-11, DOC-12, DOC-13, DOC-14, DOC-15, DOC-16, DOC-20 → Q101b-2 | Q101b-1 ✅ / Q101b-2 ⏳ |
 | QA-002 | minCell→rowHeight 一次性配置迁移 | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
-| A11Y-1 | `jsx-a11y` 15 条（`prefer-tag-over-role`×9 / `click-events-have-key-events`×2 / `no-noninteractive-element-interactions`×2 / `no-autofocus`×2） | P2 | Q101（a11y 专项：复杂行 `div role=button` 与「真 button」的取舍需专门设计，WEB-3 教训在前） | ⏳ |
+| A11Y-1 ✅ | `jsx-a11y` 15 条（`prefer-tag-over-role`×9 / `click-events-have-key-events`×2 / `no-noninteractive-element-interactions`×2 / `no-autofocus`×2） | P2 | **✅ 已修（Q101c-3，15→0）**：设计定案——① 无嵌套交互的触发器转**真 button**（todo/rss 标题、看板列标题/卡片、邮件行、opencode 会话行、随机图包 UnstyledButton、`role=status`→`<output>`）共消 9 条；② portainer 容器行保留 `div role=button`（内嵌重启 ConfirmAction，`<button>` 嵌套非法，WEB-3 路线）+ lightbox `role=dialog`/遮罩点击、看板行内编辑 autoFocus 共 6 条**定向豁免留因**（键盘通道均已具备） | Q101c-3 ✅ |
 | LNT-1 | 三份 .oxlintrc.json 两份空规则集（静态检测面远窄于拍板目标） | **✅ 已修（Q96a）**：规则开足 + 定向豁免 + 清零 160 条（242→82） | Q96a ✅ |
 | LNT-2 | 全仓仅存 2 处类型断言逃逸（抹 props 类型 / 双重断言绕 zod） | **✅ 已修（Q96b）**：单点收窄函数 + `isServiceOverview` 类型守卫（调用点零断言） | ✅ |
 | LNT-3 | 死代码/未用导出/未用依赖无守卫 | **✅ 全清（Q96b/Q96c）**：knip 引入 + 死文件 1 + 死代码/未用导出 58 条清理 → **knip 零发现** | ✅ |

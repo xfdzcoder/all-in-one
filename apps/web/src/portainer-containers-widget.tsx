@@ -60,6 +60,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
           // <button>（非法嵌套交互元素）；且点「重启」会冒泡到行 onClick → 确认框与日志弹窗同时弹。
           <div
             key={c.id}
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- 复杂行内嵌「重启」ConfirmAction：<button> 嵌套 button 是非法 HTML（WEB-3 定型 div 路线）；tabIndex+Enter/Space 键盘通道已备
             role="button"
             tabIndex={0}
             className="wb-admin-row"

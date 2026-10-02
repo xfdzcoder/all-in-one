@@ -1,3 +1,4 @@
+import { UnstyledButton } from "@mantine/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { packRows } from "./media-wall-layout";
@@ -138,14 +139,16 @@ export function MediaWall({
         {it &&
           (it.src ? (
             // key 变化触发淡入（交叉淡入观感），reduced-motion 由全局 CSS 兜底
-            <img
+            // A11Y-1：img 包真 <button>（原裸 img onClick 无键盘通道）
+            <UnstyledButton
               key={it.id}
-              className="wb-gallery__random-img"
-              src={it.src}
-              alt=""
+              className="wb-gallery__random-btn"
+              aria-label="放大预览"
               title={it.title}
               onClick={() => onOpen(it, randIdx)}
-            />
+            >
+              <img className="wb-gallery__random-img" src={it.src} alt="" />
+            </UnstyledButton>
           ) : (
             <button
               type="button"

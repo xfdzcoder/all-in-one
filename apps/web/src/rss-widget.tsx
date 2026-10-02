@@ -70,9 +70,9 @@ export function RssWidget({
             <Text
               size="xs"
               fw={it.read ? 400 : 700}
-              className="wb-clickable"
-              role="button"
-              tabIndex={0}
+              component="button"
+              type="button"
+              className="wb-clickable wb-btn-reset"
               onClick={() => {
                 // Q29c/二.2：点击 = 新标签打开原文 + 标已读（无详情弹层）
                 if (!it.read) markRead.mutate(it.itemKey);

@@ -50,11 +50,11 @@ export function IconAction({
 /** 骨架屏（D52 批3）：替换"加载中…"文本 —— shimmer 占位条（宽度档位在 CSS 中按序定义）。 */
 export function WbLoading({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="wb-skeleton" role="status" aria-label="加载中">
+    <output className="wb-skeleton" aria-label="加载中">
       {Array.from({ length: rows }, (_, i) => (
         <span key={i} className="wb-skeleton__bar" />
       ))}
-    </div>
+    </output>
   );
 }
 

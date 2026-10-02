@@ -74,11 +74,11 @@ export function MailWidget({
               withBorder
               padding={6}
               radius={6}
+              component="button"
+              type="button"
               className="wb-card--interactive wb-mail-row"
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", textAlign: "inherit" }}
               onClick={() => setOpen(item)}
-              role="button"
-              tabIndex={0}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();

@@ -489,6 +489,26 @@ a.wb-widget__title-link:focus-visible {
   cursor: pointer;
 }
 
+/* A11Y-1：文本触发器换真 <button> 时消 UA 默认观感（排版/配色仍由元素自身类负责）。
+ * 仅用于**不自带盒模型**的文本元素 —— Card 富行的 padding/bg 走 Mantine 类，勿加本类
+ * （本类 padding:0 会盖掉 Card 的作者级 padding）。 */
+.wb-btn-reset {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  text-align: inherit;
+}
+
+/* A11Y-1：随机图预览的语义按钮盒（img 本体的宽高/动画仍在 .wb-gallery__random-img）。 */
+.wb-gallery__random-btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* 禁嵌时仍留在 DOM（hidden 判定读元素自身 display），仅视觉移除；
  * 选择器带上 .wb-frame iframe 以在特异性上压过基础规则（不引入 !important） */
 .wb-frame iframe.wb-frame__el--hidden {

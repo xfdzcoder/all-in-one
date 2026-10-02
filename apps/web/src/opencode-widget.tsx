@@ -75,10 +75,10 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
             withBorder
             padding={6}
             radius={6}
-            style={{ cursor: "pointer" }}
+            component="button"
+            type="button"
+            style={{ cursor: "pointer", textAlign: "inherit" }}
             onClick={() => setDetail(s)}
-                role="button"
-                tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();

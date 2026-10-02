@@ -115,8 +115,9 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
               />
               <Text
                 size="sm"
-                role="button"
-                tabIndex={0}
+                component="button"
+                type="button"
+                className="wb-btn-reset"
                 style={{ flex: 1, textDecoration: t.done ? "line-through" : undefined, cursor: "pointer" }}
                 onClick={() => setDetail(t)}
                 onKeyDown={(e) => {

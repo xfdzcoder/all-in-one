@@ -182,6 +182,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     size="xs"
                     defaultValue={col.title}
                     className="wb-grow"
+                    // oxlint-disable-next-line jsx-a11y/no-autofocus -- 行内编辑器「点开即输入」是交互契约（重命名/新增卡），移除属 UX 回归；仅瞬态输入框、非页面首焦
                     autoFocus
                     onBlur={(e) => {
                       const t = e.currentTarget.value.trim();
@@ -195,10 +196,10 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                   />
                 ) : (
                   <Text
-                    className="wb-kanban__col-title"
+                    component="button"
+                    type="button"
+                    className="wb-kanban__col-title wb-btn-reset"
                     title="点击重命名"
-                    role="button"
-                    tabIndex={0}
                     onClick={() => setEditingCol(col.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -237,14 +238,14 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     <Card
                     key={card.id}
                     data-card-id={card.id}
+                    component="button"
+                    type="button"
                     withBorder
                     padding={6}
                     radius={6}
                     className="wb-card--interactive"
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "pointer", textAlign: "inherit" }}
                     draggable={!editMode}
-                    role="button"
-                    tabIndex={0}
                     onDragStart={(e) => {
                       draggingIdRef.current = card.id;
                       e.dataTransfer.setData("text/plain", card.id);
@@ -294,6 +295,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
                     <TextInput
                       size="xs"
                       placeholder="卡片标题"
+                      // oxlint-disable-next-line jsx-a11y/no-autofocus -- 行内编辑器「点开即输入」是交互契约（重命名/新增卡），移除属 UX 回归；仅瞬态输入框、非页面首焦
                       autoFocus
                       value={cardDrafts[col.id] ?? ""}
                       onChange={(e) => {
