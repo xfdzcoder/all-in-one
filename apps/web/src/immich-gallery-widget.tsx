@@ -20,7 +20,9 @@ export function ImmichGalleryWidget({
   refreshSec,
   layout = "grid",
   randomIntervalSec = 30,
-  minCell = 72,
+  rowHeight = 72,
+  /** @deprecated QA-002：旧键（语义已是「目标行高」），仅迁移期双读 */
+  minCell,
   albumId,
 }: {
   sourceId?: string;
@@ -29,8 +31,10 @@ export function ImmichGalleryWidget({
   /** Q71（项 6）：`grid` 铺开 / `random` 随机单图定时换。 */
   layout?: "grid" | "random";
   randomIntervalSec?: number;
-  /** Q89（D60 §3）：**目标行高** px（配置键仍叫 `minCell`，为兼容既有配置）。
-   *  行高由等比装箱反推，不再「只限最小、不限最大」地撑满卡片。 */
+  /** Q89（D60 §3）/ QA-002：**目标行高** px —— 行高由等比装箱反推，不再「只限最小、
+   *  不限最大」地撑满卡片。配置键已迁 `rowHeight`；`minCell` 仅迁移期双读。 */
+  rowHeight?: number;
+  /** @deprecated QA-002：旧键双读 */
   minCell?: number;
   /** Q72/Q87：只看某个相册（留空 = 全部）。 */
   albumId?: string;
@@ -106,7 +110,7 @@ export function ImmichGalleryWidget({
           }))}
           layout={layout}
           randomIntervalSec={randomIntervalSec}
-          targetRowHeight={minCell}
+          targetRowHeight={rowHeight ?? minCell ?? 72}
           onOpen={(it, i) => {
             setPreviewIdx(i);
             const src = data.items.find((x) => x.id === it.id);

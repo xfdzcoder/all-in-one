@@ -93,7 +93,7 @@
 | ID | 位置 | 问题 | 级别 | 批次 | 状态 |
 |---|---|---|---|---|---|
 | QA-001 ✅ | `apps/server/src/connector/gallery.ts` / `navidrome-library.ts`（data URI 组装） | ⑭ data URI mime 硬编码 `image/jpeg`，Navidrome PNG/WebP 封面被误标（现靠浏览器嗅探侥幸显示） | P1 | Q98 | ⏳ |
-| QA-002 | `apps/web/src/widget-registry.ts`（`minCell` 键） | ⑮ 键名与语义不符（语义已是「目标行高」），迁 `rowHeight` + 一次性配置迁移 | P2 | Q101 | ⏳ |
+| QA-002 | `apps/web/src/widget-registry.ts`（`minCell` 键） | ⑮ 键名与语义不符 → 迁 `rowHeight` | P2 | **✅ 已修（Q101a）**：键改名 + 组件双读 + 服务端读写双向规范化（懒收敛）+ `LAYOUT_SCHEMA_VERSION` 升 2 | ✅ |
 
 ## 备查（历轮挂起项，已并入上表所属批次）
 

@@ -64,7 +64,7 @@ export const session = sqliteTable(
 );
 
 /** Current layoutJson document version written by this build. */
-export const LAYOUT_SCHEMA_VERSION = 1;
+export const LAYOUT_SCHEMA_VERSION = 2; // QA-002：布局 props 迁移（minCell → rowHeight）后升版
 
 export const credential = sqliteTable(
   "credential",

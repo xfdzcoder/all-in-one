@@ -202,3 +202,49 @@ describe("dashboard CRUD (M1-④)", () => {
     expect(doc.paths["/api/dashboards/{id}"].patch).toBeTruthy();
   });
 });
+
+describe("QA-002（⑮）：minCell → rowHeight 布局 props 迁移", () => {
+  it("normalizeLayoutJson：旧键迁移新键、双键以新键为准、无 minCell 原样通过", async () => {
+    const { normalizeLayoutJson } = await import("./routes.ts");
+    const migrated = JSON.parse(
+      normalizeLayoutJson(
+        JSON.stringify([
+          { id: "w1", component: "immich-gallery", props: { minCell: 110, limit: 5 } },
+          { id: "w2", component: "immich-gallery", props: { rowHeight: 80, minCell: 110 } },
+          { id: "w3", component: "todo", props: { list: "inbox" } },
+        ]),
+      ),
+    );
+    expect(migrated[0].props).toEqual({ limit: 5, rowHeight: 110 });
+    expect(migrated[1].props).toEqual({ rowHeight: 80 }); // 双键 → 新键为准，旧键删除
+    expect(migrated[2].props).toEqual({ list: "inbox" });
+  });
+
+  it("畸形 layoutJson 原样返回（不抛）", async () => {
+    const { normalizeLayoutJson } = await import("./routes.ts");
+    expect(normalizeLayoutJson("not-json")).toBe("not-json");
+    expect(normalizeLayoutJson('{"a":1}')).toBe('{"a":1}');
+  });
+
+  it("API 往返：PUT 带旧键 → GET 返回新键", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/dashboards",
+      cookies: { sid },
+      payload: { title: `qa002-${Date.now().toString(36)}` },
+    });
+    const id = created.json().id;
+    await app.inject({
+      method: "PUT",
+      url: `/api/dashboards/${id}/layout`,
+      cookies: { sid },
+      payload: { layoutJson: JSON.stringify([{ id: "w1", component: "immich-gallery", props: { minCell: 110 } }]) },
+    });
+    const list = (await app.inject({ method: "GET", url: "/api/dashboards", cookies: { sid } })).json();
+    const row = list.find((d: { id: string; layoutJson: string }) => d.id === id);
+    const props = (JSON.parse(row!.layoutJson) as Array<{ props: Record<string, unknown> }>)[0]!.props;
+    expect(props.rowHeight).toBe(110);
+    expect(props.minCell).toBeUndefined();
+    await app.inject({ method: "DELETE", url: `/api/dashboards/${id}`, cookies: { sid } });
+  });
+});

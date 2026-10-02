@@ -18,6 +18,32 @@ function parse<T>(schema: { safeParse: (v: unknown) => { success: boolean; data?
   return r.success ? (r.data as T) : null;
 }
 
+/**
+ * QA-002（⑮）：布局 props 一次性迁移 —— `minCell`（键名与语义不符，语义已是「目标行高」）
+ * 迁为 `rowHeight`。**读写双向、懒收敛**：读时规范化返回（旧行立即可见新键）、写时持久化
+ * （编辑过的行落新键）；组件侧另有双读兜底，故任何中间态都正确。
+ */
+export function normalizeLayoutJson(layoutJson: string): string {
+  let list: unknown;
+  try {
+    list = JSON.parse(layoutJson);
+  } catch {
+    return layoutJson;
+  }
+  if (!Array.isArray(list)) return layoutJson;
+  const out = (list as Array<Record<string, unknown>>).map((w) => {
+    const props = w?.props as Record<string, unknown> | undefined;
+    if (!props || typeof props !== "object") return w;
+    if (!("minCell" in props)) return w;
+    const next = { ...props };
+    if (next.rowHeight === undefined && typeof next.minCell === "number") next.rowHeight = next.minCell;
+    delete next.minCell;
+    return { ...w, props: next };
+  });
+  return JSON.stringify(out);
+}
+
+
 export function registerDashboardRoutes(app: FastifyInstance): void {
   // All business routes are behind authGuard (M1-④).
   app.get("/api/dashboards", { preHandler: authGuard }, async (req) => {
@@ -26,7 +52,8 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
       .from(dashboard)
       .where(eq(dashboard.userId, req.user!.id))
       .orderBy(asc(dashboard.sortOrder), asc(dashboard.createdAt));
-    return rows;
+    // QA-002：读时规范化（旧行立即以新键返回；写时再持久化 = 懒收敛）
+    return rows.map((r) => ({ ...r, layoutJson: normalizeLayoutJson(r.layoutJson ?? "[]") }));
   });
 
   app.post("/api/dashboards", { preHandler: authGuard }, async (req, reply) => {
@@ -68,7 +95,7 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
     if (body.columns !== undefined) set.columns = body.columns;
     if (body.cellHeight !== undefined) set.cellHeight = body.cellHeight;
     if (body.layoutJson !== undefined) {
-      set.layoutJson = body.layoutJson;
+      set.layoutJson = normalizeLayoutJson(body.layoutJson); // QA-002
       set.schemaVersion = LAYOUT_SCHEMA_VERSION;
     }
 
@@ -102,7 +129,7 @@ export function registerDashboardRoutes(app: FastifyInstance): void {
     const [row] = await app.db
       .update(dashboard)
       .set({
-        layoutJson: body.layoutJson,
+        layoutJson: normalizeLayoutJson(body.layoutJson), // QA-002
         schemaVersion: LAYOUT_SCHEMA_VERSION,
         updatedAt: new Date(),
       })
