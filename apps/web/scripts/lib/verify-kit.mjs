@@ -61,3 +61,32 @@ export function makeApiFetch(page) {
       { p: path, o: options },
     );
 }
+
+/**
+ * 唯一命名后缀（**TST-8**）：时间戳 + 随机段。
+ * 原 `Date.now().toString(36).slice(-4)` 同毫秒并发会重名、且只增不减地留残留行。
+ */
+export const uniqId = (prefix = "") =>
+  `${prefix}${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+/**
+ * 按钮点击（**TST-12/TST-14**）：匹配优先级 = 精确文本 → aria-label 精确 → 包含匹配。
+ * 原实现默认「首个包含命中」——「添加」会命中「添加组件」这类**首个匹配陷阱**；
+ * 精确优先把陷阱消解在匹配序里，`exact=true` 时禁用包含回落。返回布尔（TST-15 契约）。
+ */
+export function makeClickBtn(page) {
+  return (label, exact = false) =>
+    page.evaluate(
+      ({ l, ex }) => {
+        const btns = [...document.querySelectorAll("button")];
+        const hit =
+          btns.find((b) => b.textContent.trim() === l) ??
+          btns.find((b) => (b.getAttribute("aria-label") ?? "").trim() === l) ??
+          (ex ? undefined : btns.find((b) => b.textContent.trim().includes(l)));
+        if (!hit) return false;
+        hit.click();
+        return true;
+      },
+      { l: label, ex: exact },
+    );
+}

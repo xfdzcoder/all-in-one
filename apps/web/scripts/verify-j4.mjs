@@ -4,7 +4,7 @@
  * Run: node scripts/verify-j4.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -38,19 +38,7 @@ const _switchPage = async (title) => {
 
 await page.setViewport({ width: 1400, height: 900 });
 
-const clickBtn = (label, exact = false) =>
-  page.evaluate(
-    ({ l, ex }) => {
-      const btns = [...document.querySelectorAll("button")];
-      const btn = ex
-        ? btns.find((b) => b.textContent.trim() === l)
-        : btns.find((b) => b.textContent.trim().includes(l));
-      if (!btn) return false;
-      btn.click();
-      return true;
-    },
-    { l: label, ex: exact },
-  );
+const clickBtn = makeClickBtn(page); // TST-12/14：精确优先匹配（首个命中陷阱消解）
 
 const openTodos = () =>
   page.$$eval('.grid-stack-item input[placeholder="新任务…"]', (els) => els.length);
@@ -175,7 +163,7 @@ try {
 
   // 页面 B：不同名称 = 不同任务池（D43 唯一名 → 隔离）
   await page.setViewport({ width: 1400, height: 900 });
-  const uniq = `J4-${Date.now().toString(36).slice(-4)}`;
+  const uniq = uniqId("J4-"); // TST-8
   await openSwitcher();
   await page.type('input[placeholder="新页面名"]', uniq);
   ok("J4 create page B", await clickBtn("新建页面"));

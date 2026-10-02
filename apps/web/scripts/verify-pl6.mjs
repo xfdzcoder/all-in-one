@@ -6,7 +6,7 @@
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { login, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
 
 import { strToU8, zipSync } from "fflate";
 import puppeteer from "puppeteer-core";
@@ -51,19 +51,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
 
-const clickBtn = (label, exact = false) =>
-  page.evaluate(
-    ({ l, ex }) => {
-      const btns = [...document.querySelectorAll("button")];
-      const btn = ex
-        ? btns.find((b) => b.textContent.trim() === l)
-        : btns.find((b) => b.textContent.trim().includes(l));
-      if (!btn) return false;
-      btn.click();
-      return true;
-    },
-    { l: label, ex: exact },
-  );
+const clickBtn = makeClickBtn(page); // TST-12/14：精确优先匹配（首个命中陷阱消解）
 
 const apiFetch = (path, options = {}) =>
   page.evaluate(

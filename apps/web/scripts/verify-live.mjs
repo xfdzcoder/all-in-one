@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { ADMIN_PASSWORD, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -138,7 +138,7 @@ await installLayoutGuard(page);
   await page.waitForSelector(".grid-stack", { timeout: 15000 });
   await sleep(800);
 
-  const uniq = Date.now().toString(36).slice(-4);
+  const uniq = uniqId(); // TST-8：时间戳+随机，防同毫秒重名/残留互撞
   const names = {
     immich: `LIVE-immich-${uniq}`,
     navidrome: `LIVE-navidrome-${uniq}`,

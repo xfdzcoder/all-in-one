@@ -7,7 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "node:http";
-import { ADMIN_PASSWORD } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeClickBtn } from "./lib/verify-kit.mjs";
 
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
@@ -154,19 +154,7 @@ const shot = async (name) => {
   await page.screenshot({ path: join(OUT, `${name}.png`) });
   console.log("shot:", name);
 };
-const clickBtn = (label, exact = false) =>
-  page.evaluate(
-    ({ l, ex }) => {
-      const btns = [...document.querySelectorAll("button")];
-      const btn = ex
-        ? btns.find((b) => b.textContent.trim() === l)
-        : btns.find((b) => b.textContent.trim().includes(l));
-      if (!btn) return false;
-      btn.click();
-      return true;
-    },
-    { l: label, ex: exact },
-  );
+const clickBtn = makeClickBtn(page); // TST-12/14：精确优先匹配（首个命中陷阱消解）
 
 try {
   // 登录页

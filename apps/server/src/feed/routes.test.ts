@@ -251,8 +251,8 @@ describe("rss 条目数语义（Q22a：展示条数 = 过滤后切片；数值�
     expect(items1.some((i) => i.sourceTitle === "flaky")).toBe(true);
 
     fail = true;
-    // 最小刷新间隔限流 5s —— 等过窗口再强刷（否则回落旧缓存）
-    await new Promise((r) => setTimeout(r, 5100));
+    // TST-7：原「等过 5s 限流窗口」是 Q87 前的旧契约残留 —— 现 force 同时穿透 TTL 与
+    // minIntervalSec（限流本身由 data/routes.test 直测覆盖），无需真等。
     const ok2 = await app.inject({
       method: "POST",
       url: "/api/widgets/data",

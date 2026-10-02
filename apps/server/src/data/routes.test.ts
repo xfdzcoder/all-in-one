@@ -1,16 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { cacheKeyOf, createConnectorRegistry, UnknownWidgetTypeError } from "../connector/registry.ts";
 import { DataCache } from "./cache.ts";
 import { EventBus } from "./events.ts";
 
 describe("data cache (NFR4)", () => {
-  it("serves within TTL and expires after", async () => {
-    const cache = new DataCache({ defaultTtlSec: 1, minIntervalSec: 0 });
-    cache.set("k", { v: 1 });
-    expect(cache.get("k")?.data).toEqual({ v: 1 });
-    await new Promise((r) => setTimeout(r, 1100));
-    expect(cache.get("k")).toBeNull();
+  it("serves within TTL and expires after", () => {
+    // TST-7：假时钟推进 —— 原真实 sleep 1.1s 且与 TTL 实现值耦合（调参即假红/假绿）
+    vi.useFakeTimers();
+    try {
+      const cache = new DataCache({ defaultTtlSec: 1, minIntervalSec: 0 });
+      cache.set("k", { v: 1 });
+      expect(cache.get("k")?.data).toEqual({ v: 1 });
+      vi.advanceTimersByTime(1100);
+      expect(cache.get("k")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rate-limits fetches under minInterval", () => {

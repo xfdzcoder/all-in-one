@@ -10,12 +10,12 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
 const ok = makeOk(results); // TST-14/15：公共库（签名/输出/非布尔告警统一）
-const uniq = Date.now().toString(36).slice(-4);
+const uniq = uniqId(); // TST-8：时间戳+随机，防同毫秒重名/残留互撞
 
 const upstream = createServer((_req, res) => {
   res.setHeader("Content-Type", "application/json");
@@ -44,19 +44,7 @@ const browser = await puppeteer.launch({
 const page = await browser.newPage();
 await page.setViewport({ width: 1400, height: 900 });
 
-const clickBtn = (label, exact = false) =>
-  page.evaluate(
-    ({ l, ex }) => {
-      const btns = [...document.querySelectorAll("button")];
-      const btn = ex
-        ? btns.find((b) => b.textContent.trim() === l)
-        : btns.find((b) => b.textContent.trim().includes(l));
-      if (!btn) return false;
-      btn.click();
-      return true;
-    },
-    { l: label, ex: exact },
-  );
+const clickBtn = makeClickBtn(page); // TST-12/14：精确优先匹配（首个命中陷阱消解）
 
 const setField = (label, value) =>
   page.evaluate(
