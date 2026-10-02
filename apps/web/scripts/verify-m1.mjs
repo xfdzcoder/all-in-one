@@ -1,6 +1,8 @@
 /**
  * M1 acceptance drive (J1/J2 + props round-trip + D10 mobile edit ban).
  * Run: node scripts/verify-m1.mjs  (server on :3000, web preview on :4173)
+ *
+ * ⚠ TST-23 双实现：J1 在 apps/web/e2e/journeys.spec.ts 还有一份 Playwright 实现 —— 改动两处同改（矩阵见 scripts/README.md）。
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";

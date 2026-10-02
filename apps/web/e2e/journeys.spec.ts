@@ -2,6 +2,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** J1–J4 旅程（D15：Playwright 全绿 = MVP 出口门槛）。
  *  前置：server :3000（ADMIN_PASSWORD=m1-e2e-pass）+ preview :4173。
+ *
+ *  ⚠ **TST-23 双实现**：J1–J4 在 `scripts/verify-{m1,drag,j4,...}.mjs` 还有一份 puppeteer 实现 ——
+ *  **选择器/文案/流程改动两处同改**（分工与矩阵见 `scripts/README.md`；曾因只改一处挂掉 e2e）。
  */
 
 async function login(page: Page) {

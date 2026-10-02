@@ -3,6 +3,8 @@
  *  ① 占位框出现在两卡之间（跟随鼠标落点，非固定列尾）；
  *  ② 松手后按占位位置中插（sortOrder 重排），同列移动不错位；
  *  ③ dragleave 子元素冒泡不丢落点（含属判定）——以占位稳定存在间接验证。
+ *
+ * ⚠ TST-23 双实现：J2 在 apps/web/e2e/journeys.spec.ts 还有一份 Playwright 实现 —— 改动两处同改（矩阵见 scripts/README.md）。
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";

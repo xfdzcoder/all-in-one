@@ -2,6 +2,9 @@
  * J4 acceptance: two Todo widgets on DIFFERENT dashboards share Workspace
  * data — toggling on one syncs to the other (via REST + SSE invalidation).
  * Run: node scripts/verify-j4.mjs (server :3000, preview :4173)
+ *
+ * ⚠ TST-23 双实现：J4 在 apps/web/e2e/journeys.spec.ts 还有一份 Playwright 实现 ——
+ * 选择器/文案/流程改动两处同改（本文件是超集：多 SSE 同步断言；矩阵见 scripts/README.md）。
  */
 import puppeteer from "puppeteer-core";
 import { ADMIN_PASSWORD, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
