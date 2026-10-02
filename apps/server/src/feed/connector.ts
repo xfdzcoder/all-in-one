@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { strLoose } from "../connector/normalize.ts";
+import { textOf } from "../connector/normalize.ts";
 
 import { and, eq, inArray } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
@@ -26,7 +26,29 @@ function itemKeyOf(url: string, guid: string, link: string): string {
   return createHash("sha256").update(`${url}|${guid || link}`).digest("hex").slice(0, 32);
 }
 
-/** 解析 RSS 2.0 / Atom 条目（fast-xml-parser，成熟 XML 库）。 */
+/** HTML 实体解码（手写最小集，不引依赖）：命名 6 种 + `&#NN;` / `&#xHH;`。
+ *  越界码位原样保留（`String.fromCodePoint` 会抛 RangeError）。 */
+function decodeEntities(s: string): string {
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (m, h: string) => {
+      const cp = Number.parseInt(h, 16);
+      return cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+    })
+    .replace(/&#(\d+);/g, (m, d: string) => {
+      const cp = Number.parseInt(d, 10);
+      return cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : m;
+    })
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (m, n: string) => named[n] ?? m);
+}
+
+/** XML 节点 → 人读纯文本（D68）：取文本节点 → 剥 HTML 标签 → 解实体 → 压空白。
+ *  Atom `<title type="html">`/`<summary>` 与 RSS `<description>` 的 CDATA 里都是 HTML。 */
+function plainText(v: unknown): string {
+  return decodeEntities(textOf(v).replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+}
+
+/** 解析 RSS 2.0 / Atom 条目（fast-xml-parser，成熟 XML 库；节点归一见 textOf/ D68）。 */
 function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, unknown>> {
   const doc = xml.parse(xmlText) as Record<string, unknown>;
   const out: Array<Record<string, unknown>> = [];
@@ -34,15 +56,16 @@ function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, 
   const rssChannel = (doc.rss as RawEntry | undefined)?.channel as RawEntry | undefined;
   const rssItems = asArray(rssChannel?.item as RawEntry | RawEntry[] | undefined);
   for (const it of rssItems) {
-    const link = strLoose(it.link);
+    const link = textOf(it.link);
+    const guid = textOf(it.guid); // D68：`<guid isPermaLink="true">` 带属性 → 旧逻辑得 "[object Object]"，已读去重全错
     out.push({
-      title: strLoose(it.title),
+      title: plainText(it.title),
       link,
-      summary: strLoose(it.description).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
-      date: strLoose(it.pubDate),
-      guid: strLoose(it.guid),
+      summary: plainText(it.description).slice(0, 300),
+      date: textOf(it.pubDate),
+      guid,
       sourceUrl,
-      itemKey: itemKeyOf(sourceUrl, strLoose(it.guid), link),
+      itemKey: itemKeyOf(sourceUrl, guid, link),
     });
   }
 
@@ -53,16 +76,17 @@ function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, 
     let link = "";
     const l = en.link;
     if (typeof l === "string") link = l;
-    else if (Array.isArray(l)) link = strLoose(l[0]?.["@_href"] ?? l[0]);
-    else if (l && typeof l === "object") link = strLoose((l as RawEntry)["@_href"]);
+    else if (Array.isArray(l)) link = textOf(l[0]?.["@_href"] ?? l[0]);
+    else if (l && typeof l === "object") link = textOf((l as RawEntry)["@_href"]);
+    const id = textOf(en.id);
     out.push({
-      title: strLoose(en.title),
+      title: plainText(en.title),
       link,
-      summary: strLoose(en.summary ?? en.content).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
-      date: strLoose(en.updated ?? en.published),
-      guid: strLoose(en.id),
+      summary: plainText(en.summary ?? en.content).slice(0, 300),
+      date: textOf(en.updated ?? en.published),
+      guid: id,
       sourceUrl,
-      itemKey: itemKeyOf(sourceUrl, strLoose(en.id), link),
+      itemKey: itemKeyOf(sourceUrl, id, link),
     });
   }
   return out;
@@ -131,7 +155,7 @@ export const rssConnector: WidgetConnector = {
       }),
     );
 
-    entries.sort((a, b) => strLoose(b.date).localeCompare(strLoose(a.date)));
+    entries.sort((a, b) => textOf(b.date).localeCompare(textOf(a.date)));
 
     // 关联已读标记（Workspace 级 —— 任一组件标记，全部组件同步）
     const keys = entries.map((e) => String(e.itemKey));

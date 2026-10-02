@@ -4,7 +4,7 @@
  * - 多数：`str`/`num` 拿不到回 `undefined`；
  * - 个别 connector：`num` 回 `0`；
  * - feed/connector.ts：`str` 对非字符串**宽松强转** `String(v)`（RSS 字段可能是数字）。
- * 收口后语义显式分名：`str`/`num`（严格）+ `strLoose`（宽松）。
+ * 收口后语义显式分名：`str`/`num`（严格）+ `textOf`（XML 节点/标量归一，D68）。
  */
 
 /** 严格字符串：仅非空 string 通过，否则 `undefined`。 */
@@ -17,9 +17,32 @@ export function num(v: unknown): number | undefined {
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
 }
 
-/** 宽松字符串（feed 语义：非字符串也强转，null/undefined 回 ""）。 */
-export function strLoose(v: unknown): string {
-  return typeof v === "string" ? v : v == null ? "" : String(v);
+/**
+ * **XML 节点文本归一**（D68，用户反馈「RSS 的标题和描述解析失败，都是 [object Object]」）。
+ *
+ * fast-xml-parser 配了 `ignoreAttributes: false` 后，**带属性的元素**解析成对象
+ * `{ "#text": 文本, "@_type": ... }`（如 Atom `<title type="html">`、RSS
+ * `<guid isPermaLink="true">`）——旧逻辑 `String(v)` 直接把对象转成 `"[object Object]"`。
+ * 规则：标量原样（数字/布尔强转）、数组取首个非空成员、对象取 `#text`（递归）、
+ * **纯属性节点/无文本回 ""**（调用方据此回落，如 guid 空则用 link）。
+ */
+export function textOf(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint") return String(v);
+  if (Array.isArray(v)) {
+    for (const item of v) {
+      const t = textOf(item);
+      if (t) return t;
+    }
+    return "";
+  }
+  if (typeof v === "object") {
+    const rec = v as Record<string, unknown>;
+    if ("#text" in rec) return textOf(rec["#text"]);
+    return "";
+  }
+  return "";
 }
 
 /**

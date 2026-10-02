@@ -31,6 +31,14 @@ const ATOM = `<?xml version="1.0"?>
 <entry><title>Atom C</title><id>c-3</id><updated>Wed, 03 Jan 2024 10:00:00 GMT</updated><summary>Summary C</summary><link href="http://ex.com/c"/></entry>
 </feed>`;
 
+// D68：带属性元素（Atom `<title type="html">` CDATA / RSS `<guid isPermaLink>`）——
+// 用户反馈的 theverge 形态；旧归一把它们转成 "[object Object]"（标题/摘要/已读去重全错）
+const ATTRIBUTED = `<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Attr</title>
+<item><title type="html"><![CDATA[Post&#x2019;s <b>one</b>]]></title><link>http://ex.com/g1</link><guid isPermaLink="true">http://ex.com/g1</guid><pubDate>Mon, 01 Jan 2024 10:00:00 GMT</pubDate><description type="html"><![CDATA[<p>Desc &amp; one &#x2019;</p>]]></description></item>
+<item><title>Plain two</title><link>http://ex.com/g2</link><guid isPermaLink="false">g2</guid><pubDate>Tue, 02 Jan 2024 10:00:00 GMT</pubDate><description>Desc two</description></item>
+</channel></rss>`;
+
 beforeAll(async () => {
   process.env.ADMIN_PASSWORD = "test-admin-password-123";
   process.env.ALLOW_PRIVATE_OUTBOUND = "1";
@@ -49,7 +57,9 @@ beforeAll(async () => {
 
   upstream = createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/xml" });
-    res.end(req.url === "/atom" ? ATOM : RSS);
+    if (req.url === "/atom") res.end(ATOM);
+    else if (req.url === "/attributed") res.end(ATTRIBUTED);
+    else res.end(RSS);
   });
   await new Promise<void>((r) => upstream.listen(0, "127.0.0.1", r));
   const addr = upstream.address();
@@ -272,4 +282,51 @@ describe("rss 条目数语义（Q22a：展示条数 = 过滤后切片；数值�
     expect(data2.errors.some((e) => e.title === "flaky")).toBe(false);
     flaky.close();
   }, 15000);
+});
+
+describe("D68：带属性节点归一（[object Object] 修复 + 已读去重）", () => {
+  it("带属性元素取 #text、摘要剥 HTML + 解实体、itemKey 互不相同", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/feeds",
+      cookies: { sid },
+      payload: { title: "attributed", url: `http://127.0.0.1:${port}/attributed` },
+    });
+    type Item = { link: string; title: string; summary: string; itemKey: string; read: boolean };
+    const pick = async (): Promise<{ g1: Item; g2: Item; count: number }> => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/widgets/data",
+        cookies: { sid },
+        payload: { type: "rss", config: { limit: 50 }, force: true },
+      });
+      const items = (res.json().data.items as Item[]).filter((i) => i.link.startsWith("http://ex.com/g"));
+      const empty: Item = { link: "", title: "(missing)", summary: "(missing)", itemKey: "(missing)", read: false };
+      return {
+        g1: items.find((i) => i.link === "http://ex.com/g1") ?? empty,
+        g2: items.find((i) => i.link === "http://ex.com/g2") ?? empty,
+        count: items.length,
+      };
+    };
+
+    const before = await pick();
+    expect(before.count).toBe(2);
+    // 标题/摘要不再是 [object Object]：CDATA 里的 HTML → 纯文本 + 实体解码
+    expect(before.g1.title).toBe("Post’s one");
+    expect(before.g1.summary).toBe("Desc & one ’");
+    expect(before.g2.title).toBe("Plain two");
+    // 旧 bug：`<guid isPermaLink>` 与带属性 title 归一成同一个 "[object Object]" → 全源同一 itemKey
+    expect(before.g1.itemKey).not.toBe(before.g2.itemKey);
+
+    // 已读去重：标 g1 只清 g1（旧 bug 会把 g2 一起清 —— 同 key）
+    await app.inject({
+      method: "POST",
+      url: "/api/feeds/read",
+      cookies: { sid },
+      payload: { itemKey: before.g1.itemKey },
+    });
+    const after = await pick();
+    expect(after.g1.read).toBe(true);
+    expect(after.g2.read).toBe(false);
+  });
 });

@@ -625,3 +625,13 @@
 - **被否备选**：① 加显式开关、默认仍最小沙箱（用户选了默认可用）；② 服务端反代 iframe 内容（工程量大、破坏 Origin 语义、与 SSRF 基线耦合）。
 - **兼容**：显式配过 `sandbox` 的旧组件不受影响（配置优先）；插件沙箱（D25）**保持 `allow-scripts` 不透明源不变**（插件是不可信代码，语义相反）。
 - **验证**：`verify-j7` 扩 3 断言（框内 `location.origin` 非 null、框内请求回显真实 Origin 头、同源拒绝）——13/13；**真机** `verify-iframe-live`（新增）5/5：Immich 真机框内 origin = `https://immich.xfdzcoder.space`（原为 "null"）、Navidrome 真机 `X-Frame-Options: DENY` 出明确提示。
+
+## D68 · RSS/Atom 节点归一 `textOf`：根治 `[object Object]` 与已读去重串号（2026-10-02）
+
+- **背景**：用户反馈「`https://www.theverge.com/rss/index.xml` 这个 rss 的文章标题和描述解析失败，都是 `[object Object]`，这个应该有专门的库统一处理？」。**根因**：fast-xml-parser 配了 `ignoreAttributes: false`（Atom `<link href>` 必须靠属性解析，不能关），**带属性的元素**解析成对象 `{ "#text": 文本, "@_type": "html" }`；旧归一 `String(v)` 把对象转成 `"[object Object]"`。theverge 实为 **Atom**，`<title type="html">`/`<summary type="html">` 全是带属性节点。**附带同根因 bug**：RSS `<guid isPermaLink="true">` 同样中招 → 所有条目 `itemKey` 哈希到同一个值 → **已读去重/标记全错**。
+- **决策（用户拍板，方案 = 自研归一收口，不新增依赖）**：
+  1. `connector/normalize.ts` 新增 **`textOf(v)`**（节点归一唯一入口）：标量原样（数字/布尔强转）、数组取首个非空成员、对象取 `#text`（递归）、纯属性节点/无文本回 **""**（调用方据此回落）。旧 `strLoose` 的 `String(v)` 语义**取消**（`[object Object]` 无人想看），并作为 `textOf` 的冗余别名一并删除。
+  2. feed 解析统一走 `plainText` = `textOf` → 剥 HTML 标签 → **手写基础实体解码**（`&amp; &lt; &gt; &quot; &apos; &nbsp;` + `&#NN;`/`&#xHH;`，越界码位原样保留）→ 压空白；标题/摘要都过（Atom `type="html"` 的 CDATA 里就是 HTML）。
+  3. `itemKeyOf` 拿到的 guid/link 是干净文本（guid 空自然回落 link）——已读去重恢复正确。
+- **被否备选**：① 引入 rss-parser/feedparser 整体替换 `parseEntries`（库内部仍要做节点归一，且多源聚合/tagIds/已读语义还要自己包一层，回归面大收益有限）；② 改 parser 选项关属性解析（Atom `link/@_href` 依赖属性，直接坏）；③ 只在 feed 局部打补丁不收口（其它 connector 迟早踩同一坑）。
+- **验证**：+5 单测（`textOf` 各形态）+ feed 契约 +1（带属性 fixture：标题/摘要人读文本、itemKey 互不相同、标一条只清一条）；**真机（用户自己的源「bbb」= theverge）**：标题如 `Tesla’s recovery hits a speed bump`（`&#x2019;` 正确解码）、摘要纯文本、itemKey 全唯一、全表零 `[object Object]`。
