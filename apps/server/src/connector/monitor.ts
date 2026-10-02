@@ -1,4 +1,5 @@
 import type { WidgetConnector, WidgetDataQuery, FetchContext } from "./registry.ts";
+import { num } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
 
 /**
@@ -22,10 +23,6 @@ export interface MonitorMetrics {
 
 const TIMEOUT_MS = 5000;
 const MAX_BYTES = 1_000_000;
-
-function num(v: unknown): number | undefined {
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
-}
 
 async function fetchJson(base: string, path: string, headers: Record<string, string>): Promise<unknown> {
   const res = await outboundRequest(`${base}${path}`, {

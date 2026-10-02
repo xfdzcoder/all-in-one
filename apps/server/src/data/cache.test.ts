@@ -76,3 +76,27 @@ describe("DataCache 字节封顶（SRV-05：base64 缩略图常驻内存）", ()
     expect(cache.get("u")).not.toBeNull();
   });
 });
+
+describe("DataCache LRU（SRV-19：命中/覆盖刷新 recency）", () => {
+  it("命中刷新 recency：再塞新条目时淘汰的是最久未命中的，不是最久插入的", () => {
+    const cache = new DataCache({ maxEntries: 2 });
+    cache.set("a", 1);
+    cache.set("b", 2);
+    expect(cache.get("a")).not.toBeNull(); // a 命中 → 移到队尾，b 变最久未命中
+    cache.set("c", 3);
+    expect(cache.get("b")).toBeNull(); // FIFO 旧实现会淘汰 a
+    expect(cache.get("a")).not.toBeNull();
+    expect(cache.get("c")).not.toBeNull();
+  });
+
+  it("覆盖同 key 也重排到队尾", () => {
+    const cache = new DataCache({ maxEntries: 2 });
+    cache.set("a", 1);
+    cache.set("b", 2);
+    cache.set("a", 11); // 覆盖 a → a 移到队尾，b 变最久未命中
+    cache.set("c", 3);
+    expect(cache.get("b")).toBeNull();
+    expect(cache.get("a")?.data).toBe(11);
+    expect(cache.get("c")).not.toBeNull();
+  });
+});

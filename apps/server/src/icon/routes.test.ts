@@ -77,6 +77,21 @@ describe("自定义图标库（Q38b/D45）", () => {
     expect(looksUnsafeSvg(clean)).toBe(false);
   });
 
+  it("SRV-21: 实体编码的 javascript: 不再绕过（解码检视 + href 按值判定）", () => {
+    // 数字实体（十进制/十六进制）藏 j —— 旧字面匹配双重漏检
+    expect(looksUnsafeSvg("&#106;avascript:alert(1)")).toBe(true);
+    expect(looksUnsafeSvg("&#x6a;avascript:alert(1)")).toBe(true);
+    expect(looksUnsafeSvg("javascript&colon;alert(1)")).toBe(true);
+    // href 属性值实体编码 → 净化直接清空该 href
+    const dirty = '<svg xmlns="http://www.w3.org/2000/svg"><a href="&#106;avascript:alert(1)"><rect width="1" height="1"/></a></svg>';
+    const clean = sanitizeSvg(dirty);
+    expect(clean).not.toContain("&#106;");
+    expect(clean).toContain('href=""');
+    expect(looksUnsafeSvg(clean)).toBe(false);
+    // 干净实体内容（&amp; 等）不误伤
+    expect(looksUnsafeSvg('<svg><text>Tom &amp; Jerry</text></svg>')).toBe(false);
+  });
+
   it("上传面校验：非法 mime 400、净化后仍危险 400、未登录 401", async () => {
     const bad = await app.inject({
       method: "POST",

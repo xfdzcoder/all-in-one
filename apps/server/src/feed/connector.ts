@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { strLoose } from "../connector/normalize.ts";
 
 import { and, eq, inArray } from "drizzle-orm";
 import { XMLParser } from "fast-xml-parser";
@@ -21,10 +22,6 @@ function asArray<T>(v: T | T[] | undefined): T[] {
   return Array.isArray(v) ? v : [v];
 }
 
-function str(v: unknown): string {
-  return typeof v === "string" ? v : v == null ? "" : String(v);
-}
-
 function itemKeyOf(url: string, guid: string, link: string): string {
   return createHash("sha256").update(`${url}|${guid || link}`).digest("hex").slice(0, 32);
 }
@@ -37,15 +34,15 @@ function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, 
   const rssChannel = (doc.rss as RawEntry | undefined)?.channel as RawEntry | undefined;
   const rssItems = asArray(rssChannel?.item as RawEntry | RawEntry[] | undefined);
   for (const it of rssItems) {
-    const link = str(it.link);
+    const link = strLoose(it.link);
     out.push({
-      title: str(it.title),
+      title: strLoose(it.title),
       link,
-      summary: str(it.description).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
-      date: str(it.pubDate),
-      guid: str(it.guid),
+      summary: strLoose(it.description).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
+      date: strLoose(it.pubDate),
+      guid: strLoose(it.guid),
       sourceUrl,
-      itemKey: itemKeyOf(sourceUrl, str(it.guid), link),
+      itemKey: itemKeyOf(sourceUrl, strLoose(it.guid), link),
     });
   }
 
@@ -56,16 +53,16 @@ function parseEntries(xmlText: string, sourceUrl: string): Array<Record<string, 
     let link = "";
     const l = en.link;
     if (typeof l === "string") link = l;
-    else if (Array.isArray(l)) link = str(l[0]?.["@_href"] ?? l[0]);
-    else if (l && typeof l === "object") link = str((l as RawEntry)["@_href"]);
+    else if (Array.isArray(l)) link = strLoose(l[0]?.["@_href"] ?? l[0]);
+    else if (l && typeof l === "object") link = strLoose((l as RawEntry)["@_href"]);
     out.push({
-      title: str(en.title),
+      title: strLoose(en.title),
       link,
-      summary: str(en.summary ?? en.content).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
-      date: str(en.updated ?? en.published),
-      guid: str(en.id),
+      summary: strLoose(en.summary ?? en.content).replace(/<[^>]+>/g, " ").trim().slice(0, 300),
+      date: strLoose(en.updated ?? en.published),
+      guid: strLoose(en.id),
       sourceUrl,
-      itemKey: itemKeyOf(sourceUrl, str(en.id), link),
+      itemKey: itemKeyOf(sourceUrl, strLoose(en.id), link),
     });
   }
   return out;
@@ -134,7 +131,7 @@ export const rssConnector: WidgetConnector = {
       }),
     );
 
-    entries.sort((a, b) => str(b.date).localeCompare(str(a.date)));
+    entries.sort((a, b) => strLoose(b.date).localeCompare(strLoose(a.date)));
 
     // 关联已读标记（Workspace 级 —— 任一组件标记，全部组件同步）
     const keys = entries.map((e) => String(e.itemKey));

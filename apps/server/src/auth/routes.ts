@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 
 import { eq } from "drizzle-orm";
 
@@ -8,9 +8,9 @@ import { verifyPassword } from "./password.ts";
 import {
   SESSION_COOKIE,
   createSession,
-  findValidSession,
   revokeSession,
 } from "./session.ts";
+import { authGuard } from "./guard.ts";
 
 /** argon2id hash of a random secret — verify() against it when user is missing,
  *  so login latency does not reveal whether an account exists. */
@@ -34,20 +34,6 @@ function setSessionCookie(
 
 function clearSessionCookie(reply: FastifyReply): void {
   reply.clearCookie(SESSION_COOKIE, { path: "/" });
-}
-
-async function requireUser(
-  req: FastifyRequest,
-  reply: FastifyReply,
-): Promise<{ id: string; username: string } | null> {
-  const token = req.cookies[SESSION_COOKIE];
-  const found = await findValidSession(req.server.db, token);
-  if (!found) {
-    clearSessionCookie(reply);
-    reply.code(401).send({ error: "unauthorized" });
-    return null;
-  }
-  return { id: found.user.id, username: found.user.username };
 }
 
 export function registerAuthRoutes(app: FastifyInstance): void {
@@ -89,10 +75,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
     return { ok: true };
   });
 
-  app.get("/api/auth/me", async (req, reply) => {
-    const me = await requireUser(req, reply);
-    if (!me) return;
-    return me;
+  // SRV-14：与全库路由同款 authGuard（原 requireUser 是同一逻辑的手抄第二份；
+  // authGuard 顺带清掉过期 token 会话，语义更完整）
+  app.get("/api/auth/me", { preHandler: authGuard }, async (req) => {
+    return req.user!;
   });
 }
 

@@ -1,5 +1,6 @@
 import type { WidgetConnector, WidgetDataQuery, FetchContext } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
+import { numOf } from "./normalize.ts";
 
 /**
  * OpenCode connector（FR-E4/06 §1"会话列表/状态/耗时 + API 版本探测"）。
@@ -25,10 +26,6 @@ interface OpencodeData {
 
 const TIMEOUT_MS = 8000;
 
-function num(v: unknown): number {
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
-}
-
 /** opencode session 形状探测（experimental API）：兼容 time.{created,updated} 与扁平字段。 */
 function normalizeSession(raw: unknown): OpencodeSession | null {
   if (!raw || typeof raw !== "object") return null;
@@ -36,8 +33,8 @@ function normalizeSession(raw: unknown): OpencodeSession | null {
   const id = typeof r.id === "string" ? r.id : "";
   if (!id) return null;
   const time = (r.time ?? {}) as Record<string, unknown>;
-  const createdAt = num(time.created) || num(r.createdAt);
-  const updatedAt = num(time.updated) || num(r.updatedAt) || createdAt;
+  const createdAt = numOf(time.created, 0) || numOf(r.createdAt, 0); // SRV-16：0 回落语义显式化
+  const updatedAt = numOf(time.updated, 0) || numOf(r.updatedAt, 0) || createdAt;
   return {
     id,
     title: typeof r.title === "string" && r.title ? r.title : "(无标题会话)",

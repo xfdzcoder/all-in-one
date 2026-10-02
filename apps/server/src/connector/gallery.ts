@@ -2,6 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
+import { str } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs , mapLimit, loadSourceConfig } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
 
@@ -52,10 +53,6 @@ const THUMB_MAX_BYTES = 500_000; // 缩略图（thumb 尺寸）通常 < 50KB
  *  页数封顶（≈360 候选）是**防打爆上游**的闸门，不是精度参数；导出供契约测试共用，避免两边漂移。 */
 export const IMMICH_PAGE_SIZE = 60;
 export const IMMICH_MAX_PAGES = 6;
-
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
-}
 
 /** 归一：search/metadata 的**已筛选条目** + 缩略图字节 → 网格项（可单测）。
  *  **Q70**：缩略图缺失的项仍保留（`thumb: ""`），由组件渲染占位 —— 避免网格缺格。

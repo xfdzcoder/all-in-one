@@ -60,6 +60,10 @@ export class DataCache {
       this.entries.delete(key);
       return null;
     }
+    // SRV-19：命中刷新 recency —— Map 迭代序即插入序，delete+set 移到队尾。
+    // 原实现「简单 LRU」实为 FIFO：命中不重排，超限时 `delete(oldest)` 会淘汰仍在高频使用的条目。
+    this.entries.delete(key);
+    this.entries.set(key, e);
     return e;
   }
 
@@ -84,8 +88,12 @@ export class DataCache {
     const size = estimateBytes(data);
     // 覆盖旧值：先退还旧字节
     const prev = this.entries.get(key);
-    if (prev) this.totalBytes -= prev.size;
-    // 简单 LRU：超条目/字节上限时删最旧（直到装得下；单条超预算则清空后仍缓存，保证命中率）
+    if (prev) {
+      this.totalBytes -= prev.size;
+      // SRV-19：覆盖已存在 key 同样重排到队尾（Map.set 不会移动既有键的迭代位）
+      this.entries.delete(key);
+    }
+    // LRU（SRV-19 修正）：超条目/字节上限时淘汰**最久未命中**（直到装得下；单条超预算则清空后仍缓存，保证命中率）
     while (
       this.entries.size > 0 &&
       (this.entries.size >= this.maxEntries || this.totalBytes + size > this.maxBytes) &&

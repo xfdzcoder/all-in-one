@@ -1,3 +1,4 @@
+import { demuxDockerLog } from "./portainer-containers.ts";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -101,5 +102,49 @@ describe("portainer 容器清单/日志数据通道", () => {
     )) as { logs: string };
     expect(logs.logs).toContain("hello");
     expect(logs.logs).toContain("bye");
+  });
+});
+
+describe("demuxDockerLog（SRV-20：按帧格式真解析）", () => {
+  const frame = (streamType: number, payload: Uint8Array): Uint8Array => {
+    const out = new Uint8Array(8 + payload.length);
+    out[0] = streamType;
+    out[4] = (payload.length >>> 24) & 0xff;
+    out[5] = (payload.length >>> 16) & 0xff;
+    out[6] = (payload.length >>> 8) & 0xff;
+    out[7] = payload.length & 0xff;
+    out.set(payload, 8);
+    return out;
+  };
+  const enc = (s: string): Uint8Array => new TextEncoder().encode(s);
+
+  it("多帧拼接为纯正文，无帧头残留", () => {
+    const bytes = new Uint8Array([
+      ...frame(1, enc("hello\n")),
+      ...frame(2, enc("warn\n")),
+      ...frame(1, enc("world\n")),
+    ]);
+    expect(demuxDockerLog(bytes)).toBe("hello\nwarn\nworld\n");
+  });
+
+  it("长度低位字节是可打印字符（≥0x20）也不残留乱码（旧正则翻车点）", () => {
+    const payload = enc("x".repeat(32)); // len=32 → 低字节 0x20（空格）
+    const bytes = frame(1, payload);
+    expect(demuxDockerLog(bytes)).toBe("x".repeat(32));
+  });
+
+  it("TTY raw 流（无帧头）整段原文回落", () => {
+    expect(demuxDockerLog(enc("plain tty line\nnext\n"))).toBe("plain tty line\nnext\n");
+  });
+
+  it("ANSI 颜色码剥离、\n/\t 保留", () => {
+    const bytes = frame(1, enc("\u001b[31mred\u001b[0m\tend\n"));
+    expect(demuxDockerLog(bytes)).toBe("red\tend\n");
+  });
+
+  it("尾部残缺帧 → 保守回落原文", () => {
+    const good = frame(1, enc("ok\n"));
+    const truncated = new Uint8Array([...good, 1, 0, 0, 0]); // 帧头不全
+    expect(demuxDockerLog(truncated)).toContain("ok\n");
   });
 });

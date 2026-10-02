@@ -2,6 +2,8 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
+import { str } from "./normalize.ts";
+import { subsonicAuth } from "./subsonic.ts";
 import { outboundRequest, resolveSecretRefs , mapLimit, loadSourceConfig } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
 
@@ -49,10 +51,6 @@ const COVER_MAX_BYTES = 1_000_000;
 const COVER_FALLBACK_SIZE = 300;
 const COVER_FALLBACK_MAX_BYTES = 400_000;
 
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
-}
-
 function sr(x: unknown): Record<string, unknown> {
   return (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
 }
@@ -92,15 +90,6 @@ export function normalizeNavidromeLibrary(
     });
   }
   return { albums };
-}
-
-/** Subsonic 认证（salt+md5，口令不入 URL 日志）。 */
-async function subsonicAuth(config: Record<string, unknown>): Promise<string> {
-  const user = str(config.username) ?? "";
-  const pass = str(config.password) ?? "";
-  const salt = Math.random().toString(36).slice(2, 10);
-  const token = await import("node:crypto").then((c) => c.createHash("md5").update(pass + salt).digest("hex"));
-  return `u=${encodeURIComponent(user)}&t=${token}&s=${salt}&v=1.16.1&c=all-in-one&f=json`;
 }
 
 /** Q72/D57：**艺人清单**（配置表单「只看某艺人」的选项源，随 sourceId 变化）。

@@ -2,6 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
+import { str } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
@@ -29,10 +30,6 @@ interface PortainerContainersData {
 }
 
 const TIMEOUT_MS = 8000;
-
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
-}
 
 /** 归一：containers/json 数组 → 清单项（可单测）。 */
 export function normalizePortainerContainers(raw: unknown): PortainerContainerItem[] {
@@ -124,9 +121,51 @@ export const portainerLogsConnector: WidgetConnector = {
       { headers, timeoutMs: TIMEOUT_MS, maxBytes: 300_000, allowPrivate: true },
     );
     if (res.status >= 400) throw new Error(`容器日志 HTTP ${res.status}`);
-    // Docker logs 流带 8 字节帧头，逐段剥掉后按行整理
-      // eslint-disable-next-line no-control-regex -- 有意：剥离日志流里的 ANSI/控制字符
-    const text = res.text.replace(/[\x00-\x08\x0b-\x1f]{1,8}/g, "").trim();
+    // SRV-20：按 Docker 复用帧格式真解析（原控制字符正则启发式会残留帧头乱码、误删正文控制字符）
+    const text = demuxDockerLog(res.bytes).trim();
     return { logs: text.slice(-8000) || "(无输出)" };
   },
 };
+
+/** 去 ANSI 转义与残留控制字符（保留 `\n`/`\t`），仅作用于**展示层**文本。 */
+/* oxlint-disable no-control-regex -- 有意：日志展示层剥离 ANSI/控制字符 */
+function cleanLogText(s: string): string {
+  return s
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
+    .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b[@-Z\\-_]/g, "")
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
+}
+/* oxlint-enable no-control-regex */
+
+/**
+ * Docker 日志流解帧（**SRV-20**）。
+ * TTY=false 时流是复用帧：`[streamType u8][0,0,0][len u32-be][payload]`；
+ * TTY=true 时是 raw 文本（无帧头）。按帧解析，任一帧不合法即整段回落原文解码（保守）。
+ * 原实现用 `replace(/[\x00-\x08\x0b-\x1f]{1,8}/g, "")` 启发式剥帧头：长度低位字节
+ * ≥0x20 时是可打印字符、不被正则命中 → 残留成日志行首乱码；同时误删正文控制字符。
+ */
+export function demuxDockerLog(bytes: Uint8Array): string {
+  const decode = (b: Uint8Array): string => cleanLogText(new TextDecoder().decode(b));
+  if (bytes.length === 0) return "";
+  const parts: Uint8Array[] = [];
+  let off = 0;
+  while (off < bytes.length) {
+    if (off + 8 > bytes.length) return decode(bytes); // 尾部残缺 → raw（保守）
+    const type = bytes[off]!;
+    const padOk = bytes[off + 1] === 0 && bytes[off + 2] === 0 && bytes[off + 3] === 0;
+    const len = (((bytes[off + 4]! << 24) | (bytes[off + 5]! << 16) | (bytes[off + 6]! << 8) | bytes[off + 7]!) >>> 0);
+    if (!padOk || type > 2 || off + 8 + len > bytes.length) return decode(bytes);
+    parts.push(bytes.subarray(off + 8, off + 8 + len));
+    off += 8 + len;
+  }
+  let total = 0;
+  for (const part of parts) total += part.length;
+  const joined = new Uint8Array(total);
+  let o = 0;
+  for (const part of parts) {
+    joined.set(part, o);
+    o += part.length;
+  }
+  return cleanLogText(new TextDecoder().decode(joined));
+}

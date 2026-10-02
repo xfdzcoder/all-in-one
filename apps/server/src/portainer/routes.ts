@@ -6,6 +6,7 @@ import { dataSource } from "../db/schema.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "../connector/registry.ts";
 import type { FetchContext } from "../connector/registry.ts";
 import { authGuard } from "../auth/guard.ts";
+import { str } from "../connector/normalize.ts";
 
 /**
  * Portainer 容器重启（FR-X3f 写操作，**D51**）：**仅 restart**（无 start/stop/delete）。
@@ -14,10 +15,6 @@ import { authGuard } from "../auth/guard.ts";
  * - **D31 二次确认**（前端 ConfirmAction 显示容器名）+ 审计日志（who/when/which）；
  * - 白名单判定按容器**名称**（restart 语义对用户是"重启某服务"，名称比随机 id 稳定）。
  */
-
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
-}
 
 /** 白名单解析（字符串逗号分隔 / 数组；空 = 拒绝一切）。 */
 export function parseRestartAllow(raw: unknown): string[] {

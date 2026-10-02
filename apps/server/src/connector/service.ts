@@ -6,6 +6,8 @@ import type { ServiceListItem, ServiceOverview } from "@all-in-one/widget-sdk";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
+import { num, str } from "./normalize.ts";
+import { subsonicAuth } from "./subsonic.ts";
 
 /**
  * 第三方服务概览适配器（Q39/D46 接入 · **Q44/D48 结构化重做**，指标按
@@ -53,14 +55,6 @@ async function postJson(
   });
   if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
   return res.text ? JSON.parse(res.text) : null;
-}
-
-function num(v: unknown): number | undefined {
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
-}
-
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
 }
 
 function gb(bytes: number): string {
@@ -398,15 +392,6 @@ export function normalizeMihomo(parts: {
     );
   }
   return out;
-}
-
-/** Subsonic 认证：salt+md5(token)（口令不入 URL）。 */
-async function subsonicAuth(config: Record<string, unknown>): Promise<string> {
-  const user = str(config.username) ?? "";
-  const pass = str(config.password) ?? "";
-  const salt = Math.random().toString(36).slice(2, 10);
-  const token = await import("node:crypto").then((c) => c.createHash("md5").update(pass + salt).digest("hex"));
-  return `u=${encodeURIComponent(user)}&t=${token}&s=${salt}&v=1.16.1&c=all-in-one&f=json`;
 }
 
 export const serviceOverviewConnector: WidgetConnector = {

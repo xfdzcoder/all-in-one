@@ -2,6 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
+import { num, str } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
@@ -38,13 +39,6 @@ export interface MihomoNodesData {
 }
 
 const TIMEOUT_MS = 8000;
-
-function str(v: unknown): string | undefined {
-  return typeof v === "string" && v ? v : undefined;
-}
-function num(v: unknown): number | undefined {
-  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
-}
 
 /** 归一：/proxies + /providers/proxies（可单测）。 */
 export function normalizeMihomoNodes(proxies: unknown, providers: unknown): Omit<MihomoNodesData, "notes"> {
