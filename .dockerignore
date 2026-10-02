@@ -1,0 +1,47 @@
+# 构建上下文排除（D74）：
+# 本地构建上下文原本约 478M，且 `COPY . .` 会把 .git、.opencode（含 .env.verify
+# 真实凭证）、data/（开发库）与宿主 node_modules 一并带进构建层 —— 全部在此排除。
+# 依赖与产物都在镜像内重新安装/构建，宿主侧任何状态都不需要进入上下文。
+
+# --- VCS / 工具状态 ---
+.git
+.gitignore
+.opencode
+.idea
+.mimocode
+.github
+
+# --- 依赖与构建产物（镜像内重新生成）---
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+*.local
+
+# --- 运行数据与凭证（绝不进上下文）---
+data
+apps/server/data
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.zip
+
+# --- 文档与协作文件（构建不需要）---
+docs
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+README.md
+AGENTS.md
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
+CHANGELOG.md
+
+# --- 测试产物 ---
+apps/web/test-results
+apps/web/playwright-report
