@@ -6,7 +6,7 @@
 
 - **阶段门控**：需求分析 → 产品定义 → 技术方案设计 → MVP 定义 → 实施。未经用户明确确认，不得进入下一阶段；文档先行于编码。不要擅自扩大需求范围。
 - **质量门禁（D47）**：新增组件、接入第三方服务、改动卡片指标，必须过 `docs/feature-plan/08-widget-quality.md` 的推导顺序与 §5 DoD 清单（含真机验证），自检结果写入当轮记录。
-- **需求/决策变更**：更新 `docs/feature-plan/01-requirements.md`，并向 `docs/feature-plan/02-decisions.md` 追加 `D#` 条目（ADR 风格，保留历史，不静默改写）。当前决策 D1–D63；MVP 里程碑与进度见 `05-mvp.md` / `README.md`。
+- **需求/决策变更**：更新 `docs/feature-plan/01-requirements.md`，并向 `docs/feature-plan/02-decisions.md` 追加 `D#` 条目（ADR 风格，保留历史，不静默改写）。当前决策 D1–D75；MVP 里程碑与进度见 `05-mvp.md` / `README.md`。
 - 非目标与排后组件（Kanban/邮件/监控/OpenCode、代码插件安装器、多用户/公网）见 `01-requirements.md` §1.2/§2.3，勿提前实现。新想法进 `06-roadmap.md` 待定清单。
 - 提交信息用英文 conventional commits；工作区只提交代码与文档，`.idea/`、`.mimocode/` 已 gitignore。**M2 起每个小批次（子项）完成后单独一次 commit**，勿攒大提交。
 

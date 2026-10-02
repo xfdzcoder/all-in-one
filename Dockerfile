@@ -8,7 +8,7 @@ WORKDIR /repo
 RUN npm i -g pnpm@12.6.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # pnpm patchedDependencies（D49 gridstack 补丁）登记在 pnpm-workspace.yaml，
-# 必须先于 install 落位，否则 pnpm 直接报 "Failed to read patch file"（D74）
+# 必须先于 install 落位，否则 pnpm 直接报 "Failed to read patch file"（D75）
 COPY patches/ patches/
 COPY apps/web/package.json apps/web/
 COPY apps/server/package.json apps/server/
@@ -30,7 +30,7 @@ RUN npm i -g pnpm@12.6.0
 # 运行时仅需 server 的生产依赖（pnpm 处理 workspace 符号链接）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # pnpm patchedDependencies（D49 gridstack 补丁）登记在 pnpm-workspace.yaml，
-# 必须先于 install 落位，否则 pnpm 直接报 "Failed to read patch file"（D74）
+# 必须先于 install 落位，否则 pnpm 直接报 "Failed to read patch file"（D75）
 COPY patches/ patches/
 COPY apps/server/package.json apps/server/
 COPY packages/widget-sdk/package.json packages/widget-sdk/
