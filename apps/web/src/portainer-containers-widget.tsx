@@ -54,7 +54,7 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {restart.error && <WbAlert tone="error" size="sm">重启失败：{restart.error}</WbAlert>}
 
-      <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
+      <Stack gap={4} className="wb-scroll-area">
         {containers.map((c) => (
           // WEB-3：行改成 `div role=button` —— 原来行是 <button>，内部又嵌 ConfirmAction 的
           // <button>（非法嵌套交互元素）；且点「重启」会冒泡到行 onClick → 确认框与日志弹窗同时弹。

@@ -110,7 +110,7 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
       )}
 
       {data?.probe?.ok && (
-        <Stack gap={6} style={{ flex: 1, overflow: "auto" }}>
+        <Stack gap={6} className="wb-scroll-area">
           <Group gap="xs" wrap="nowrap" align="stretch">
             <MetricCard label="CPU" value={data.cpu ? `${data.cpu.percent.toFixed(1)}%` : "—"} />
             <MetricCard
@@ -140,7 +140,7 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
             {data.disks.map((d) => (
               <div key={d.point}>
                 <Group gap={6} justify="space-between">
-                  <Text size="xs" lineClamp={1} style={{ flex: 1 }}>
+                  <Text size="xs" lineClamp={1} className="wb-flex-1">
                     {d.point}
                   </Text>
                   <Text size="xs" c="dimmed">

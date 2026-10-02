@@ -29,7 +29,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {data && (
-        <Stack gap={6} style={{ flex: 1, overflow: "auto" }}>
+        <Stack gap={6} className="wb-scroll-area">
           {data.groups.length > 0 && (
             <div className="wb-svc-list">
               <Text size="xs" fw={600} c="dimmed">
@@ -42,7 +42,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                     <Text size="xs" truncate style={{ minWidth: 110 }}>
                       {g.name}
                     </Text>
-                    <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
+                    <Text size="xs" c="dimmed" truncate className="wb-flex-1">
                       → {g.now ?? "—"}
                     </Text>
                     <Badge size="xs" variant="light" color="blue">
@@ -63,7 +63,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                 {data.nodes.slice(0, 30).map((n, ni) => (
                   // WEB-25
                   <Group key={`n-${n.name}-${ni}`} gap={6} wrap="nowrap">
-                    <Text size="xs" truncate style={{ flex: 1 }}>
+                    <Text size="xs" truncate className="wb-flex-1">
                       {n.name}
                     </Text>
                     {n.delayMs !== undefined ? (
@@ -90,7 +90,7 @@ export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string;
                 {data.providers.map((p, pi) => (
                   // WEB-25
                   <Group key={`p-${p.name}-${pi}`} gap={6} wrap="nowrap">
-                    <Text size="xs" truncate style={{ flex: 1 }}>
+                    <Text size="xs" truncate className="wb-flex-1">
                       {p.name}
                     </Text>
                     <Text size="xs" c="dimmed">

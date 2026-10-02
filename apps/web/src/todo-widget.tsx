@@ -68,7 +68,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
               setDraft("");
             }
           }}
-          style={{ flex: 1 }}
+          className="wb-flex-1"
         />
         <Button
           size="xs"
@@ -98,7 +98,7 @@ export function TodoWidget({ name, list = "inbox", filter = "open", refreshSec }
       )}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
-      <List listStyleType="none" style={{ flex: 1, overflow: "auto" }}>
+      <List listStyleType="none" className="wb-scroll-area">
         {items.map((t) => (
           <List.Item key={t.id}>
             <Group gap="xs" wrap="nowrap">

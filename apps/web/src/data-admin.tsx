@@ -38,6 +38,7 @@ import { TagInput } from "./tag-input";
 import { ServiceIcon } from "./service-icon";
 import { WbAlert } from "./ui";
 import { reportError } from "./feedback";
+import { TERMS } from "./terms";
 
 /**
  * 数据源管理（FR-D2/D40；Q25c/#2 由弹窗改为**独立全页**——大数量好展示）：
@@ -246,24 +247,24 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                   <Group gap="xs" wrap="nowrap">
                     <Select
                       size="xs"
-                      placeholder="选择 ToDo"
+                      placeholder={`选择${TERMS.todoGroup}`}
                       data={names.map((n: string) => ({
                         value: n,
                         label: n,
                       }))}
                       value={current ?? null}
                       onChange={(v) => setActiveTodoName(v ?? undefined)}
-                      nothingFoundMessage="暂无 ToDo —— 在 Dashboard 添加组件并命名"
+                      nothingFoundMessage={`暂无${TERMS.todoGroup} —— 在 Dashboard 添加组件并命名`}
                       className="wb-grow"
-                      aria-label="ToDo 选择"
+                      aria-label={`${TERMS.todoGroup}选择`}
                     />
                     {current && (
                       <ConfirmAction
-                        label="删除 ToDo"
+                        label={`删除${TERMS.todoGroup}`}
                         size="compact-xs"
                         variant="subtle"
-                        title="删除 ToDo？"
-                        message={`确认删除 ToDo「${current}」？将真删其全部 ${totalCount} 项任务（不可恢复；Dashboard 上的卡片只是视图）`}
+                        title={`删除${TERMS.todoGroup}？`}
+                        message={`确认删除${TERMS.todoGroup}「${current}」？将真删其全部 ${totalCount} 项任务（不可恢复；Dashboard 上的卡片只是视图）`}
                         onConfirm={() => {
                           todoMut.deleteGroup.mutate(current);
                           setActiveTodoName(undefined);
@@ -366,7 +367,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                   )}
                   {names.length === 0 && (
                     <Text size="xs" c="dimmed">
-                      暂无 ToDo —— 在 Dashboard「添加组件 · 个人 Todo」创建并命名后，这里按名称管理
+                      暂无分组 —— 在 Dashboard「添加组件 · 个人 Todo」创建并命名后，这里按名称管理
                     </Text>
                   )}
                 </>
@@ -384,7 +385,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                 placeholder="标题"
                 value={newSourceTitle}
                 onChange={(e) => setNewSourceTitle(e.currentTarget.value)}
-                style={{ width: 130 }}
+                className="wb-col-130"
               />
               <TextInput
                 size="xs"
@@ -401,7 +402,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     setNewSourceTitle("");
                   }
                 }}
-                style={{ flex: 1 }}
+                className="wb-flex-1"
               />
               <Button
                 size="xs"
@@ -423,7 +424,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                 .filter((src: FeedSource) => !q || src.title.includes(q) || src.url.includes(q))
                 .map((s: FeedSource) => (
                   <div key={s.id} className="wb-admin__row" data-admin-row="feed">
-                    <Text size="sm" fw={600} style={{ width: 140 }} truncate>
+                    <Text size="sm" fw={600} className="wb-col-140" truncate>
                       {s.title}
                     </Text>
                     <Text size="xs" c="dimmed" className="wb-grow" truncate>
@@ -731,7 +732,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                       placeholder="连接名称"
                       value={dsName}
                       onChange={(e) => setDsName(e.currentTarget.value)}
-                      style={{ width: 150 }}
+                      className="wb-col-150"
                     />
                     {DS_FIELDS[dsKind].map((f) =>
                       f.type === "select" ? (
@@ -741,7 +742,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                           data={f.options ?? []}
                           value={dsConfig[f.key] ?? "none"}
                           onChange={(v) => setDsConfig((c) => ({ ...c, [f.key]: v ?? "" }))}
-                          style={{ width: 110 }}
+                          className="wb-col-110"
                           aria-label={f.label}
                         />
                       ) : (
@@ -756,7 +757,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                             const v = e.currentTarget.value;
                             setDsConfig((c) => ({ ...c, [f.key]: v }));
                           }}
-                          style={{ width: 160 }}
+                          className="wb-col-160"
                         />
                       ),
                     )}
@@ -776,7 +777,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     .filter((r: DataSourceRow) => r.kind === dsView && (!q || r.name.includes(q)))
                     .map((r: DataSourceRow) => (
                       <div key={r.id} className="wb-admin__row" data-admin-row="source">
-                        <Text size="sm" fw={600} style={{ width: 140 }} truncate>
+                        <Text size="sm" fw={600} className="wb-col-140" truncate>
                           {r.name}
                         </Text>
                         <Text size="xs" c="dimmed" className="wb-grow" truncate>
@@ -846,14 +847,14 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     setNewTagName("");
                   }
                 }}
-                style={{ flex: 1 }}
+                className="wb-flex-1"
               />
               <Select
                 size="xs"
                 data={TAG_COLORS}
                 value={newTagColor}
                 onChange={(v) => setNewTagColor(v ?? "")}
-                style={{ width: 90 }}
+                className="wb-col-90"
                 aria-label="标签颜色"
               />
               <Button
@@ -887,10 +888,10 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     data={TAG_COLORS}
                     value={t.color ?? ""}
                     onChange={(v) => tagMut.update.mutate({ id: t.id, color: v || null })}
-                    style={{ width: 90 }}
+                    className="wb-col-90"
                     aria-label={`标签颜色 ${t.name}`}
                   />
-                  <Text size="xs" c="dimmed" style={{ width: 64 }}>
+                  <Text size="xs" c="dimmed" className="wb-col-64">
                     {t.targetCount} 项
                   </Text>
                   <ConfirmAction

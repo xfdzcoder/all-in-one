@@ -61,7 +61,7 @@ export function MailWidget({
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
       {!open && (
-        <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
+        <Stack gap={4} className="wb-scroll-area">
           {loading && <WbLoading />}
           {!loading && (agg?.items ?? []).length === 0 && (
             <Text size="xs" c="dimmed">
@@ -90,7 +90,7 @@ export function MailWidget({
                 {!item.seen && <Badge size="xs" color="blue" circle>
                   &nbsp;
                 </Badge>}
-                <Text size="xs" fw={item.seen ? 400 : 600} style={{ flex: 1 }} lineClamp={1}>
+                <Text size="xs" fw={item.seen ? 400 : 600} className="wb-flex-1" lineClamp={1}>
                   {item.subject}
                 </Text>
                 <Text size="xs" c="dimmed">
@@ -116,7 +116,7 @@ export function MailWidget({
             <Button size="compact-xs" variant="subtle" onClick={() => setOpen(null)}>
               ← 返回
             </Button>
-            <Text size="xs" fw={600} style={{ flex: 1 }} lineClamp={1}>
+            <Text size="xs" fw={600} className="wb-flex-1" lineClamp={1}>
               {open.subject}
             </Text>
           </Group>
@@ -131,7 +131,7 @@ export function MailWidget({
           )}
           {detail && detail.html && <HtmlSandbox html={detail.html} title={`mail-${open.uid}`} />}
           {detail && !detail.html && (
-            <pre style={{ margin: 0, flex: 1, overflow: "auto", whiteSpace: "pre-wrap", fontSize: 12 }}>{detail.text}</pre>
+            <pre className="wb-mail-raw">{detail.text}</pre>
           )}
         </Stack>
       )}

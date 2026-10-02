@@ -133,7 +133,7 @@ try {
   ok(
     "J4 data admin select ToDo",
     await page.evaluate((_n) => {
-      const sel = document.querySelector('[aria-label="ToDo 选择"]');
+      const sel = document.querySelector('[aria-label="分组选择"]'); // WEB-22 术语统一（ToDo→分组）
       sel?.click();
       return Boolean(sel);
     }, `J4A-${uniqA}`),

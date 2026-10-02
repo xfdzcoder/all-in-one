@@ -145,7 +145,7 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
             accept=".zip,application/zip"
             value={file}
             onChange={setFile}
-            style={{ flex: 1 }}
+            className="wb-flex-1"
             size="xs"
           />
           <Button size="xs" onClick={() => void install()} disabled={!file || busy}>
@@ -193,7 +193,7 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
             return (
               <List.Item key={row.id}>
                 <Group gap="xs" wrap="nowrap" align="flex-start">
-                  <Stack gap={2} style={{ flex: 1 }}>
+                  <Stack gap={2} className="wb-flex-1">
                     <Group gap={6}>
                       <Text size="sm" fw={600}>
                         {row.name}

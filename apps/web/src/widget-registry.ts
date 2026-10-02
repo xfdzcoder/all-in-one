@@ -9,6 +9,7 @@ import { IframeWidget } from "./iframe-widget";
 import { KanbanWidget } from "./kanban-widget";
 import { MailWidget } from "./mail-widget";
 import { OpencodeWidget } from "./opencode-widget";
+import { TERMS } from "./terms";
 import { MonitorWidget } from "./monitor-widget";
 import { ServiceOverviewWidget } from "./service-overview-widget";
 import { ImmichGalleryWidget } from "./immich-gallery-widget";
@@ -131,7 +132,7 @@ const customApiManifest: WidgetManifest = {
 
 const rssManifest: WidgetManifest = {
   type: "rss",
-  name: "信息流",
+  name: TERMS.rss, // WEB-22：卡片标题 Q85 起为「RSS」，选择器名随之统一
   description: "多源 RSS/Atom 聚合，未读标记归 Workspace（跨组件同步）",
   icon: "rss", // Q38a：官方品牌图标
   category: "信息流",

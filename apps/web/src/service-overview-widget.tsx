@@ -115,7 +115,7 @@ function ListBlock({ list }: { list: { title: string; items: ServiceListItem[] }
               {it.title}
             </Text>
             {it.detail && (
-              <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
+              <Text size="xs" c="dimmed" truncate className="wb-flex-1">
                 {it.detail}
               </Text>
             )}
@@ -200,7 +200,7 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
       )}
       {loading && <WbLoading />}
       {ov?.probe?.ok && (
-        <Stack gap={6} style={{ flex: 1, overflow: "auto" }}>
+        <Stack gap={6} className="wb-scroll-area">
           {(ov.statuses ?? []).length > 0 && (
             <Group gap={6}>
               {(ov.statuses ?? []).map((s, i) => (

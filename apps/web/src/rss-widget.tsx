@@ -9,7 +9,7 @@ import { WbAlert, WbLoading, IconAction } from "./ui";
 /**
  * RSS 组件（FR：多源订阅、摘要、未读标记归 Workspace、跳转原文）。
  * 已读态是 Workspace 数据 —— 任一组件标记，其它组件经 SSE 同步（FR-I6）。
- * 订阅源管理与打标签在「数据管理」（FR-D2/D40）；本组件按标签选源（FR-D3）。
+ * 订阅源管理与打标签在「数据源管理」（FR-D2/D40）；本组件按标签选源（FR-D3）。
  */
 export type RssConfig = {
   limit?: number;
@@ -63,7 +63,7 @@ export function RssWidget({
 
       {items.map((it: FeedItem) => (
         <Group key={it.itemKey} gap="xs" wrap="nowrap" align="flex-start">
-          <Badge size="xs" circle color={it.read ? "gray" : "blue"} style={{ marginTop: 4 }}>
+          <Badge size="xs" circle color={it.read ? "gray" : "blue"} className="wb-rss-badge">
             &nbsp;
           </Badge>
           <div className="wb-grow">

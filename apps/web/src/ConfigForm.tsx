@@ -161,7 +161,7 @@ export function ConfigForm({
                   label={f.label}
                   size="xs"
                   type="password"
-                  style={{ flex: 1 }}
+                  className="wb-flex-1"
                   placeholder="保存时写入凭证库（明文不进配置）"
                   value={shown}
                   onChange={(e) => onChange(f.key, e.currentTarget.value)}

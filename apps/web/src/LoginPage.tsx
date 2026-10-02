@@ -33,7 +33,7 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: () => void }) {
       p="xl"
       radius="md"
       withBorder
-      style={{ width: 360, margin: "12vh auto" }}
+      className="wb-login-card"
     >
       <Stack>
         {/* ISS-8：品牌图标与头部一致 */}

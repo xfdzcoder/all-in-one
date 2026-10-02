@@ -489,6 +489,46 @@ a.wb-widget__title-link:focus-visible {
   cursor: pointer;
 }
 
+/* ── WEB-23（D39 收口）：内联 style 改语义类 —— 「类名即公共 API」，/custom.css 才能覆盖。
+ * 取舍口径：**视觉属性**（字号/颜色/间距/圆角/固定列宽）一律走类；**动态值**（条件样式、
+ * 计算宽度、CSS 变量透传如 `--wb-placeholder-bg`）保留内联 —— 类承载不了运行时值。 ── */
+.wb-flex-1 {
+  flex: 1;
+}
+.wb-scroll-area {
+  flex: 1;
+  overflow: auto;
+}
+.wb-col-64 { width: 64px; }
+.wb-col-90 { width: 90px; }
+.wb-col-110 { width: 110px; }
+.wb-col-130 { width: 130px; }
+.wb-col-140 { width: 140px; }
+.wb-col-150 { width: 150px; }
+.wb-col-160 { width: 160px; }
+.wb-login-card {
+  width: 360px;
+  margin: 12vh auto;
+}
+.wb-mail-raw {
+  margin: 0;
+  flex: 1;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+.wb-sandbox-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+}
+.wb-rss-badge {
+  margin-top: 4px;
+}
+
 /* A11Y-1：文本触发器换真 <button> 时消 UA 默认观感（排版/配色仍由元素自身类负责）。
  * 仅用于**不自带盒模型**的文本元素 —— Card 富行的 padding/bg 走 Mantine 类，勿加本类
  * （本类 padding:0 会盖掉 Card 的作者级 padding）。 */

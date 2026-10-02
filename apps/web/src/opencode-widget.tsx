@@ -63,7 +63,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
       )}
       {loading && <WbLoading />}
 
-      <Stack gap={4} style={{ flex: 1, overflow: "auto" }}>
+      <Stack gap={4} className="wb-scroll-area">
         {data?.probe?.ok && (data.sessions ?? []).length === 0 && (
           <Text size="xs" c="dimmed">
             暂无会话
@@ -87,7 +87,7 @@ export function OpencodeWidget(config: { url?: string; limit?: number } & Record
                 }}
           >
             <Group gap={6} justify="space-between" wrap="nowrap">
-              <Text size="xs" fw={500} lineClamp={1} style={{ flex: 1 }}>
+              <Text size="xs" fw={500} lineClamp={1} className="wb-flex-1">
                 {s.title}
               </Text>
               <Badge size="xs" variant="outline">

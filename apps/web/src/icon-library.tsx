@@ -94,7 +94,7 @@ export function IconLibrary() {
               placeholder="图标名称"
               value={name}
               onChange={(e) => setName(e.currentTarget.value)}
-              style={{ width: 160 }}
+              className="wb-col-160"
             />
             <input
               type="file"
@@ -114,7 +114,7 @@ export function IconLibrary() {
             <span className="wb-source-logo" aria-hidden>
               <ServiceIcon name={`/api/icons/${r.id}`} size={22} />
             </span>
-            <Text size="sm" fw={600} style={{ width: 140 }} truncate>
+            <Text size="sm" fw={600} className="wb-col-140" truncate>
               {r.name}
             </Text>
             <Text size="xs" c="dimmed" className="wb-grow" truncate>
