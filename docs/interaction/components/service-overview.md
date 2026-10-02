@@ -52,5 +52,5 @@ POST /api/widgets/data { type:"service-overview", config:{ sourceId } }
 
 ### 行为边界
 
-- 深度操作（照片墙/播放/容器操作/代理切换）**不提供**（FR-X3 二期另立需求）。
+- 深度组件已落地为**只读**（D50/Q50–Q53）：[Immich 照片墙](immich-gallery.md) / [Navidrome 专辑墙](navidrome-library.md) / [Portainer 容器清单](portainer-containers.md) / [Mihomo 节点面板](mihomo-nodes.md)；写操作**仅保留 Portainer 容器重启**（D51/Q56，白名单+确认+审计），Navidrome 播放遥控与 Mihomo 策略切换已 **D54 移除**。
 - 组件删除/页面删除不影响连接数据（FR-D4）。
