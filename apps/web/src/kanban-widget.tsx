@@ -131,7 +131,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
 
       {boardId && (
         <Group className="wb-kanban__board" gap="xs" wrap="nowrap">
-          {(tree?.columns ?? []).map((col) => (
+          {(tree?.columns ?? []).map((col) => ( // oxlint-disable-line react/refs -- tree 是 useKanbanTree 的查询数据，非 ref，规则误判
             <div
               key={col.id}
               className={`wb-kanban__col${dropTarget?.colId === col.id ? " wb-kanban__col--drop" : ""}`}

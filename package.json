@@ -11,5 +11,8 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "knip": "^6.39.0"
   }
 }

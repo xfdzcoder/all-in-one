@@ -608,9 +608,9 @@ export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
     refetchInterval: refreshInterval(refreshSec, 60_000),
   });
   return {
-    data: query.data as
-      | { probe: { ok: boolean; version?: string; error?: string }; stats: Array<{ label: string; value: string }> }
-      | undefined,
+    // LNT-2：不再手写局部形状断言（「类型说的比实际少」）—— 回原始 unknown 形状，
+    // 由组件过 `validateServiceOverview` 契约校验后收窄（service-overview-widget）。
+    data: query.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, key, "service-overview", { sourceId }),

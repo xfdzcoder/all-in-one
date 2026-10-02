@@ -35,7 +35,9 @@ export {
   type ServiceStatus,
   emptyOverview,
   validateServiceOverview,
+  isServiceOverview,
 } from "./service-overview.ts";
+
 
 export {
   type ActionCapability,

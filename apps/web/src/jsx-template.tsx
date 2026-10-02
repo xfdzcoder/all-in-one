@@ -24,23 +24,31 @@ import type { TemplateNode } from "@all-in-one/widget-sdk";
  * 无事件处理器；此处仅做树 → 元素映射（不执行任何字符串代码）。
  */
 
-// oxlint-disable-next-line no-explicit-any -- 白名单组件 props 形态各异；校验层已限制可传属性
-const COMPONENTS: Record<string, ComponentType<any>> = {
-  Stack,
-  Group,
-  SimpleGrid,
-  Center,
-  Space,
-  Text,
-  Title,
-  Code,
-  Badge,
-  Card,
-  Paper,
-  Alert,
-  Progress,
-  Anchor,
-  Divider,
+/** 白名单组件的 props 形态各异 —— 统一按「未知键值对象」调用（校验层已限制可传属性）。
+ *  LNT-2：原 `ComponentType<any>` 抹掉全部组件 props 类型，改为显式 `Record<string, unknown>`。 */
+type JsxProps = Record<string, unknown>;
+
+/** LNT-2：Mantine 各组件 props 形态不同（strictFunctionTypes 下无法直接赋给统一签名）——
+ *  在此**单点**放宽为 `Record<string, unknown>`；真正的防线是模板校验层的属性白名单（D35）。
+ *  比通篇 `ComponentType<any>` 诚实：逃逸面收敛到一个函数。 */
+const asJsxComponent = (c: unknown): ComponentType<JsxProps> => c as ComponentType<JsxProps>;
+
+const COMPONENTS: Record<string, ComponentType<JsxProps>> = {
+  Stack: asJsxComponent(Stack),
+  Group: asJsxComponent(Group),
+  SimpleGrid: asJsxComponent(SimpleGrid),
+  Center: asJsxComponent(Center),
+  Space: asJsxComponent(Space),
+  Text: asJsxComponent(Text),
+  Title: asJsxComponent(Title),
+  Code: asJsxComponent(Code),
+  Badge: asJsxComponent(Badge),
+  Card: asJsxComponent(Card),
+  Paper: asJsxComponent(Paper),
+  Alert: asJsxComponent(Alert),
+  Progress: asJsxComponent(Progress),
+  Anchor: asJsxComponent(Anchor),
+  Divider: asJsxComponent(Divider),
 };
 
 /** 校验用白名单（与渲染映射同源）。 */

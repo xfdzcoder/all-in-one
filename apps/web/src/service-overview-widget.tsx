@@ -1,7 +1,8 @@
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Stack, Text } from "@mantine/core";
 
+import { isServiceOverview, validateServiceOverview } from "@all-in-one/widget-sdk";
 import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-one/widget-sdk";
 
 import { useServiceOverview, useSourceHomeUrl } from "./data-hooks";
@@ -27,8 +28,11 @@ type Sample = { t: number; series: Record<string, number> };
  */
 function useTrend(sample: ServiceOverview["sample"]): Array<{ key: string; label: string; points: number[] }> {
   const [samples, setSamples] = useState<Sample[]>([]);
-  useEffect(() => {
-    if (!sample) return;
+  const [lastSample, setLastSample] = useState<ServiceOverview["sample"]>(undefined);
+  // react(set-state-in-effect)：改为**渲染期派生**（React 官方「storing information from previous
+  // renders」模式，state 比较而非 ref —— ref-in-render 会被 react(refs) 抓）；严格模式双渲染幂等。
+  if (sample && sample !== lastSample) {
+    setLastSample(sample);
     setSamples((prev) => {
       const t = Date.parse(sample.at);
       const ts = Number.isFinite(t) ? t : Date.now();
@@ -36,7 +40,7 @@ function useTrend(sample: ServiceOverview["sample"]): Array<{ key: string; label
       if (last && ts - last.t < 500) return prev; // 去抖（同一次轮询的重复渲染）
       return [...prev, { t: ts, series: sample.series }].slice(-TREND_MAX);
     });
-  }, [sample]);
+  }
 
   return useMemo(() => {
     if (samples.length < 2) return [];
@@ -146,7 +150,18 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
     http: "",
   };
 
-  const ov = data as unknown as ServiceOverview | undefined;
+  // LNT-2：原 `as unknown as` 双重断言会静默吞掉形状漂移 —— 先过契约校验再收窄
+  //（validateServiceOverview 来自 widget-sdk；校验失败留在控制台，渲染仍按已知字段走）
+  const ov = useMemo<ServiceOverview | undefined>(() => {
+    const raw: unknown = data;
+    if (raw === undefined || raw === null) return undefined;
+    // LNT-2：类型守卫收窄（零断言）—— 形状漂移时有明确信号（控制台 + 空态），不再静默吞
+    if (!isServiceOverview(raw)) {
+      console.error("[service-overview] 契约校验失败：", validateServiceOverview(raw));
+      return undefined;
+    }
+    return raw;
+  }, [data]);
   const trend = useTrend(ov?.sample);
 
   const primary = ov?.metrics?.find((m) => m.emphasis);

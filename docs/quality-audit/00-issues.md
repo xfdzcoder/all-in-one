@@ -84,8 +84,8 @@
 | [15-docs.md](15-docs.md) | DOC-3, DOC-4, DOC-5, DOC-6, DOC-7, DOC-8, DOC-9, DOC-10, DOC-11, DOC-12, DOC-13, DOC-14, DOC-15, DOC-16, DOC-17, DOC-18, DOC-19, DOC-20, DOC-21, DOC-22, DOC-23, DOC-24, DOC-25, DOC-26, DOC-27, DOC-28 | Q101 |
 | QA-002 | minCell→rowHeight 一次性配置迁移 | Q101 |
 | LNT-1 | 三份 .oxlintrc.json 两份空规则集（静态检测面远窄于拍板目标） | **✅ 已修（Q96a）**：规则开足 + 定向豁免 + 清零 160 条（242→82） | Q96a ✅ |
-| LNT-2 | 全仓仅存 2 处类型断言逃逸（抹 props 类型 / 双重断言绕 zod） | Q96b | ⏳ |
-| LNT-3 | 死代码/未用导出/未用依赖无守卫（人工扫恰好干净，但无工具兜底） | Q96b（引入 knip） | ⏳ |
+| LNT-2 | 全仓仅存 2 处类型断言逃逸（抹 props 类型 / 双重断言绕 zod） | **✅ 已修（Q96b）**：单点收窄函数 + `isServiceOverview` 类型守卫（调用点零断言） | ✅ |
+| LNT-3 | 死代码/未用导出/未用依赖无守卫 | **✅ knip 已引入并跑通**（Q96b）：死文件 tag-filter.tsx 已删；未用导出 58 条入 Q96c 清理 | ✅ |
 
 ## 已定项（06 §3 #7 ⑭⑮）
 

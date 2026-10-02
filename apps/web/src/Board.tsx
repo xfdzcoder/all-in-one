@@ -322,7 +322,7 @@ export function Board({
   // prematurely flush mid-debounce after every parent re-render).
   const flushRef = useRef(flush);
   useEffect(() => {
-    flushRef.current = flush;
+    flushRef.current = flush; // oxlint-disable-line react/immutability -- latest-ref 惯用法（React 官方模式），ref.current 赋值即其用法
   });
 
   // Q22a：编辑态在 App —— true→false 转移时冲刷未保存布局（原 toggle 内联逻辑迁移至此）
@@ -398,11 +398,16 @@ export function Board({
     [configureId, configManifest, configOriginal, scheduleSave],
   );
 
+  const editCtxValue = useMemo(
+    () => ({ editMode: effectiveEditMode, onConfigure: openConfig, requestSave: scheduleSave }),
+    [effectiveEditMode, openConfig, scheduleSave],
+  );
+
   return (
     <div>
       {saveError && <WbAlert tone="error">{saveError}</WbAlert>}
       <WidgetEditContext.Provider
-        value={{ editMode: effectiveEditMode, onConfigure: openConfig, requestSave: scheduleSave }}
+        value={editCtxValue} // jsx-no-constructed-context-values：useMemo 稳定引用
       >
         <GridStack
           ref={gridRef}

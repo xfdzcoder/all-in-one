@@ -123,6 +123,11 @@ export function validateServiceOverview(v: unknown): string[] {
   return errs;
 }
 
+/** LNT-2：类型守卫 —— 契约校验通过即收窄，调用点**零断言**（原 `as unknown as` 双断言会吞掉形状漂移）。 */
+export function isServiceOverview(v: unknown): v is ServiceOverview {
+  return validateServiceOverview(v).length === 0;
+}
+
 /** 空概览骨架（探活失败等降级路径统一使用）。 */
 export function emptyOverview(source: string, error?: string): ServiceOverview {
   return { probe: { ok: false, source, error }, metrics: [], notes: error ? [error] : [] };
