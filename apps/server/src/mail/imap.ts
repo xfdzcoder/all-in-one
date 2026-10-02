@@ -28,9 +28,36 @@ function isoOf(d: Date | string | false | undefined): string {
   return typeof d === "string" ? d : "";
 }
 
-export function createImapClient(conn: MailConnectionConfig): MailClient {
-  const connect = async (): Promise<ImapFlow> => {
-    const client = new ImapFlow({
+/** IMAP 连接的窄接口（TST-2/Q100g）：**可注入假连接**做适配层单测 ——
+ *  连接/UID 区间拉取/正文解析/登出这套映射逻辑归我们，wire 协议归 imapflow。 */
+export type ImapMessage = {
+  uid: number | string;
+  envelope?: {
+    subject?: string;
+    from?: Array<{ name?: string; address?: string }>;
+    date?: Date | string | false;
+  };
+  flags?: Set<string>;
+  source?: string | Buffer | null;
+};
+
+export type ImapConnection = {
+  connect(): Promise<void>;
+  getMailboxLock(folder: string): Promise<{ release(): void }>;
+  mailbox?: { exists?: number };
+  fetch(range: string, opts: Record<string, unknown>): AsyncIterable<ImapMessage>;
+  fetchOne(
+    uid: number | string,
+    opts: Record<string, unknown>,
+    opts2?: Record<string, unknown>,
+  ): Promise<ImapMessage | null>;
+  logout(): Promise<void>;
+};
+
+export function createImapClient(
+  conn: MailConnectionConfig,
+  imapFactory: () => ImapConnection = () =>
+    new ImapFlow({
       host: conn.host,
       port: conn.port,
       secure: conn.security === "ssl",
@@ -38,7 +65,10 @@ export function createImapClient(conn: MailConnectionConfig): MailClient {
       logger: false,
       socketTimeout: TIMEOUT_MS,
       greetingTimeout: TIMEOUT_MS,
-    });
+    }) as unknown as ImapConnection,
+): MailClient {
+  const connect = async (): Promise<ImapConnection> => {
+    const client = imapFactory();
     await client.connect();
     return client;
   };
@@ -49,7 +79,7 @@ export function createImapClient(conn: MailConnectionConfig): MailClient {
       try {
         const lock = await client.getMailboxLock(folder);
         try {
-          const total = typeof client.mailbox === "object" ? client.mailbox.exists : 0;
+          const total = typeof client.mailbox === "object" ? (client.mailbox.exists ?? 0) : 0;
           if (total === 0) return [];
           const start = Math.max(1, total - limit + 1);
           const out: MailMessageSummary[] = [];
