@@ -35,8 +35,12 @@ export interface RefreshCapability {
   supportsManualRefresh?: boolean;
 }
 
-/** 数据查询结果（服务端数据通道 → 前端）。 */
+/** 数据查询结果（服务端数据通道 → 前端）。
+ *  CON-7：三方对齐 —— 服务端一直回 `{data, fetchedAt, cached}`，契约此前漏了 `cached`。 */
 export interface WidgetDataResponse<T = unknown> {
   data: T;
+  /** 服务端**抓取**时间（ISO）；缓存命中 = 该缓存的抓取时间，不是本次请求时间。 */
   fetchedAt: string;
+  /** true = 服务端缓存命中（未回源）。 */
+  cached?: boolean;
 }

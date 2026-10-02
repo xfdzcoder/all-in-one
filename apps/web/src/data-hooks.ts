@@ -51,7 +51,8 @@ function forceRefetch(
   config: Record<string, unknown>,
 ): () => void {
   return () => {
-    void (api.widgetData(type, config, true) as Promise<unknown>)
+    // CON-7/13：信封（data/fetchedAt/cached）整包入缓存，与 queryFn 同形
+    void api.widgetData(type, config, true)
       .then((d) => qc.setQueryData(key, d))
       .catch(() => {
         /* 回源失败保留旧数据；错误态由下一次常规查询反映 */
@@ -197,19 +198,20 @@ export function useCustomApiData(config: Record<string, unknown>): WidgetDataSta
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: qk.customApi(JSON.stringify(config)),
-    queryFn: () => api.widgetData("custom-api", config),
+    queryFn: () => api.widgetData("custom-api", config), // CON-13：信封泛型，无断言
     enabled: Boolean(config.url),
     staleTime: 60_000,
     refetchInterval: refreshInterval(config.refreshSec, 300_000),
   });
   return {
-    data: query.data,
+    data: query.data?.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
-    fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toISOString() : undefined,
+    // CON-7：fetchedAt = **服务端抓取时间**（缓存命中 = 缓存的抓取时间）—— 原用客户端请求时间冒充
+    fetchedAt: query.data?.fetchedAt,
     refresh: () => {
       // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
-      void (api.widgetData("custom-api", config, true) as Promise<unknown>)
+      void api.widgetData("custom-api", config, true)
         .then((d) => qc.setQueryData(qk.customApi(JSON.stringify(config)), d))
         .catch((e) => reportError("自定义 API 刷新失败", e)); // WEB-4
     },
@@ -223,22 +225,23 @@ export function useAppLauncher(items: Array<{ name: string; url: string }>, refr
   const query = useQuery({
     queryKey: key,
     queryFn: () =>
-      api.widgetData("app-launcher", { items }) as Promise<{
+      api.widgetData<{
         items: Array<{ name: string; url: string; alive: boolean }>;
         up: number;
         total: number;
-      }>,
+      }>("app-launcher", { items }),
     enabled: items.length > 0,
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 120_000),
   });
   return {
-    data: query.data,
+    data: query.data?.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
+    fetchedAt: query.data?.fetchedAt,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("app-launcher", { items }, true) as Promise<unknown>)
+      void api.widgetData("app-launcher", { items }, true)
         .then((d) => qc.setQueryData(key, d))
         .catch((e) => reportError("应用入口刷新失败", e)); // WEB-4
     },
@@ -333,18 +336,19 @@ export function useOpencodeData(config: Record<string, unknown>) {
   const key = qk.opencode(JSON.stringify(config));
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("opencode", config) as Promise<OpencodeData>,
+    queryFn: () => api.widgetData<OpencodeData>("opencode", config),
     enabled: Boolean(config.url),
     staleTime: 30_000,
     refetchInterval: refreshInterval(config.refreshSec, 60_000),
   });
   return {
-    data: query.data,
+    data: query.data?.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
+    fetchedAt: query.data?.fetchedAt,
     // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("opencode", config, true) as Promise<OpencodeData>)
+      void api.widgetData("opencode", config, true)
         .then((d) => qc.setQueryData(key, d))
         .catch((e) => reportError("OpenCode 刷新失败", e)); // WEB-4
     },
@@ -368,18 +372,19 @@ export function useMonitorData(config: Record<string, unknown>) {
   const key = qk.monitor(JSON.stringify(config));
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("monitor", config) as Promise<MonitorMetrics>,
+    queryFn: () => api.widgetData<MonitorMetrics>("monitor", config),
     enabled: Boolean(config.url),
     staleTime: 30_000,
     refetchInterval: refreshInterval(config.refreshSec, 60_000),
   });
   return {
-    data: query.data,
+    data: query.data?.data,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
+    fetchedAt: query.data?.fetchedAt,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
-      void (api.widgetData("monitor", config, true) as Promise<MonitorMetrics>)
+      void api.widgetData("monitor", config, true)
         .then((d) => qc.setQueryData(key, d))
         .catch((e) => reportError("监控刷新失败", e)); // WEB-4
     },
@@ -401,6 +406,21 @@ export function useMailAccounts() {
 /** Immich 照片墙（FR-X3 只读深度，D50）：缩略图服务端代取为 data URI。
  *  `albumId`（Q87 项 4）= 「只看相册」——**必须进 queryKey 与请求体**，此前前端把它丢了，
  *  导致改配置不生效、点刷新也只是一遍遍重发同一请求。 */
+/** Immich 照片墙数据载荷（CON-13：形状具名化 —— 泛型替代 `query.data as …` 断言）。 */
+export interface ImmichGalleryData {
+  items: Array<{
+    id: string;
+    at: string;
+    type: "IMAGE" | "VIDEO";
+    thumb: string;
+    href: string;
+    /** D60 §1：服务端从缩略图字节头解析的原始宽高（Q89 等比装箱用）。 */
+    width?: number;
+    height?: number;
+  }>;
+  notes?: string[];
+}
+
 export function useImmichGallery(
   sourceId?: string,
   limit?: unknown,
@@ -413,28 +433,15 @@ export function useImmichGallery(
   const key = qk.immichGallery(sourceId ?? "", n, album ?? "");
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("immich-gallery", { sourceId, limit: n, albumId: album }) as Promise<Record<string, unknown>>,
+    queryFn: () => api.widgetData<ImmichGalleryData>("immich-gallery", { sourceId, limit: n, albumId: album }),
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
     structuralSharing: false, // WEB-8：payload 是整批 base64，深比较纯浪费
   });
   return {
-    data: query.data as
-      | {
-          items: Array<{
-            id: string;
-            at: string;
-            type: "IMAGE" | "VIDEO";
-            thumb: string;
-            href: string;
-            /** D60 §1：服务端从缩略图字节头解析的原始宽高（Q89 等比装箱用）。 */
-            width?: number;
-            height?: number;
-          }>;
-          notes?: string[];
-        }
-      | undefined,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, key, "immich-gallery", {
@@ -448,6 +455,20 @@ export function useImmichGallery(
 /** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加，封面服务端代取。
  *  Q94（反馈②）：「正在播放」已按用户要求移除。
  *  `artistId`（Q87 项 4）= 「只看艺人」——同上，必须进 queryKey 与请求体。 */
+/** Navidrome 专辑墙数据载荷（CON-13 同上）。 */
+export interface NavidromeLibraryData {
+  albums: Array<{
+    id: string;
+    name: string;
+    artist?: string;
+    cover: string;
+    /** D60 §1：服务端从封面字节头解析的原始宽高（Q89 等比装箱用）。 */
+    width?: number;
+    height?: number;
+  }>;
+  notes?: string[];
+}
+
 export function useNavidromeLibrary(
   sourceId?: string,
   limit?: unknown,
@@ -459,27 +480,15 @@ export function useNavidromeLibrary(
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: qk.navidromeLibrary(sourceId ?? "", n, artist ?? ""),
-    queryFn: () => api.widgetData("navidrome-library", { sourceId, limit: n, artistId: artist }) as Promise<Record<string, unknown>>,
+    queryFn: () => api.widgetData<NavidromeLibraryData>("navidrome-library", { sourceId, limit: n, artistId: artist }),
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
     structuralSharing: false, // WEB-8：同上（封面 base64 整批）
   });
   return {
-    data: query.data as
-      | {
-          albums: Array<{
-            id: string;
-            name: string;
-            artist?: string;
-            cover: string;
-            /** D60 §1：服务端从封面字节头解析的原始宽高（Q89 等比装箱用）。 */
-            width?: number;
-            height?: number;
-          }>;
-          notes?: string[];
-        }
-      | undefined,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, qk.navidromeLibrary(sourceId ?? "", n, artist ?? ""), "navidrome-library", {
@@ -491,30 +500,32 @@ export function useNavidromeLibrary(
 }
 
 /** Portainer 容器清单（FR-X3 只读深度，D50）。 */
+/** Portainer 容器清单数据载荷（CON-13 同上）。 */
+export interface PortainerContainersData {
+  containers: Array<{
+    id: string;
+    name: string;
+    state: string;
+    status: string;
+    image?: string;
+    ports?: string;
+    abnormal: boolean;
+  }>;
+  notes?: string[];
+}
+
 export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: qk.portainerContainers(sourceId ?? ""),
-    queryFn: () => api.widgetData("portainer-containers", { sourceId }) as Promise<Record<string, unknown>>,
+    queryFn: () => api.widgetData<PortainerContainersData>("portainer-containers", { sourceId }),
     enabled: Boolean(sourceId),
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 120_000),
   });
   return {
-    data: query.data as
-      | {
-          containers: Array<{
-            id: string;
-            name: string;
-            state: string;
-            status: string;
-            image?: string;
-            ports?: string;
-            abnormal: boolean;
-          }>;
-          notes?: string[];
-        }
-      | undefined,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, qk.portainerContainers(sourceId ?? ""), "portainer-containers", { sourceId }),
@@ -525,36 +536,38 @@ export function usePortainerContainers(sourceId?: string, refreshSec?: unknown) 
 export function usePortainerLogs(sourceId?: string, containerId?: string) {
   const query = useQuery({
     queryKey: qk.portainerLogs(sourceId ?? "", containerId ?? ""),
-    queryFn: () => api.widgetData("portainer-logs", { sourceId, containerId }) as Promise<{ logs: string }>,
+    queryFn: () => api.widgetData<{ logs: string }>("portainer-logs", { sourceId, containerId }),
     enabled: Boolean(sourceId && containerId),
     staleTime: 10_000,
   });
   return {
-    logs: query.data?.logs,
+    logs: query.data?.data.logs,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
   };
 }
 
 /** Mihomo 节点面板（FR-X3 只读深度，D50）。 */
+/** Mihomo 节点面板数据载荷（CON-13 同上）。 */
+export interface MihomoNodesData {
+  groups: Array<{ name: string; now?: string; members: number; options: string[] }>;
+  nodes: Array<{ name: string; type?: string; alive?: boolean; delayMs?: number }>;
+  providers: Array<{ name: string; nodes: number; updatedAt?: string }>;
+  notes?: string[];
+}
+
 export function useMihomoNodes(sourceId?: string, refreshSec?: unknown) {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: qk.mihomoNodes(sourceId ?? ""),
-    queryFn: () => api.widgetData("mihomo-nodes", { sourceId }) as Promise<Record<string, unknown>>,
+    queryFn: () => api.widgetData<MihomoNodesData>("mihomo-nodes", { sourceId }),
     enabled: Boolean(sourceId),
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 120_000),
   });
   return {
-    data: query.data as
-      | {
-          groups: Array<{ name: string; now?: string; members: number; options: string[] }>;
-          nodes: Array<{ name: string; type?: string; alive?: boolean; delayMs?: number }>;
-          providers: Array<{ name: string; nodes: number; updatedAt?: string }>;
-          notes?: string[];
-        }
-      | undefined,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, qk.mihomoNodes(sourceId ?? ""), "mihomo-nodes", { sourceId }),
@@ -583,7 +596,7 @@ export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("service-overview", { sourceId }) as Promise<Record<string, unknown>>,
+    queryFn: () => api.widgetData<Record<string, unknown>>("service-overview", { sourceId }),
     enabled: Boolean(sourceId),
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 60_000),
@@ -591,7 +604,8 @@ export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
   return {
     // LNT-2：不再手写局部形状断言（「类型说的比实际少」）—— 回原始 unknown 形状，
     // 由组件过 `validateServiceOverview` 契约校验后收窄（service-overview-widget）。
-    data: query.data,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     refresh: forceRefetch(qc, key, "service-overview", { sourceId }),
@@ -689,7 +703,8 @@ export function usePluginData(
     staleTime: 60_000,
   });
   return {
-    data: query.data ?? null,
+    data: query.data?.data ?? null,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
   };
@@ -701,7 +716,7 @@ export function useEmbedCheck(url: string): EmbedCheck | null | undefined {
   const query = useQuery({
     queryKey: qk.iframeEmbed(url),
     queryFn: () =>
-      api.widgetData("iframe-embed", { url, parentOrigin: window.location.origin }) as Promise<EmbedCheck>,
+      api.widgetData<EmbedCheck>("iframe-embed", { url, parentOrigin: window.location.origin }).then((r) => r.data),
     enabled: Boolean(url),
     staleTime: 300_000,
   });
@@ -723,18 +738,19 @@ export function useFeeds(
   const key = ["feeds", limit, filter ?? "all", tags.join(",") || "all"];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("rss", { limit, filter, tagIds: tags }) as Promise<FeedAgg>,
+    queryFn: () => api.widgetData<FeedAgg>("rss", { limit, filter, tagIds: tags }),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });
   return {
-    data: query.data,
+    data: query.data?.data,
+    fetchedAt: query.data?.fetchedAt,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（跳过服务端 TTL 缓存）
     refresh: () => {
       // WEB-5：手动刷新必须复用**同一份清洗结果**（原先发原始 tagIds，畸形配置下「查询正常、点刷新报错」）
-      void (api.widgetData("rss", { limit, filter, tagIds: tags }, true) as Promise<unknown>)
+      void api.widgetData("rss", { limit, filter, tagIds: tags }, true)
         .then((d) => qc.setQueryData(key, d))
         .catch((e) => reportError("RSS 刷新失败", e)); // WEB-4
     },
@@ -854,8 +870,8 @@ export function useMediaOptionLabel(
   const scoped = useQuery({
     queryKey: qk.mediaOptions(scopeDynamic, sid),
     queryFn: () =>
-      api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
-        const items = (d as { items?: Array<{ value: string; label: string }> }).items;
+      api.widgetData<{ items?: Array<{ value: string; label: string }> }>(scopeDynamic ?? "", { sourceId: sid }).then((r) => {
+        const items = r.data.items;
         return Array.isArray(items) ? items : [];
       }),
     enabled: Boolean(scopeDynamic && sid && value),
@@ -889,8 +905,8 @@ export function useDynamicOptionsMap(
   const scoped = useQuery({
     queryKey: qk.mediaOptions(scopeDynamic, sid),
     queryFn: () =>
-      api.widgetData(scopeDynamic ?? "", { sourceId: sid }).then((d) => {
-        const items = (d as { items?: Array<{ value: string; label: string }> }).items;
+      api.widgetData<{ items?: Array<{ value: string; label: string }> }>(scopeDynamic ?? "", { sourceId: sid }).then((r) => {
+        const items = r.data.items;
         return Array.isArray(items) ? items : [];
       }),
     enabled: Boolean(scopeDynamic && sid),

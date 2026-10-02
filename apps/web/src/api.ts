@@ -1,3 +1,4 @@
+import type { WidgetDataResponse } from "@all-in-one/widget-sdk";
 /**
  * Q91（D58）：网格列数档位。**服务端 `api/schemas.ts` 的同名常量才是权威校验**，这里供渲染下拉。
  * 取 4 的倍数只为响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数（列数本身不必是 4 的倍数）。
@@ -223,8 +224,10 @@ export const api = {
   patchTodo: (id: string, patch: { done?: boolean; title?: string; archived?: boolean; list?: string; sortOrder?: number }) =>
     req<TodoItem>("PATCH", `/api/todos/${id}`, patch),
   deleteTodo: (id: string) => req<{ ok: boolean }>("DELETE", `/api/todos/${id}`),
-  widgetData: (type: string, config: Record<string, unknown>, force = false) =>
-    req<unknown>("POST", "/api/widgets/data", { type, config, force }).then((r) => (r as { data: unknown }).data),
+  // CON-7/13：返回完整信封 `{data, fetchedAt, cached}`（SDK 契约类型，不再 `(r as {data})` 丢信息）；
+  // T = data 载荷形状，调用点用 `widgetData<T>` 声明预期，替代 `as Promise<T>` 断言。
+  widgetData: <T = unknown>(type: string, config: Record<string, unknown>, force = false) =>
+    req<WidgetDataResponse<T>>("POST", "/api/widgets/data", { type, config, force }),
   // ── 写操作深度组件（D51：专属 REST + 服务端审计；D54 起 Navidrome 遥控与 Mihomo 切换已移除，仅剩 Portainer 重启）──
   portainerRestart: (sourceId: string, containerId: string) =>
     req<{ ok: boolean; name: string }>("POST", "/api/portainer/restart", { sourceId, containerId }),

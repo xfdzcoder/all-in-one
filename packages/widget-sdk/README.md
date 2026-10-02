@@ -89,6 +89,18 @@ export const builtinManifests  = […, myManifest];
   `refresh.defaultRefreshSec`；`minRefreshSec` 是防打爆第三方的下限（NFR4）。
   **手动**——组件头部「刷新」按钮强制回源（数据通道 `force` 穿透服务端 TTL 缓存）；
   SSE 不可用时宿主另有断线轮询兜底（FR-I6）。
+- **响应契约**（`WidgetDataResponse<T>`，CON-7 三方对齐）：
+
+  ```ts
+  interface WidgetDataResponse<T = unknown> {
+    data: T;          // 连接器载荷（形状由各 connector 定义）
+    fetchedAt: string; // 服务端**抓取**时间（ISO）；缓存命中 = 缓存的抓取时间，非本次请求时间
+    cached?: boolean;  // true = 服务端缓存命中（未回源）
+  }
+  ```
+
+  宿主 `api.widgetData<T>()` 按此返回**完整信封**；`WidgetDataState.fetchedAt`
+  取 `fetchedAt`（「x 分钟前」= 服务端抓取时间，不拿客户端请求时间冒充）。
 
 ## 服务概览数据形状（D48，结构化卡片 + 迷你图表）
 
