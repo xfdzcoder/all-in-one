@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import type { ComponentType, ReactNode } from "react";
-import { IconSettings, IconTrash } from "@tabler/icons-react";
+import { IconSettings, IconTrash } from "./icons";
 import { useGridStack, useGridStackItem } from "gridstack/dist/react";
 
 import { WidgetEditContext } from "./widget-edit-context";

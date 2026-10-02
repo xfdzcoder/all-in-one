@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "./icons";
 import { Badge, Group, Text } from "@mantine/core";
 
 import type { FeedItem } from "./api";

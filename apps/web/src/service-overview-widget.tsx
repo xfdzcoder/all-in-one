@@ -1,4 +1,4 @@
-import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
+import { IconRefresh, IconInfoCircle } from "./icons";
 import { useMemo, useState } from "react";
 import { Badge, Card, Group, JsonInput, Modal, Stack, Text } from "@mantine/core";
 

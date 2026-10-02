@@ -6,7 +6,7 @@ import type { ComponentMap, GridStackHandle, GridStackWidget } from "gridstack/d
 import { Utils } from "gridstack";
 import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/widget-sdk";
 import { Group, Modal, Text } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "./icons";
 
 import { api, DASHBOARD_COLUMNS, type DashboardColumns } from "./api";
 import { randomId } from "./random-id";

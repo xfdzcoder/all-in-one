@@ -1,4 +1,4 @@
-import { IconRefresh, IconRotateClockwise } from "@tabler/icons-react";
+import { IconRefresh, IconRotateClockwise } from "./icons";
 import { useState } from "react";
 import { Badge, Code, Modal, Stack, Text } from "@mantine/core";
 

@@ -2,8 +2,7 @@ import type { WidgetManifest } from "@all-in-one/widget-sdk";
 
 import { Placeholder, StatBox } from "./widgets";
 import { TodoWidget } from "./todo-widget";
-import { CustomApiWidget } from "./custom-api-widget";
-import { ChartWidget } from "./chart-widget";
+import { lazyWidget } from "./lazy-widget";
 import { RssWidget } from "./rss-widget";
 import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
@@ -445,8 +444,13 @@ export const widgetComponents = {
   "mihomo-nodes": MihomoNodesWidget,
   "app-launcher": LauncherWidget,
   iframe: IframeWidget,
-  "custom-api": CustomApiWidget,
-  chart: ChartWidget,
+  "custom-api": lazyWidget<Record<string, unknown>>(() =>
+    import("./custom-api-widget").then((m) => ({ default: m.CustomApiWidget })),
+  ),
+  // Q115 批1：重依赖组件懒加载 —— echarts 系（~10MB）/acorn JSX 解析（~1.3MB）只在真有该类卡片时才进内存/索引
+  chart: lazyWidget<Record<string, unknown>>(() =>
+    import("./chart-widget").then((m) => ({ default: m.ChartWidget })),
+  ),
   // manifest.type 别名：组件选择器按 type 添加（placeholder/stat-box）；
   // 旧布局 JSON 用类名 key（Placeholder/StatBox），保留兼容（seed/历史布局）。
   placeholder: Placeholder,

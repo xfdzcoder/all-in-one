@@ -6,7 +6,7 @@ import {
   IconPalette,
   IconPuzzle,
   IconUser,
-} from "@tabler/icons-react";
+} from "./icons";
 import { useState, type ReactNode } from "react";
 
 import { api, type Me } from "./api";

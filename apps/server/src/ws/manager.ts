@@ -33,6 +33,8 @@ interface Conn {
   retryMs: number;
   timer: ReturnType<typeof setTimeout> | null;
   closed: boolean;
+  /** 连续失败次数（跨重连累计 —— 日志限流用，Q115 批2）。 */
+  failCount: number;
 }
 
 export class WsSourceManager {
@@ -108,9 +110,24 @@ export class WsSourceManager {
       : new HttpAgent({ lookup: lookupPinned, keepAlive: false });
 
     const ws = new WebSocket(row.url, { headers: row.headers, agent, handshakeTimeout: 10_000 });
-    const conn: Conn = { ws, row, retryMs: 1_000, timer: null, closed: false };
+    // Q115 批2：退避与失败计数要**跨重连携带** —— 此前每次 connect 都新建 conn 重置成 1s，
+    // 「1s→30s 封顶」的退避从未生效（死端口每秒重试一次 + 日志刷屏）。
+    const prev = this.conns.get(row.id);
+    const conn: Conn = {
+      ws,
+      row,
+      retryMs: prev?.retryMs ?? 1_000,
+      timer: null,
+      closed: false,
+      failCount: prev?.failCount ?? 0,
+    };
     this.conns.set(row.id, conn);
 
+    ws.on("open", () => {
+      // 连上过 = 清零退避与失败计数（下次断线重新从 1s 退避）
+      conn.retryMs = 1_000;
+      conn.failCount = 0;
+    });
     ws.on("message", (raw) => {
       const text = typeof raw === "string" ? raw : raw.toString("utf8");
       let payload: unknown = text;
@@ -122,7 +139,13 @@ export class WsSourceManager {
       this.bus.publish(`ws:${row.id}`, payload);
     });
     ws.on("error", (err) => {
-      this.opts.log?.(`[ws] ${row.id} 连接错误：${err.message}`);
+      // Q115 批2：日志限流 —— 前 3 次照常（看得见问题），之后每 10 次汇总一条（不刷屏）
+      conn.failCount++;
+      if (conn.failCount <= 3 || conn.failCount % 10 === 0) {
+        this.opts.log?.(
+          `[ws] ${row.id} 连接错误：${err.message}（连续失败 ${conn.failCount} 次，退避重试中；在「设置 · 数据源」可停用该连接）`,
+        );
+      }
     });
     ws.on("close", () => {
       if (conn.closed) return;

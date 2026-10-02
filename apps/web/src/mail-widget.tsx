@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "./icons";
 import { useState } from "react";
 import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
 

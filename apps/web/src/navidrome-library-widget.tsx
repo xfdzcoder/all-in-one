@@ -1,4 +1,4 @@
-import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
+import { IconDiscOff, IconRefresh } from "./icons";
 import { useState } from "react";
 import { Text } from "@mantine/core";
 

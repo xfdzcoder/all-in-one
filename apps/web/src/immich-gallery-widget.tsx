@@ -1,4 +1,4 @@
-import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react";
+import { IconExternalLink, IconPhotoOff, IconRefresh } from "./icons";
 import { useState } from "react";
 import { Badge, Text } from "@mantine/core";
 

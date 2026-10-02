@@ -660,3 +660,14 @@
 - **被否备选**：① Monaco（体积 ~1MB+、Worker 配置复杂，LAN 单用户工作台偏重）；② textarea + Prism 只做高亮（用户明确要"代码提示"）；③ 构建期生成提示清单 JSON（多一步生成物、易失同步，`?raw` 更简单）。
 - **验证**：`css-hints` 单测（提取规则 + lint 语义）、`styles/routes` 契约测试 5 项（保存/备份/回滚/穿越拒绝/上限/封顶）；**真机 `verify-css.mjs` 14/14**（提示给到真令牌与真类名 = `?raw`→提取→补全 UI 全链路；保存生效对账 `/custom.css`；备份条目；回滚后 hotpink 消失；结尾还原原始内容）。
 - **坑留档**：vitest 下 `?raw` 的 CSS 被 stub 成空串（`test.css` 默认 false）——「真实样式表→提示」这类断言只能在浏览器面验（verify-css），单测保持纯函数。
+
+## D71 · dev 脚本体积治理：vendored 图标 + 重依赖懒加载 + 预构建压缩（2026-10-03）
+
+- **背景**：用户反馈「网站总是很卡 —— 不是页面操作卡，而是**浏览器开发者工具很卡**、DevTools 页面加载不出来，其他网站没这问题」。实测定位：**vite dev 首屏 43 个脚本 / 40.9MB（未压缩）**，而构建产物只有 1 个 / 0.66MB；DevTools 面板（Sources/Console 索引）对**脚本总量**敏感、与页面 DOM 无关 —— 空页面也卡、页面操作不卡，全对得上。已排除：sourcemap（预构建包与 src 模块都无 map 声明）、console 刷屏（0 条）、请求风暴、CSS 体积（4KB）。
+- **决策（用户拍板：图标用 vendored 自绘 SVG）**：
+  1. **图标 vendored 化**：弃 `@tabler/icons-react`（vite dev 预构建整包 **16MB**，全库只用 16 个图标）→ 把用到的 16 个图标按 Tabler Icons **outline**（MIT，登记 SOURCES.md）内联为 `icons.tsx` 组件（`size` 参数 + `currentColor`，调用点零改动）。**16MB → 0**。
+  2. **重依赖懒加载**（`lazyWidget` 容器，Suspense + 骨架屏）：`chart-widget`（echarts 系 ~10MB）与 `custom-api-widget`（acorn/acorn-jsx JSX 解析 ~1.3MB）只在真有该类卡片时才加载；`css-editor`（CodeMirror ~3MB）只在打开「设置 · 外观」时加载。顺带生产主包 **2.1MB → 697KB**（chart 619KB / css-editor 375KB / custom-api 10KB 变按需块，维度⑪）。
+  3. **依赖预构建压缩**：`optimizeDeps.esbuildOptions.minify: true`（dev 依赖包默认不压缩；压缩后再降 ~10%，且解析更快；要调试 node_modules 时注释该行）。
+- **效果**：dev 首屏 **40.9MB / 43 脚本 → 11.9MB / 99 小请求（-71%）**，16MB 单文件消失；剩余大头为 `@mantine/core` 3.9MB + `react-dom` 2.7MB（核心，不可省）。
+- **被否备选**：① 仅建议用户用 preview 看效果（不解决开发期体感）；② 换图标库（改动面大于收益）；③ 关 DevTools sourcemap（根因不在 map）。
+- **残余（P2 跟进）**：`acorn` 仍被 `widget-sdk` 的 index 重出口拽进首屏（`jsx-template.ts` 从 index 导出）——需 SDK 入口拆分（`exports` 子路径）才能移出，记 Q116。

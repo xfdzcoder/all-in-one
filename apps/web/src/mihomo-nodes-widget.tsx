@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "./icons";
 import { Badge, Group, Stack, Text } from "@mantine/core";
 
 import { useMihomoNodes } from "./data-hooks";

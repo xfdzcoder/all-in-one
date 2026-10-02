@@ -1,4 +1,4 @@
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "./icons";
 import { Fragment, useContext, useRef, useState } from "react";
 import {
   Button,

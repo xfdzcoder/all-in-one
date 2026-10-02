@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import { lazy, Suspense } from "react";
 import { Button, Group, Select, SegmentedControl, Stack, Text, Title } from "@mantine/core";
 
 import { api, type CustomCssBackup } from "./api";
-import { CssEditor } from "./css-editor";
 import { lintCss } from "./css-hints";
 import { ConfirmAction } from "./confirm";
-import { WbAlert } from "./ui";
+import { WbAlert, WbLoading } from "./ui";
+
+// Q115 批1：CodeMirror（dev 预构建 ~3MB）懒加载 —— 只在打开「外观」面板时才拉
+const CssEditor = lazy(() => import("./css-editor").then((m) => ({ default: m.CssEditor })));
 
 /** 保存即生效：让 `<link href="/custom.css">` 重新取（缓存穿透）。 */
 function reloadCustomCss() {
@@ -109,7 +112,9 @@ export function AppearancePanel({
           自定义 CSS（保存即生效；令牌与类名见提示，或参考
           <code> docs/design-audit/02-custom-css.md</code>）
         </Text>
-        <CssEditor value={css} onChange={setCss} />
+        <Suspense fallback={<WbLoading />}>
+          <CssEditor value={css} onChange={setCss} />
+        </Suspense>
         <Group gap="xs">
           <Button size="xs" disabled={busy} onClick={() => void save()}>
             保存 CSS

@@ -272,9 +272,6 @@ importers:
       '@mantine/hooks':
         specifier: ^9.6.3
         version: 9.6.3(react@19.3.0)
-      '@tabler/icons-react':
-        specifier: ^3.48.0
-        version: 3.48.0(react@19.3.0)
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -1418,14 +1415,6 @@ packages:
     resolution: {integrity: sha512-oELmoyA6ML9jDRMV3kgcMQFKxUfBU0yFVn6yTctVaLT5ygXnxH52I3TZEgV9EhXJC68/uFvE5Daj1/25c0Xa/A==}
     peerDependencies:
       selderee: ~0.12.0
-
-  '@tabler/icons-react@3.48.0':
-    resolution: {integrity: sha512-OCeAlpaWHEMV+EsgdVeGQ3YuKfmfnThZhc++CaZ/ujYzi5+/DONDQlX4OGvH1ikYhIfmc0grI4otJgHy7QAvng==}
-    peerDependencies:
-      react: '>= 16'
-
-  '@tabler/icons@3.48.0':
-    resolution: {integrity: sha512-lQk06gVHNVBnJp0UOgtth54mcZBJM7rdYKsAxKOProj1bbSAx+/xiuOWfHlyvgdL3M+Y+I0HINrjHa3ygp8eXQ==}
 
   '@tanstack/query-core@5.104.0':
     resolution: {integrity: sha512-JrC2r/JQlXt7khBSdUpsgxNvybzOg+aITa+ARRMlP2AFo93Y8vIqz077rp+e61mJetSZ0T6AJbwW1JHer1vrPQ==}
@@ -3219,13 +3208,6 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       selderee: 0.12.0
-
-  '@tabler/icons-react@3.48.0(react@19.3.0)':
-    dependencies:
-      '@tabler/icons': 3.48.0
-      react: 19.3.0
-
-  '@tabler/icons@3.48.0': {}
 
   '@tanstack/query-core@5.104.0': {}
 

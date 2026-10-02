@@ -13,7 +13,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconCheck, IconPencil, IconSettings } from "@tabler/icons-react";
+import { IconCheck, IconPencil, IconSettings } from "./icons";
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 

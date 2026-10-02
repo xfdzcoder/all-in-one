@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh } from "./icons";
 
 import { appendStreamRows, compileChartOption, type ChartSpec } from "./chart/compile-option";
 import type { EChartsCoreOption } from "./chart/echarts-setup";
