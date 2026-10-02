@@ -79,6 +79,7 @@ export function ConfigForm({
                 size="xs"
                 minRows={4}
                 placeholder={f.placeholder}
+                description={f.help}
                 value={typeof v === "string" ? v : ""}
                 onChange={(e) => onChange(f.key, e.currentTarget.value)}
               />
@@ -88,6 +89,7 @@ export function ConfigForm({
               <Checkbox
                 key={f.key}
                 label={f.label}
+                description={f.help}
                 checked={Boolean(v)}
                 onChange={(e) => onChange(f.key, e.currentTarget.checked)}
               />
@@ -98,6 +100,7 @@ export function ConfigForm({
                 key={f.key}
                 label={f.label}
                 size="xs"
+                description={f.help}
                 value={typeof v === "number" ? v : ""}
                 onChange={(nv) => onChange(f.key, typeof nv === "number" ? nv : undefined)}
               />
@@ -137,6 +140,8 @@ export function ConfigForm({
                 size="xs"
                 data={optionsFor(f)}
                 value={typeof v === "string" ? v : null}
+                placeholder={f.placeholder}
+                description={f.help}
                 onChange={(nv) => onChange(f.key, nv ?? undefined)}
               />
             );
@@ -148,6 +153,7 @@ export function ConfigForm({
                 label={f.label}
                 size="xs"
                 minRows={4}
+                description={f.help}
                 value={typeof v === "string" ? v : v !== undefined ? JSON.stringify(v, null, 2) : ""}
                 onChange={(e) => onChange(f.key, e.currentTarget.value)}
               />
@@ -163,6 +169,8 @@ export function ConfigForm({
                   type="password"
                   className="wb-flex-1"
                   placeholder="保存时写入凭证库（明文不进配置）"
+                  // D65：help 必须渲染 ——「与来源不同才需填/仅覆盖本卡」这类语义靠它承载
+                  description={f.help ?? "存入凭证库，配置仅保存引用（SEC3）"}
                   value={shown}
                   onChange={(e) => onChange(f.key, e.currentTarget.value)}
                 />
@@ -179,6 +187,7 @@ export function ConfigForm({
                 label={f.label}
                 size="xs"
                 placeholder={f.placeholder}
+                description={f.help}
                 value={typeof v === "string" ? v : ""}
                 onChange={(e) => onChange(f.key, e.currentTarget.value)}
               />

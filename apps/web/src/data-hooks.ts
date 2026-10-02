@@ -11,7 +11,7 @@ import type { WidgetDataState } from "@all-in-one/widget-sdk";
 import { api, type DataSourceRow, type FeedAgg, type MailAgg, type MailListEntry, type TodoItem } from "./api";
 import { DATA_ROOT_KEYS, qk, qkRoot, sseKeysFor } from "./query-keys";
 import { dispatchWs } from "./ws-stream";
-import { normalizeTagIds } from "./config-form-utils";
+import { normalizeTagIds, resolveSourceConfig } from "./config-form-utils";
 import { reportError } from "./feedback";
 
 /** TanStack Query 单例（04-tech-stack：TanStack Query + SSE）。 */
@@ -988,25 +988,29 @@ export function useDynamicOptionsMap(
 }
 
 /**
- * 连接解析（D42）：config.sourceId 命中命名连接时合并其配置（内联值可覆盖）；
- * pick 限定合并键（自定义 API 只取认证）。未引用/未命中 → 原样返回（内联回落）。
+ * 连接解析（D42 + **D65**）：config.sourceId 命中命名连接时合并其配置；
+ * pick 限定合并键（自定义 API/图表只取认证）。未引用/未命中 → 原样返回（内联回落）。
+ *
+ * **D65（用户反馈⑤）**：`opts.inlineWins` = 卡片已填值**覆盖**来源（空值才回落）——
+ * 图表/自定义 API 的「访问令牌/认证头」语义（不同才需填，填了只覆盖本卡）；
+ * `opts.resolveRelativeUrl` = 相对 `url` 按来源站点地址拼接。缺省保持 D42 旧语义
+ * （来源优先、内联回落）—— monitor/opencode 的兼容路径不受影响。
  */
 export function useResolvedSourceConfig<T extends Record<string, unknown>>(
   kind: string,
   config: T,
   pick?: string[],
+  opts: { inlineWins?: boolean; resolveRelativeUrl?: boolean } = {},
 ): T {
   const sources = useDataSources(kind);
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
   const source = (sources.data ?? []).find((r) => r.id === sourceId);
+  const inlineWins = opts.inlineWins ?? false;
+  const resolveRelativeUrl = opts.resolveRelativeUrl ?? false;
   return useMemo(() => {
     if (!source) return config;
-    const srcConfig = source.config ?? {};
-    const from = pick
-      ? Object.fromEntries(Object.entries(srcConfig).filter(([k]) => pick.includes(k)))
-      : srcConfig;
-    return { ...config, ...from } as T;
-  }, [config, source, pick]);
+    return resolveSourceConfig(config, source.config ?? {}, pick, { inlineWins, resolveRelativeUrl });
+  }, [config, source, pick, inlineWins, resolveRelativeUrl]);
 }
 
 /**

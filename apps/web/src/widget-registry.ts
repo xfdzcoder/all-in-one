@@ -97,8 +97,8 @@ const customApiManifest: WidgetManifest = {
   defaultSize: { w: 4, h: 3 },
   minSize: { w: 2, h: 2 },
   configSchema: [
-    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌（D42）；留空 = 使用下方内联配置" },
-    { key: "url", label: "接口地址", type: "text", required: true, placeholder: "https://api.example.com/…" },
+    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌与站点地址（D42/D65）；留空 = 使用下方内联配置；选中后「接口地址」可填相对路径" },
+    { key: "url", label: "接口地址", type: "text", required: true, placeholder: "/api/stats", help: "相对路径（以 / 开头）按「认证来源」的站点地址拼接（D65）；未选认证来源时填完整 https:// 地址" },
     { key: "method", label: "方法", type: "select", default: "GET", options: [
       { value: "GET", label: "GET" },
       { value: "POST", label: "POST" },
@@ -121,8 +121,8 @@ const customApiManifest: WidgetManifest = {
     { key: "labelField", label: "标题字段", type: "text", default: "name" },
     { key: "valueField", label: "数值字段", type: "text", default: "value" },
     { key: "statusField", label: "状态字段", type: "text", help: "状态模板：该字段真值=绿点" },
-    { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
-    { key: "authHeader", label: "认证头名", type: "text", placeholder: "Authorization（可空 = Bearer）" },
+    { key: "apiToken", label: "访问令牌", type: "secret", help: "与「认证来源」的令牌**不同才需要填写**（相同留空即可）；填写只覆盖**本卡**（优先级高于来源），不修改来源配置（D65）。存入凭证库（SEC3）" },
+    { key: "authHeader", label: "认证头名", type: "text", placeholder: "Authorization（可空 = Bearer）", help: "同「访问令牌」：与来源不同才需填写；填写仅作用于本卡（D65）" },
   ],
   capabilities: {
     data: { source: "http-connector" },
@@ -419,8 +419,8 @@ const chartManifest: WidgetManifest = {
   defaultSize: { w: 6, h: 4 },
   minSize: { w: 3, h: 2 },
   configSchema: [
-    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌（D42）；留空 = 使用下方内联配置" },
-    { key: "url", label: "接口地址", type: "text", required: true, placeholder: "https://api.example.com/…" },
+    { key: "sourceId", label: "认证来源", type: "select", dynamic: "data-source:http", help: "HTTP 连接提供认证头/令牌与站点地址（D42/D65）；留空 = 使用下方内联配置；选中后「接口地址」可填相对路径" },
+    { key: "url", label: "接口地址", type: "text", required: true, placeholder: "/api/stats", help: "相对路径（以 / 开头）按「认证来源」的站点地址拼接（D65）；未选认证来源时填完整 https:// 地址" },
     { key: "method", label: "方法", type: "select", default: "GET", options: [
       { value: "GET", label: "GET" },
       { value: "POST", label: "POST" },
@@ -437,8 +437,8 @@ const chartManifest: WidgetManifest = {
     { key: "wsSourceId", label: "WS 实时源", type: "select", dynamic: "data-source:ws", help: "Q78/D56：选定即实时流模式（服务端 WS → SSE 转发，滚动 120 点）；留空 = 上方 HTTP 快照" },
     { key: "stack", label: "堆叠", type: "boolean" },
     { key: "smooth", label: "平滑曲线", type: "boolean" },
-    { key: "apiToken", label: "访问令牌", type: "secret", help: "存入凭证库，配置仅保存引用（SEC3）" },
-    { key: "authHeader", label: "认证头名", type: "text", placeholder: "Authorization（可空 = Bearer）" },
+    { key: "apiToken", label: "访问令牌", type: "secret", help: "与「认证来源」的令牌**不同才需要填写**（相同留空即可）；填写只覆盖**本卡**（优先级高于来源），不修改来源配置（D65）。存入凭证库（SEC3）" },
+    { key: "authHeader", label: "认证头名", type: "text", placeholder: "Authorization（可空 = Bearer）", help: "同「访问令牌」：与来源不同才需填写；填写仅作用于本卡（D65）" },
   ],
   capabilities: {
     data: { source: "http-connector" },

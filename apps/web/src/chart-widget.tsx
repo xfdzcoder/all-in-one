@@ -16,8 +16,12 @@ import { IconAction, SourceHint, WbAlert, WbLoading } from "./ui";
  * 数据连接（D42），`path` 客户端提取行数据；spec 编译见 `chart/compile-option.ts`（纯函数、单测覆盖）。
  */
 export function ChartWidget(props: Record<string, unknown>) {
-  // D42：认证来源（sourceId 提供 authHeader/apiToken），url 仍由组件配置
-  const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"]);
+  // D42 + D65：认证来源（sourceId 提供 authHeader/apiToken）——**卡片已填 > 来源**
+  // （不同才需填，填了只覆盖本卡）；相对 url 按来源站点地址拼接
+  const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"], {
+    inlineWins: true,
+    resolveRelativeUrl: true,
+  });
   const { data, loading, error, refresh } = useCustomApiData(resolved);
 
   // Q78/D56：WS 流模式 —— wsSourceId 命中即实时流（滚动窗口 120 点），否则走 HTTP 快照
@@ -72,7 +76,7 @@ export function ChartWidget(props: Record<string, unknown>) {
         compiled && "rows" in compiled && <span className="wb-sr-only">{`${compiled.rows} 点`}</span>
       )}
       {!resolved.url && (
-        <SourceHint text="未配置接口地址 —— 在配置里填「接口地址」（认证头可选「认证来源」连接）" />
+        <SourceHint text="未配置接口地址 —— 填「接口地址」（可填相对路径如 /api/stats，基于「认证来源」的地址；认证头/令牌可选认证来源）" />
       )}
       {loading && <WbLoading />}
       {/* D47：错误/降级一律「原因 + 怎么修」，不整卡空白不留白 */}

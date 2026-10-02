@@ -19,6 +19,45 @@ export function defaultsFromSchema(schema: ConfigSchema): ConfigValues {
 
 export type FieldError = { key: string; message: string };
 
+/** D65（用户反馈⑤，2026-10-02）：连接配置合并（**纯函数**，`useResolvedSourceConfig` 委托实现）。
+ *
+ * - `inlineWins`（图表/自定义 API 的认证键语义）：**卡片已填 > 来源**，空值才回落来源 ——
+ *   「与认证来源不同才需填写；填了只覆盖本卡，不修改来源配置」；缺省 `false` = 来源优先、
+ *   内联回落（D42 旧语义，monitor/opencode 的兼容路径不动）。
+ * - `resolveRelativeUrl`：相对 `url`（无 scheme）按来源的站点地址拼接 —— 「接口地址」不再
+ *   要求带域名的绝对地址（来源已有绝对地址）；无来源或拼不出则原样保留（下游报「原因+怎么修」）。 */
+const isEmptyValue = (v: unknown) => v === undefined || v === null || v === "";
+
+export function resolveSourceConfig<T extends Record<string, unknown>>(
+  config: T,
+  sourceConfig: Record<string, unknown>,
+  pick?: string[],
+  opts: { inlineWins?: boolean; resolveRelativeUrl?: boolean } = {},
+): T {
+  const from = pick
+    ? Object.fromEntries(Object.entries(sourceConfig).filter(([k]) => pick.includes(k)))
+    : sourceConfig;
+  // inlineWins：**来源只补空位** —— 卡片已填值原样保留（覆盖来源），空值才用来源
+  // （「与来源不同才需填写；填了只覆盖本卡」）；缺省 = 来源优先、内联回落（D42 旧语义）
+  const merged = (
+    opts.inlineWins
+      ? { ...config, ...Object.fromEntries(Object.entries(from).filter(([k]) => isEmptyValue(config[k]))) }
+      : { ...config, ...from }
+  ) as Record<string, unknown>;
+  if (opts.resolveRelativeUrl) {
+    const rel = typeof merged.url === "string" ? merged.url : "";
+    const base = typeof sourceConfig.url === "string" ? sourceConfig.url : "";
+    if (rel && base && !/^[a-z][a-z0-9+.-]*:/i.test(rel)) {
+      try {
+        merged.url = new URL(rel, base).toString();
+      } catch {
+        /* 来源地址畸形：原样保留，由取数层按「原因 + 怎么修」报错 */
+      }
+    }
+  }
+  return merged as T;
+}
+
 /** 校验表单值（required / 类型），返回错误列表。 */
 export function validateForm(schema: ConfigSchema, values: ConfigValues): FieldError[] {
   const errors: FieldError[] = [];

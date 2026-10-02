@@ -40,7 +40,10 @@ const payload = {
   },
 };
 
-const mock = createServer((_req, res) => {
+/** D65（用户反馈⑤）：记录最近一次上游请求的 Authorization 头 —— 验「来源令牌 / 卡片覆盖」。 */
+let lastAuth = "";
+const mock = createServer((req, res) => {
+  lastAuth = req.headers.authorization ?? "";
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify(payload));
 });
@@ -93,6 +96,26 @@ try {
   await sleep(400);
   ok("CHART listed in picker", await clickBtn("图表"));
   await sleep(400);
+  // D65（用户反馈⑤）：接口地址示例是**相对地址**（认证来源已有绝对地址，不再示例带域名）
+  ok(
+    "CHART form: url placeholder is a relative path (D65)",
+    await page.evaluate(() => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes("接口地址"),
+      );
+      const ph = wrapper?.querySelector("input")?.getAttribute("placeholder") ?? "";
+      return ph.startsWith("/") && !ph.includes("://");
+    }),
+  );
+  ok(
+    "CHART form: token help says only fill when different from source (D65)",
+    await page.evaluate(() => {
+      const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
+        w.querySelector("label")?.textContent.includes("访问令牌"),
+      );
+      return (wrapper?.textContent ?? "").includes("不同");
+    }),
+  );
   ok("CHART form: url field", await setField("接口地址", mockUrl));
   ok("CHART form: path field", await setField("取数路径", "data.items"));
   ok("CHART form: x field", await setField("X 轴字段", "t"));
@@ -141,6 +164,74 @@ try {
 
   // ⑤ 刷新按钮在（FR-I3）
   ok("CHART has 刷新", await clickBtn("刷新"));
+
+  // ── D65（用户反馈⑤）：相对地址按「认证来源」拼接；卡片令牌**覆盖**来源（且不改来源）──
+  const srcCreated = await page.evaluate(async (base) => {
+    const res = await fetch("/api/data-sources", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "http",
+        name: `http-${Math.random().toString(36).slice(2, 6)}`,
+        config: { url: base, apiToken: "src-token" },
+      }),
+    });
+    return { status: res.status, body: await res.text() };
+  }, `http://127.0.0.1:${mock.address().port}`);
+  ok("CHART D65 http source created", srcCreated.status === 201, `status=${srcCreated.status}`);
+  const httpSourceId = JSON.parse(srcCreated.body).id;
+
+  /** 直接改草稿盘上 chart 卡 props（D65 用例换配置用，TST-23：只认草稿盘）。 */
+  const setChartProps = async (patch) => {
+    await page.evaluate(
+      async ({ p, dashId }) => {
+        const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
+        const home = list.find((d) => d.id === dashId);
+        if (!home) return;
+        const items = JSON.parse(home.layoutJson ?? "[]");
+        const card = items.find((i) => i.component === "chart");
+        if (!card) return;
+        card.props = { ...card.props, ...p };
+        await fetch(`/api/dashboards/${home.id}/layout`, {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ layoutJson: JSON.stringify(items) }),
+        });
+      },
+      { p: patch, dashId: scratch.id },
+    );
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector(".grid-stack", { timeout: 8000 });
+    await sleep(1500);
+  };
+
+  // ① 相对地址 + 卡片不填令牌 → 用来源地址拼接 + 来源令牌
+  lastAuth = "";
+  await setChartProps({ sourceId: httpSourceId, url: "/metrics", apiToken: "", authHeader: "", path: "data.items", wsSourceId: "" });
+  ok(
+    "CHART D65 relative url + source token（卡片不填 → 用来源）",
+    (await waitFor(page, () => Boolean(document.querySelector(".wb-chart canvas")), undefined)) &&
+      lastAuth === "Bearer src-token",
+    `authSeen=${lastAuth}`,
+  );
+  // ② 卡片令牌覆盖来源（优先级高于默认配置），来源配置原样不动
+  lastAuth = "";
+  const srcBefore = await page.evaluate(async (sid) => {
+    const rows = await (await fetch("/api/data-sources", { credentials: "same-origin" })).json();
+    return JSON.stringify((rows.find((r) => r.id === sid) ?? {}).config ?? {});
+  }, httpSourceId);
+  await setChartProps({ apiToken: "card-token" });
+  const srcAfter = await page.evaluate(async (sid) => {
+    const rows = await (await fetch("/api/data-sources", { credentials: "same-origin" })).json();
+    return JSON.stringify((rows.find((r) => r.id === sid) ?? {}).config ?? {});
+  }, httpSourceId);
+  ok(
+    "CHART D65 card token overrides source token（来源配置原样不动）",
+    lastAuth === "Bearer card-token" && srcBefore === srcAfter,
+    `authSeen=${lastAuth} sourceUnchanged=${srcBefore === srcAfter}`,
+  );
 
   // ⑥ Q78/D56：WS 流模式 —— mock WS 源 → 服务端 WsSourceManager → SSE → 图表滚动窗口
   const wss = new WebSocketServer({ port: 0, host: "127.0.0.1" });

@@ -11,6 +11,13 @@ export const httpConnector: WidgetConnector = {
     const config = await resolveSecretRefs(query.config, ctx);
     const url = String(config.url ?? "");
     if (!url) throw new Error("url is required");
+    // D65（用户反馈⑤）：相对地址应由前端按「认证来源」站点地址拼接；拼不到（未选来源/
+    // 来源缺地址）到这一步要**明确报「原因 + 怎么修」**，不把畸形 URL 的天书抛给用户
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+      throw new Error(
+        `接口地址是相对路径（${url}）—— 请选「认证来源」（相对地址按它的站点地址拼接），或直接填完整 https:// 地址`,
+      );
+    }
 
     const headers: Record<string, string> = {};
     // 可选凭证注入：默认 Authorization: Bearer <token>；authHeader 自定义头名则原样放值

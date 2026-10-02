@@ -62,8 +62,12 @@ const summarize = (v: unknown): { value: string; hint?: string } => {
 };
 
 export function CustomApiWidget(props: CustomApiConfig) {
-  // D42：认证来源（sourceId 提供 authHeader/apiToken），url 仍由组件配置
-  const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"]);
+  // D42 + D65：认证来源（sourceId 提供 authHeader/apiToken）——**卡片已填 > 来源**
+  // （不同才需填，填了只覆盖本卡）；相对 url 按来源站点地址拼接
+  const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"], {
+    inlineWins: true,
+    resolveRelativeUrl: true,
+  });
   const display = props.display ?? "stat";
   const { data, loading, error, refresh } = useCustomApiData(resolved);
   const [detailOpen, setDetailOpen] = useState(false);
