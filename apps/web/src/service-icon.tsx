@@ -30,7 +30,7 @@ const BRAND_URL: Record<string, string> = {
   metacubexd: mihomoPng,
 };
 
-export const SERVICE_ICON_NAMES = Object.keys(BRAND);
+
 
 export function ServiceIcon({ name, size = 18 }: { name?: string; size?: number }) {
   if (!name) return null;

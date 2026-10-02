@@ -16,7 +16,7 @@ import { createImapClient } from "./imap.ts";
 import { createGmailClient } from "./gmail.ts";
 
 /** 账号类型 → 客户端（imap / gmail-OAuth，D37）；password 位按类型承载密码或 refresh_token。 */
-export function createMailClient(conn: MailConnectionConfig): MailClient {
+function createMailClient(conn: MailConnectionConfig): MailClient {
   if (conn.kind === "gmail") return createGmailClient(conn);
   return createImapClient(conn);
 }
@@ -51,9 +51,9 @@ export class MailError extends Error {
   }
 }
 
-export const TEXT_CAP = 100_000;
+const TEXT_CAP = 100_000;
 export const HTML_CAP = 200_000;
-export const LIST_TTL_MS = 60_000;
+const LIST_TTL_MS = 60_000;
 
 const listCache = new Map<string, { at: number; items: MailMessageSummary[] }>();
 
@@ -152,7 +152,7 @@ export async function deleteAccount(db: Db, userId: string, id: string): Promise
   return Boolean(row);
 }
 
-export type MailListEntry = MailMessageSummary & {
+type MailListEntry = MailMessageSummary & {
   accountId: string;
   accountName: string;
 };

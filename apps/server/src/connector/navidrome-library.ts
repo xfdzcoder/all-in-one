@@ -30,13 +30,8 @@ export interface NavidromeAlbumItem {
   height?: number;
 }
 
-export interface NavidromePlayingItem {
-  title: string;
-  artist?: string;
-  username?: string;
-}
 
-export interface NavidromeLibraryData {
+interface NavidromeLibraryData {
   albums: NavidromeAlbumItem[];
   /** Q94（反馈②）：「正在播放」已按用户要求移除（两处：服务概览 + 本专辑墙）。 */
   notes?: string[];

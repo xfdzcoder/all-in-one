@@ -21,7 +21,7 @@ import { MihomoNodesWidget } from "./mihomo-nodes-widget";
  * M2-⑤ 追加 custom-api；M2 后此注册表逐步被 widget-sdk 动态注册替代。
  */
 
-export const todoManifest: WidgetManifest = {
+const todoManifest: WidgetManifest = {
   type: "todo",
   uniqueField: "name",
   name: "个人 Todo",
@@ -61,7 +61,7 @@ export const todoManifest: WidgetManifest = {
   },
 };
 
-export const placeholderManifest: WidgetManifest = {
+const placeholderManifest: WidgetManifest = {
   type: "placeholder",
   name: "占位组件",
   category: "其它",
@@ -73,7 +73,7 @@ export const placeholderManifest: WidgetManifest = {
   capabilities: { data: { source: "none" } },
 };
 
-export const statBoxManifest: WidgetManifest = {
+const statBoxManifest: WidgetManifest = {
   type: "stat-box",
   name: "指标卡片",
   category: "其它",
@@ -86,7 +86,7 @@ export const statBoxManifest: WidgetManifest = {
 };
 
 /** 自定义 API（D14 声明式模板 + configSchema 表单 FR-W2 + secret 字段 SEC3）。 */
-export const customApiManifest: WidgetManifest = {
+const customApiManifest: WidgetManifest = {
   type: "custom-api",
   name: "自定义 API",
   description: "服务端代取任意 HTTP 接口并按模板展示（SSRF 基线防护）",
@@ -130,7 +130,7 @@ export const customApiManifest: WidgetManifest = {
 };
 
 /** gridstack components 映射（key = manifest.type）。 */
-export const rssManifest: WidgetManifest = {
+const rssManifest: WidgetManifest = {
   type: "rss",
   name: "信息流",
   description: "多源 RSS/Atom 聚合，未读标记归 Workspace（跨组件同步）",
@@ -153,7 +153,7 @@ export const rssManifest: WidgetManifest = {
   },
 };
 
-export const launcherManifest: WidgetManifest = {
+const launcherManifest: WidgetManifest = {
   type: "app-launcher",
   name: "应用入口",
   description: "服务聚合入口，HTTP/TCP 存活探测（内网服务，D22）",
@@ -176,7 +176,7 @@ export const launcherManifest: WidgetManifest = {
   },
 };
 
-export const iframeManifest: WidgetManifest = {
+const iframeManifest: WidgetManifest = {
   type: "iframe",
   name: "嵌入页面",
   description: "iframe 嵌入第三方页面（sandbox 沙箱；目标站禁嵌时给出提示）",
@@ -194,7 +194,7 @@ export const iframeManifest: WidgetManifest = {
 };
 
 /** 看板组件（Q6b）：多项目看板，Workspace 数据（D21），配置看板经组件内选择器写回 props。 */
-export const kanbanManifest: WidgetManifest = {
+const kanbanManifest: WidgetManifest = {
   type: "kanban",
   name: "看板",
   description: "多项目看板：列与卡片、卡片操作（编辑/移动/归档/删除）",
@@ -212,7 +212,7 @@ export const kanbanManifest: WidgetManifest = {
 };
 
 /** OpenCode 组件（FR-E4/Q8）：会话列表/状态/耗时 + API 版本探测（D32）。 */
-export const opencodeManifest: WidgetManifest = {
+const opencodeManifest: WidgetManifest = {
   type: "opencode",
   name: "OpenCode",
   description: "opencode 会话列表 / 状态 / 耗时 + API 版本探测（实验性接口）",
@@ -233,7 +233,7 @@ export const opencodeManifest: WidgetManifest = {
 };
 
 /** 服务器监控组件（Q9/D36）：打通 Glances 等第三方监控源，只做连接与展示。 */
-export const monitorManifest: WidgetManifest = {
+const monitorManifest: WidgetManifest = {
   type: "monitor",
   name: "服务器监控",
   description: "Glances 等监控源打通：CPU / 内存 / 负载 / 磁盘（只做连接与展示）",
@@ -254,7 +254,7 @@ export const monitorManifest: WidgetManifest = {
 
 /** 邮件组件（Q7b）：多账号只读聚合，正文沙箱渲染（D30）。 */
 /** 服务概览（Q39/D46）：选一个服务连接 → 探活徽标 + 版本 + 关键计数。 */
-export const serviceOverviewManifest: WidgetManifest = {
+const serviceOverviewManifest: WidgetManifest = {
   type: "service-overview",
   name: "服务概览",
   description: "第三方服务状态一览（Immich / Navidrome / Portainer / Mihomo）：可达性 + 版本 + 关键计数",
@@ -273,7 +273,7 @@ export const serviceOverviewManifest: WidgetManifest = {
 };
 
 /** Immich 照片墙（FR-X3 只读深度，D50）：最近照片网格，缩略图服务端代取。 */
-export const immichGalleryManifest: WidgetManifest = {
+const immichGalleryManifest: WidgetManifest = {
   type: "immich-gallery",
   name: "Immich 照片墙",
   description: "最近照片网格（只读）：缩略图服务端代取，点击开 Immich 原图页",
@@ -313,7 +313,7 @@ export const immichGalleryManifest: WidgetManifest = {
 };
 
 /** Navidrome 专辑墙（FR-X3 只读深度，D50）：最近添加，封面服务端代取。Q94：已移除「正在播放」。 */
-export const navidromeLibraryManifest: WidgetManifest = {
+const navidromeLibraryManifest: WidgetManifest = {
   type: "navidrome-library",
   name: "Navidrome 专辑墙",
   description: "最近添加专辑网格（只读）：封面服务端代取",
@@ -354,7 +354,7 @@ export const navidromeLibraryManifest: WidgetManifest = {
 };
 
 /** Portainer 容器清单（FR-X3 只读深度，D50）：状态/端口/镜像 + 日志尾部只读。 */
-export const portainerContainersManifest: WidgetManifest = {
+const portainerContainersManifest: WidgetManifest = {
   type: "portainer-containers",
   name: "Portainer 容器清单",
   description: "容器状态/端口/镜像清单（只读）：点行看日志尾部，无启停操作",
@@ -372,7 +372,7 @@ export const portainerContainersManifest: WidgetManifest = {
 };
 
 /** Mihomo 节点面板（FR-X3 只读深度，D50）：策略组/节点延迟/订阅源。 */
-export const mihomoNodesManifest: WidgetManifest = {
+const mihomoNodesManifest: WidgetManifest = {
   type: "mihomo-nodes",
   name: "Mihomo 节点面板",
   description: "策略组 / 节点延迟 / 订阅源详情（只读）：无代理切换",
@@ -389,7 +389,7 @@ export const mihomoNodesManifest: WidgetManifest = {
   },
 };
 
-export const mailManifest: WidgetManifest = {
+const mailManifest: WidgetManifest = {
   type: "mail",
   name: "邮件",
   description: "多账号邮件聚合（只读）：列表 + 正文（沙箱渲染）",
@@ -485,11 +485,3 @@ export const FALLBACK_LAYOUT = [
 ];
 
 /** 清单显示名（ISS-15 修复）：manifest 选项与各处显示同源；未收录键原样回落。 */
-export const LIST_LABELS: Record<string, string> = {
-  inbox: "收件箱",
-  work: "工作",
-  life: "生活",
-  home: "家庭",
-  personal: "个人",
-};
-export const listLabel = (key: string) => LIST_LABELS[key] ?? key;

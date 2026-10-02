@@ -15,7 +15,7 @@ import { IconAction } from "./ui";
  * 按 D31 豁免确认（不动业务数据）。
  */
 
-export function WidgetChrome({ children }: { children: ReactNode }) {
+function WidgetChrome({ children }: { children: ReactNode }) {
   const { editMode, onConfigure } = useContext(WidgetEditContext);
   const { id, node } = useGridStackItem();
   const { grid, removeWidget } = useGridStack();

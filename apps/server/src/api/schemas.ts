@@ -8,7 +8,7 @@ export const loginBody = z.object({
 });
 
 /** layoutJson = JSON text of gridstack widget list (Dashboard owns layout only). */
-export const layoutJsonSchema = z
+const layoutJsonSchema = z
   .string()
   .max(2_000_000)
   .refine((s) => {
@@ -25,7 +25,7 @@ export const layoutJsonSchema = z
  * 响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数。
  * 前端 `apps/web` 有一份同值常量供渲染下拉 —— 服务端这份才是权威校验。
  */
-export const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
+const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
 
 const dashboardColumns = z.union([
   z.literal(DASHBOARD_COLUMNS[0]),
@@ -65,6 +65,5 @@ export const idParams = z.object({ id: z.string().min(1).max(64) });
 /** Body for PUT /api/dashboards/:id/layout (M1-⑤ auto-save target). */
 export const layoutUpdateBody = z.object({ layoutJson: layoutJsonSchema });
 
-export type LoginBody = z.infer<typeof loginBody>;
 export type DashboardCreateBody = z.infer<typeof dashboardCreateBody>;
 export type DashboardPatchBody = z.infer<typeof dashboardPatchBody>;

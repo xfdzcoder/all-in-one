@@ -16,6 +16,7 @@
     "import/no-unassigned-import": "off",
     "eslint/no-await-in-loop": "off",
     "eslint/no-underscore-dangle": "off",
-    "oxc/no-async-endpoint-handlers": "off"
+    "oxc/no-async-endpoint-handlers": "off",
+    "oxc/no-map-spread": "off"
   }
 }

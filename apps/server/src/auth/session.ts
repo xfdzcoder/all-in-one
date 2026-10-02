@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import {createHash, randomBytes} from "node:crypto";
 
 import { and, eq, gt } from "drizzle-orm";
 
@@ -52,9 +52,3 @@ export async function revokeSession(
 }
 
 /** Constant-time compare helper for future CSRF/token checks. */
-export function safeEqual(a: string, b: string): boolean {
-  const ba = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ba.length !== bb.length) return false;
-  return timingSafeEqual(ba, bb);
-}

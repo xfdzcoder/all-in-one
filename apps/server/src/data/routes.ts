@@ -44,9 +44,6 @@ export interface DataChannelDeps {
   bus: EventBus;
 }
 
-export function createDataChannel(deps: DataChannelDeps): DataChannelDeps {
-  return deps;
-}
 
 /** 默认数据通道（todo connector 内置；M2-⑤ 注册 http；M3 注册 rss/launcher/iframe-embed）。 */
 export function defaultDataChannel(): DataChannelDeps {

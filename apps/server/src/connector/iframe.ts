@@ -13,7 +13,7 @@ import { assertSafeOutboundUrl } from "./ssrf.ts";
  * 不误报（verified:false，前端按可嵌入正常渲染）。
  */
 
-export interface EmbedCheck {
+interface EmbedCheck {
   /** false = 目标站禁止被嵌入。 */
   embeddable: boolean;
   /** 判定依据（禁嵌原因 / 说明）。 */

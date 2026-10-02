@@ -23,7 +23,7 @@ export interface PortainerContainerItem {
   abnormal: boolean;
 }
 
-export interface PortainerContainersData {
+interface PortainerContainersData {
   containers: PortainerContainerItem[];
   notes?: string[];
 }

@@ -29,7 +29,7 @@ export interface WallRatio {
   ratio: number;
 }
 
-export interface WallCell {
+interface WallCell {
   id: string;
   ratio: number;
   /** 最终渲染宽度（px，不含 gap）。 */

@@ -39,7 +39,7 @@ function action<S extends ZodType>(
   return { schema, topic, run: run as ActionDef["run"] };
 }
 
-export const PLUGIN_ACTIONS: Record<string, ActionDef> = {
+const PLUGIN_ACTIONS: Record<string, ActionDef> = {
   "todo.create": action(
     z.object({ title: z.string().min(1).max(200), list: z.string().max(64).optional() }),
     "todo",

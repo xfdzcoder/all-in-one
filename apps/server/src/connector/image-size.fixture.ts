@@ -28,13 +28,3 @@ export function miniJpeg(width: number, height: number): Uint8Array {
 }
 
 /** 测试夹具：最小 PNG（真 IHDR）。 */
-export function miniPng(width: number, height: number): Uint8Array {
-  return new Uint8Array([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // 签名
-    0x00, 0x00, 0x00, 0x0d, // IHDR 长度 13
-    0x49, 0x48, 0x44, 0x52, // "IHDR"
-    (width >>> 24) & 0xff, (width >>> 16) & 0xff, (width >>> 8) & 0xff, width & 0xff,
-    (height >>> 24) & 0xff, (height >>> 16) & 0xff, (height >>> 8) & 0xff, height & 0xff,
-    0x08, 0x02, 0x00, 0x00, 0x00,
-  ]);
-}

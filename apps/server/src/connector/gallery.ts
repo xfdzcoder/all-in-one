@@ -35,7 +35,7 @@ export interface ImmichGalleryItem {
   height?: number;
 }
 
-export interface ImmichGalleryData {
+interface ImmichGalleryData {
   items: ImmichGalleryItem[];
   /** 诚实降级说明（08 §5）。 */
   notes?: string[];

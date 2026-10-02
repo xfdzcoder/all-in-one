@@ -9,7 +9,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 const ALGO = "aes-256-gcm";
 
-export class MissingMasterKeyError extends Error {
+class MissingMasterKeyError extends Error {
   constructor() {
     super("CREDENTIALS_MASTER_KEY env var is required (base64-encoded 32 bytes)");
     this.name = "MissingMasterKeyError";

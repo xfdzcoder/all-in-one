@@ -10,7 +10,7 @@ import type { MailClient, MailConnectionConfig, MailMessageFull, MailMessageSumm
  * - 基址可经环境变量指向 mock（单测），默认官方端点。
  */
 
-export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 
 const accountsBase = () => process.env.GMAIL_ACCOUNTS_BASE ?? "https://accounts.google.com";
 const oauthBase = () => process.env.GMAIL_OAUTH_BASE ?? "https://oauth2.googleapis.com";
@@ -68,7 +68,7 @@ export function exchangeGmailCode(
   });
 }
 
-export function refreshGmailToken(
+function refreshGmailToken(
   refreshToken: string,
   clientId: string,
   clientSecret: string,

@@ -9,7 +9,7 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
  * 目标为本机/内网 opencode server（服务聚合核心场景）→ allowPrivate 通道（D22 同族）。
  */
 
-export interface OpencodeSession {
+interface OpencodeSession {
   id: string;
   title: string;
   createdAt: number;
@@ -18,7 +18,7 @@ export interface OpencodeSession {
   durationMs: number;
 }
 
-export interface OpencodeData {
+interface OpencodeData {
   probe: { ok: boolean; version?: string; error?: string };
   sessions: OpencodeSession[];
 }

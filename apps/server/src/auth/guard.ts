@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { findValidSession, revokeSession, SESSION_COOKIE } from "./session.ts";
 
-export type CurrentUser = { id: string; username: string };
+type CurrentUser = { id: string; username: string };
 
 declare module "fastify" {
   interface FastifyRequest {

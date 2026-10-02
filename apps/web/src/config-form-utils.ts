@@ -1,4 +1,4 @@
-import type { ConfigField, ConfigSchema, ConfigValues, SecretRef } from "@all-in-one/widget-sdk";
+import type { ConfigSchema, ConfigValues, SecretRef } from "@all-in-one/widget-sdk";
 import { isSecretRef } from "@all-in-one/widget-sdk";
 
 /**
@@ -80,13 +80,7 @@ export async function propsWithSecretRefs(
   return props;
 }
 
-export function fieldOf(schema: ConfigSchema, key: string): ConfigField | undefined {
-  return schema.find((f) => f.key === key);
-}
 
-export function secretRefOf(v: unknown): SecretRef | null {
-  return isSecretRef(v) ? (v as SecretRef) : null;
-}
 
 /** WEB-2（Q98c）：提交前的配置清洗。
  *  - `undefined` 一律剔除（未改动的字段不发）；

@@ -8,11 +8,11 @@ import { deleteCredentialIfOrphan } from "../credentials/store.ts";
 import { dataSource } from "../db/schema.ts";
 
 /** D42：连接类型白名单 —— 扩展 = 加枚举值。 */
-export const DATA_SOURCE_KINDS = ["monitor", "opencode", "http", "immich", "navidrome", "portainer", "mihomo"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）
-export type DataSourceKind = (typeof DATA_SOURCE_KINDS)[number];
+const DATA_SOURCE_KINDS = ["monitor", "opencode", "http", "immich", "navidrome", "portainer", "mihomo"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）
+type DataSourceKind = (typeof DATA_SOURCE_KINDS)[number];
 
 /** 各类连接的 config 允许键（secret 字段与表单同名，值为凭证库 SecretRef，SEC3）。 */
-export const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> = {
+const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> = {
   monitor: ["url", "authMode", "username", "password", "apiToken"], // password=旧键（Q36 起新表单用 apiToken）
   opencode: ["url", "apiToken"],
   http: ["url", "authHeader", "apiToken"],

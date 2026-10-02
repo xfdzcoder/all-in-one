@@ -8,7 +8,7 @@ import type { Db } from "../db/client.ts";
 import { tag, tagTarget } from "../db/schema.ts";
 
 /** D40：targetType 白名单 —— 扩展新实体 = 加枚举值（不迁移）。 */
-export const TAG_TARGET_TYPES = ["todo", "feed"] as const;
+const TAG_TARGET_TYPES = ["todo", "feed"] as const;
 export type TagTargetType = (typeof TAG_TARGET_TYPES)[number];
 
 const createBody = z.object({

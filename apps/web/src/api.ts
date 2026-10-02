@@ -82,6 +82,7 @@ export type TagRow = {
   targetCount: number;
 };
 
+/** RSS 聚合响应（Q29c/二.1：含快照兜底信息）。 */
 export type FeedAgg = {
   items: FeedItem[];
   unread: number;

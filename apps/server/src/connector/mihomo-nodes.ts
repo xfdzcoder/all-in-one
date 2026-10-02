@@ -10,7 +10,7 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
  * - 只读边界（D50 / **D54**）：无代理切换/重载配置 —— 策略组切换（FR-X3g）已于 D54 移除，组件纯只读。
  */
 
-export interface MihomoNodeItem {
+interface MihomoNodeItem {
   name: string;
   type?: string;
   alive?: boolean;
@@ -18,13 +18,13 @@ export interface MihomoNodeItem {
   delayMs?: number;
 }
 
-export interface MihomoGroupItem {
+interface MihomoGroupItem {
   name: string;
   now?: string;
   members: number;
 }
 
-export interface MihomoProviderItem {
+interface MihomoProviderItem {
   name: string;
   nodes: number;
   updatedAt?: string;

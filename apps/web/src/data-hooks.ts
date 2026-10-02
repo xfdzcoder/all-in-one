@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
-import { api, type TodoItem } from "./api";
+import { api, type FeedAgg, type TodoItem } from "./api";
 import { normalizeTagIds } from "./config-form-utils";
 import { reportError } from "./feedback";
 
@@ -343,7 +343,7 @@ export type OpencodeSession = {
   updatedAt: number;
   durationMs: number;
 };
-export type OpencodeData = {
+type OpencodeData = {
   probe: { ok: boolean; version?: string; error?: string };
   sessions: OpencodeSession[];
 };
@@ -372,7 +372,7 @@ export function useOpencodeData(config: Record<string, unknown>) {
 }
 
 /** 监控源数据（FR：服务器监控，D36 打通第三方服务只做连接与展示）。 */
-export type MonitorMetrics = {
+type MonitorMetrics = {
   probe: { ok: boolean; source: string; version?: string; error?: string };
   cpuName?: string;
   cores?: number;
@@ -742,7 +742,7 @@ export function useFeeds(
   const key = ["feeds", limit, filter ?? "all", tags.join(",") || "all"];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.widgetData("rss", { limit, filter, tagIds: tags }) as Promise<import("./api").FeedAgg>,
+    queryFn: () => api.widgetData("rss", { limit, filter, tagIds: tags }) as Promise<FeedAgg>,
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });

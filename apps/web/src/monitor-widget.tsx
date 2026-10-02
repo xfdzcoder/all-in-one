@@ -43,7 +43,7 @@ function MetricCard({ label, value, hint }: { label: string; value: string; hint
 }
 
 /** ISS-18：运行时长本地化（"5 days, 1:02:03" → "5 天 1 小时 2 分"；原值由调用处留 title）。 */
-export function formatUptimeZh(raw: string): string {
+function formatUptimeZh(raw: string): string {
   const m = raw.match(/(?:(\d+)\s*days?,?\s*)?(\d+):(\d+):(\d+)/i);
   if (!m) return raw;
   const [, d, h, min] = m;

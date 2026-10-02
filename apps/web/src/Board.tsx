@@ -72,7 +72,7 @@ function parseLayout(json: string): GridStackWidget[] {
  * Q91（D58）：由列数档位推导响应式断点 `N → N/2 → N/4 → 1`（阈值沿用 D39 的 1200/900/600/480）。
  * 列数档位取 4 的倍数正是为了让取半/取四分之一都是整数。
  */
-export function breakpointsFor(cols: number): Array<{ w: number; c: number }> {
+function breakpointsFor(cols: number): Array<{ w: number; c: number }> {
   const n = Math.max(1, Math.round(Number(cols) || 12));
   const half = Math.max(1, Math.round(n / 2));
   const quarter = Math.max(1, Math.round(n / 4));

@@ -96,4 +96,3 @@ export function registerAuthRoutes(app: FastifyInstance): void {
   });
 }
 
-export { requireUser };
