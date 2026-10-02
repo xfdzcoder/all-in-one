@@ -6,7 +6,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { ADMIN_PASSWORD, makeOk, summarize } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeOk, summarize, waitFor } from "./lib/verify-kit.mjs";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = []; // TST-15：统一记账
@@ -47,7 +47,7 @@ await installLayoutGuard(page);
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
-  await sleep(1500);
+  await waitFor(page, () => { const cs = [...document.querySelectorAll("[data-card-id]")]; return cs.length >= 3 && cs.every((c) => c.getBoundingClientRect().height > 0) && document.querySelectorAll(".grid-stack-item[gs-y]").length > 0; }, undefined); // TST-13：几何+定位就绪（浅条件曾致拖拽坐标算早）
 
   const before = await page.evaluate(() => {
     const cards = [...document.querySelectorAll("[data-card-id]")];
@@ -82,7 +82,15 @@ await installLayoutGuard(page);
       new DragEvent("drop", { dataTransfer: window.__dt, bubbles: true, cancelable: true, clientY: window.__y }),
     );
   });
-  await sleep(1500);
+  // TST-13：等 React 按 drop 结果重排（原 sleep(1500) 是同帧读结果的确定性竞态）——
+  // 轮询「顺序已变」；drop 失败则超时 → 下面的断言如实红
+  await waitFor(
+    page,
+    (prev) =>
+      [...document.querySelectorAll("[data-card-id]")].map((c) => c.textContent.trim().slice(0, 3)).join() !== prev,
+    before.join(),
+    { timeoutMs: 4000 },
+  );
   const after = await page.evaluate(() =>
     [...document.querySelectorAll("[data-card-id]")].map((c) => c.textContent.trim().slice(0, 3)),
   );

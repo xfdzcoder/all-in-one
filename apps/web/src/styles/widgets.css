@@ -539,6 +539,10 @@ a.wb-widget__title-link:focus-visible {
   padding: 0;
   margin: 0;
   text-align: inherit;
+  /* UA `button { color: buttontext }` 不走继承 —— 系统暗色偏好下 buttontext=白，
+     会压过主题继承色（verify-dark 曾抓到 LIGHT 面白字白底）；font 同理归零。 */
+  color: inherit;
+  font: inherit;
 }
 
 /* A11Y-1：随机图预览的语义按钮盒（img 本体的宽高/动画仍在 .wb-gallery__random-img）。 */

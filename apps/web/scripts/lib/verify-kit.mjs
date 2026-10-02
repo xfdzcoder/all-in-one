@@ -90,3 +90,26 @@ export function makeClickBtn(page) {
       { l: label, ex: exact },
     );
 }
+
+/**
+ * 轮询等待（**TST-13**）：以**条件**而非固定毫秒同步异步渲染。
+ * 原 `sleep(1200)`/`sleep(1500)` 魔法数 = 慢机假红、快机假绿、同帧读结果是确定性竞态。
+ * `fn` 在页面上下文执行（page.evaluate 语义，arg 传参），返回真即达成；超时返回 false（TST-15 契约）。
+ */
+export async function waitFor(page, fn, arg, { timeoutMs = 8000, intervalMs = 100 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await page.evaluate(fn, arg)) return true;
+    if (Date.now() > deadline) return false;
+    await sleep(intervalMs);
+  }
+}
+
+/** 文本出现/消失等待（TST-13 常用形态）。 */
+export const waitForText = (page, text, { present = true, timeoutMs = 8000 } = {}) =>
+  waitFor(
+    page,
+    (t) => ((document.body.textContent ?? "").includes(t.text) === t.present),
+    { text, present },
+    { timeoutMs },
+  );

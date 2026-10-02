@@ -7,7 +7,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, sleep, uniqId, waitFor, waitForText } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -75,7 +75,7 @@ await installLayoutGuard(page);
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
-  await sleep(1200);
+  await waitFor(page, () => document.querySelectorAll("[data-card-id]").length > 0, undefined); // TST-13
 
   // ① Todo 任务删除二次确认（scoped 到**该任务所在行**的「×」——列表里有历史任务）
   const openTaskConfirm = () =>
@@ -106,8 +106,7 @@ await installLayoutGuard(page);
   ok("D31 todo delete reopen", await openTaskConfirm());
   await sleep(400);
   ok("D31 todo confirm deletes", await clickBtn("确认", true));
-  await sleep(1000);
-  ok("D31 task gone after confirm", await page.evaluate((t) => !(document.body.textContent ?? "").includes(t), taskTitle));
+  ok("D31 task gone after confirm", await waitForText(page, taskTitle, { present: false })); // TST-13：条件等待替代 sleep(1000)
 
   // ② 信息流源退订二次确认（Q22b-2：退订入口移至「数据源管理 · 信息源」——点击按钮，非药丸）
   const openUnsub = async () => {
@@ -142,8 +141,7 @@ await installLayoutGuard(page);
   ok("D31 rss unsubscribe reopen", await openUnsub());
   await sleep(400);
   ok("D31 rss confirm unsubscribes", await clickBtn("确认", true));
-  await sleep(1000);
-  ok("D31 source gone after confirm", await page.evaluate((t) => !(document.body.textContent ?? "").includes(t), sourceTitle));
+  ok("D31 source gone after confirm", await waitForText(page, sourceTitle, { present: false })); // TST-13
 
   // Q25c：退订旅程在数据源管理页 —— 先返回工作台再验 fixture
   await page.evaluate(() =>

@@ -5,7 +5,7 @@
  * Run: node scripts/verify-dark.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, sleep, waitFor } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -162,7 +162,7 @@ try {
   await page.evaluate(() => localStorage.setItem("wb-theme", "light"));
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector(".grid-stack", { timeout: 8000 });
-  await sleep(1000);
+  await waitFor(page, () => document.querySelectorAll(".wb-widget").length > 0, undefined); // TST-13
   await runThemeChecks("LIGHT");
 
   // Q90（项 9）：滚动条**不含固定的顶栏** —— 滚动容器是 AppShell.Main，不是文档视口

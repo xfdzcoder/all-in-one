@@ -33,6 +33,29 @@ async function resetHomeLayout(page: Page) {
   });
 }
 
+/** TST-22：e2e 造的数据（手机任务-/J4- 前缀）逐轮累积、`before+1` 断言随累积变脆 ——
+ *  测前自愈清理（fixture-guard 是 puppeteer 侧的，Playwright 这边自理）。 */
+async function cleanupFixtureData(page: Page) {
+  const todos = (await (await page.request.get("/api/todos?includeArchived=1")).json()) as Array<{
+    id: string;
+    title: string;
+  }>;
+  for (const t of todos.filter((t) => /^(手机任务-|J4-)/.test(t.title))) {
+    await page.request.delete(`/api/todos/${t.id}`);
+  }
+}
+
+/** TST-13：轮询布局落盘（防抖 800ms）——固定 sleep 等保存是同帧竞态。 */
+async function waitForLayoutHas(page: Page, text: string): Promise<boolean> {
+  const deadline = Date.now() + 8000;
+  for (;;) {
+    const dashboards = (await (await page.request.get("/api/dashboards")).json()) as Array<{ layoutJson: string }>;
+    if (dashboards.some((d) => d.layoutJson.includes(text))) return true;
+    if (Date.now() > deadline) return false;
+    await page.waitForTimeout(150);
+  }
+}
+
 test("J1 first-run: login lands on default dashboard with example widgets", async ({ page }) => {
   await login(page);
   // 默认首页 + 示例组件（含 D8 首版 todo/rss）
@@ -78,6 +101,10 @@ test("J2 edit → drag → auto-save → reload restores layout", async ({ page 
 
 test("J2b add widget persists with props after reload", async ({ page }) => {
   await login(page);
+  // TST-22：起手重置 seed —— 历史运行累积的 N-* 测试卡在此清掉，before 恒定 5、断言不再随累积变脆
+  await resetHomeLayout(page);
+  await page.reload();
+  await page.waitForSelector(".grid-stack", { timeout: 15_000 });
   await page.getByRole("button", { name: "编辑页面" }).click();
   await page.waitForTimeout(400);
   const before = await page.locator(".grid-stack-item").count();
@@ -87,7 +114,7 @@ test("J2b add widget persists with props after reload", async ({ page }) => {
   const title = `N-${Date.now().toString(36).slice(-4)}`;
   await page.locator(".mantine-Modal-root").getByLabel("标题").fill(title);
   await page.getByRole("button", { name: "确认添加" }).click();
-  await page.waitForTimeout(1500); // debounce save
+  expect(await waitForLayoutHas(page, title)).toBe(true); // TST-13：轮询布局落盘（原 sleep(1500) 等防抖）
   await page.reload();
   await page.waitForSelector(".grid-stack", { timeout: 15_000 });
   await page.waitForTimeout(500);
@@ -98,6 +125,7 @@ test("J2b add widget persists with props after reload", async ({ page }) => {
 test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 720 });
   await login(page);
+  await cleanupFixtureData(page); // TST-22：清历史 手机任务-/J4- 累积
   // 无横向溢出
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(2);
@@ -124,6 +152,7 @@ test("J3 mobile: reflow, browse+operate, no edit entry, touch targets", async ({
 
 test("J4 data/view separation: card name = task group, data admin shares state (D43)", async ({ page }) => {
   await login(page);
+  await cleanupFixtureData(page); // TST-22
   const nm = `J4-${Date.now().toString(36).slice(-4)}`;
   // 页面 A：添加 Todo（名称全站唯一）并新建任务
   await page.getByRole("button", { name: "编辑页面" }).click();
@@ -155,7 +184,7 @@ test("J4 data/view separation: card name = task group, data admin shares state (
   await page.getByRole("button", { name: "数据源管理" }).click();
   await page.waitForTimeout(600);
   // Q29b：任务页签 = 单 ToDo 视图 —— 下拉选中目标
-  await page.getByRole("combobox", { name: "ToDo 选择" }).click();
+  await page.getByRole("combobox", { name: "分组选择" }).click(); // WEB-22 术语统一（ToDo→分组）——TST-23 双实现同步
   await page.locator("[data-combobox-option]", { hasText: nm }).first().click();
   await page.waitForTimeout(400);
   await expect(page.locator('[data-admin-row="todo"]', { hasText: title })).toBeVisible({ timeout: 5000 });
