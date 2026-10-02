@@ -30,7 +30,7 @@
 
 | ID | 位置 | 问题 | 批次 | 报告 |
 |---|---|---|---|---|
-| CON-1 | apps/server/src/api/openapi.ts:19-88 | OpenAPI 只含 health/auth/dashboards 共 9 个操作；todos/tags/feeds/plugins/kanban/mail/credentials/data-sources/icons/widgets-data/events/portainer 等约 55 条路由未 | Q100 | 12 |
+| CON-1 ✅ | apps/server/src/api/openapi.ts:19-88 | OpenAPI 只含 health/auth/dashboards 共 9 个操作；todos/tags/feeds/plugins/kanban/mail/credentials/data-sources/icons/widgets-data/events/portainer 等约 55 条路由未 | Q100 | 12 |
 | CON-2 ✅ | apps/server/src/api/schemas.ts:5-8（loginBody）vs auth/routes.ts:53-60；openapi.ts:40 | POST /api/auth/login 的 OpenAPI 声明用 loginBody 校验，但路由手写 truthy 检查、从不 safeParse —— username≤128/password≤256 限制形同虚设（超长口令照样进 argon2），OpenAPI 与实现漂移 | Q100 | 12 |
 | CON-3 ✅ | apps/web/src/api.ts:117,296-297 vs apps/server/src/mail/client.ts:24、gmail.ts:147、mail/routes.ts:45-46 | 邮件 uid 类型三方不一致：客户端 uid: number（MailListEntry.uid、mailMessage(uid: number)），服务端 number / string，Gmail 账号 uid 是字符串消息 id（uid: meta.id）—— Gmail 下前端类型说谎，任何 | Q100 | 12 |
 | CON-4 ✅ | packages/widget-sdk/package.json:7-19（main/exports/prepare）；根 package.json:6-14；apps/*/tsconfig*.json（无 paths） | widget-sdk 发 dist/ 消费的坑：dist/ gitignore、只有 prepare: tsc（install 时跑一次），无 dev/watch 脚本；web/server 均按包名解析 dist/index.js+dist/index.d.ts —— 改 SDK 源码后 pnpm | Q100 | 12 |
