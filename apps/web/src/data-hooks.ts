@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
-import { api, type DataSourceRow, type FeedAgg, type TodoItem } from "./api";
+import { api, type DataSourceRow, type FeedAgg, type MailAgg, type MailListEntry, type TodoItem } from "./api";
 import { DATA_ROOT_KEYS, qk, qkRoot, sseKeysFor } from "./query-keys";
 import { dispatchWs } from "./ws-stream";
 import { normalizeTagIds } from "./config-form-utils";
@@ -672,6 +672,24 @@ export function useMailMessages(
         .mailMessages({ accountIds: ids.length > 0 ? ids : undefined, limit, force: true })
         .then((d) => qc.setQueryData(key, d))
         .catch((e) => console.error("[mail] 刷新失败：", e)); // WEB-4：不再裸奔 unhandled rejection
+    },
+    // D64（用户反馈③）：点开即标已读 —— 乐观改本卡 + 服务端落本地标记（幂等）后
+    // 失效**所有**邮件列表（任一组件标记，其它组件同步 —— 同 RSS 未读语义）
+    markRead: (accountId: string, uid: number | string) => {
+      qc.setQueryData<{ items: MailListEntry[]; errors: MailAgg["errors"] }>(key, (prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((i) =>
+                i.accountId === accountId && i.uid === uid ? { ...i, seen: true } : i,
+              ),
+            }
+          : prev!,
+      );
+      void api
+        .markMailRead(accountId, uid)
+        .then(() => qc.invalidateQueries({ queryKey: qkRoot.mailMessages })) // 根键前缀失效 = 所有邮件列表
+        .catch((e) => console.error("[mail] 标记已读失败：", e)); // WEB-4
     },
   };
 }

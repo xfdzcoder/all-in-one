@@ -17,12 +17,14 @@ import {
   fetchMessageBody,
   fetchMessages,
   listAccounts,
+  markMessageRead,
   updateAccount,
 } from "./service.ts";
 
 /**
  * 邮件 REST（Q7a，只读聚合）：账号管理（密码只存凭证引用）+ 聚合列表 + 正文。
- * 无任何写邮箱的端点（D3 只读边界）。
+ * 无任何写**邮箱服务商**的端点（D3 只读边界）；**D64**（用户反馈③）另有**本地**已读
+ * 标记端点（未读徽标归 Workspace，服务商 SEEN 不回写）。
  */
 
 const accountBody = z.object({
@@ -197,5 +199,14 @@ export function registerMailRoutes(
       if (e instanceof SsrfBlockedError) return reply.code(400).send({ error: e.message });
       throw e;
     }
+  });
+
+  /** D64（用户反馈③）：标记已读 —— **本地幂等**（未读徽标归 Workspace），
+   *  不回写 IMAP SEEN / Gmail UNREAD（D3 只读边界不破）。 */
+  app.post("/api/mail/messages/:accountId/:uid/read", { preHandler: authGuard }, async (req, reply) => {
+    const params = bodyParams.safeParse(req.params);
+    if (!params.success) return reply.code(400).send({ error: "invalid request" });
+    await markMessageRead(app.db, req.user!.id, params.data.accountId, params.data.uid);
+    return { ok: true };
   });
 }

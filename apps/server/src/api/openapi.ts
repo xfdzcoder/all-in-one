@@ -205,6 +205,9 @@ export const openApiDoc = {
     "/api/mail/messages/{accountId}/{uid}": {
       get: op("Message body（截断 + 沙箱渲染前取回）", { params: ["accountId", "uid"] }),
     },
+    "/api/mail/messages/{accountId}/{uid}/read": {
+      post: op("Mark message read（D64：本地已读幂等，服务商状态不回写）", { params: ["accountId", "uid"], ok: "ok" }),
+    },
     "/api/mail/gmail/authorize": { post: op("Start Gmail OAuth（D37）", { ok: "authorize url" }) },
     "/api/mail/gmail/callback": {
       get: op("Gmail OAuth callback（state 防伪）", { auth: false, query: ["code", "state"] }),

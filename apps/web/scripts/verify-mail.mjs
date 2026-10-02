@@ -56,6 +56,9 @@ const bodyFixture = {
   html: `<p>富文本<b>正文-${uniq}</b></p><script>window.__PWNED = 1; document.title = "PWNED";</script><img src="https://evil.example/px.gif">`,
 };
 
+/** D64（用户反馈③）：已读端点命中记账（夹具同步 seen，验「未读标记取消」全链路）。 */
+const readMarks = [];
+
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/google-chrome",
   headless: "new",
@@ -122,6 +125,18 @@ const confirmDeleteOwnAccount = (name) =>
     return false;
   }, name);
 
+/** D64（用户反馈③）：某封邮件行的未读状态（蓝点 badge + 主题字重）。 */
+const mailRowState = (subject) =>
+  page.evaluate((s) => {
+    const row = [...document.querySelectorAll(".wb-mail-row")].find((c) => (c.textContent ?? "").includes(s));
+    if (!row) return null;
+    const badge = Boolean(row.querySelector(".mantine-Badge-root"));
+    const subjectNode = [...row.querySelectorAll("*")].find(
+      (n) => n.children.length === 0 && (n.textContent ?? "").includes(s),
+    );
+    return { badge, fw: subjectNode ? getComputedStyle(subjectNode).fontWeight : "400" };
+  }, subject);
+
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await login(page); // TST-14：登录块单点（选择器变更只改 verify-kit）
@@ -159,7 +174,17 @@ await installLayoutGuard(page);
   await page.setRequestInterception(true);
   page.on("request", (req) => {
     const url = req.url();
-    if (url.includes("/api/mail/messages/") && /\/\d+$/.test(url)) {
+    if (url.includes("/api/mail/messages/") && url.endsWith("/read")) {
+      // D64：本地已读标记端点 —— 记账 + 把夹具标已读（列表响应随之反映徽标消失）
+      const m = /\/api\/mail\/messages\/([^/]+)\/([^/]+)\/read/.exec(url);
+      if (m) {
+        for (const it of listFixture.items) {
+          if (String(it.accountId) === m[1] && String(it.uid) === m[2]) it.seen = true;
+        }
+        readMarks.push(`${m[1]}:${m[2]}`);
+      }
+      void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+    } else if (url.includes("/api/mail/messages/") && /\/\d+$/.test(url)) {
       void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(bodyFixture) });
     } else if (url.includes("/api/mail/messages")) {
       // 首次返回空列表（空态提示可断言），此后返回夹具
@@ -242,6 +267,13 @@ await installLayoutGuard(page);
   const bodyText = await page.evaluate(() => document.body.textContent ?? "");
   ok("MAIL list renders subjects", bodyText.includes(`周报汇总-${uniq}`) && bodyText.includes(`欢迎订阅-${uniq}`));
   ok("MAIL per-account error surfaced", bodyText.includes("挂掉的邮箱") && bodyText.includes("connection refused"));
+  // D64 前置：未读信有蓝点 + 加粗（为「点开取消标记」铺垫）
+  const unreadBefore = await mailRowState(`周报汇总-${uniq}`);
+  ok(
+    "MAIL unread row shows badge and bold (D64 前置)",
+    Boolean(unreadBefore?.badge) && Number(unreadBefore?.fw) >= 600,
+    JSON.stringify(unreadBefore),
+  );
 
   // Q68（项 2）：卡片左上角显示本卡覆盖的邮箱 —— 账号名 `，`连接、**仅一行、超出省略号**；
   // 与 /api/mail/accounts 的 name 清单逐字对齐（校验多账号连接完整）；
@@ -357,7 +389,14 @@ await installLayoutGuard(page);
 
   // 返回列表 + 清理（Q68：管理入口在头部「数据源管理」，进去后需自行切到「邮箱」页签）
   ok("MAIL back to list", await clickBtn("← 返回"));
-  await sleep(400);
+  await sleep(600);
+  // D64（用户反馈③）：点开 → 返回列表「未读标记」已取消（蓝点消失 + 常规字重 + 已读端点被调用）
+  const readAfter = await mailRowState(`周报汇总-${uniq}`);
+  ok(
+    "MAIL opening a message clears the unread mark (D64)",
+    Boolean(readAfter) && readAfter.badge === false && Number(readAfter.fw) < 600 && readMarks.includes("acc-1:101"),
+    JSON.stringify({ row: readAfter, readMarks }),
+  );
   ok("MAIL reopen manager for cleanup", await clickBtn("数据源管理"));
   await sleep(500);
   ok(

@@ -322,4 +322,7 @@ export const api = {
   },
   mailMessage: (accountId: string, uid: number | string) =>
     req<MailFull>("GET", `/api/mail/messages/${accountId}/${uid}`),
+  /** D64（用户反馈③）：本地已读标记（幂等）——未读徽标归 Workspace，服务商状态不回写。 */
+  markMailRead: (accountId: string, uid: number | string) =>
+    req<{ ok: boolean }>("POST", `/api/mail/messages/${accountId}/${uid}/read`),
 };

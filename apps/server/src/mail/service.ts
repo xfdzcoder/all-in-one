@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 
 import { assertSafeOutboundUrl, SsrfBlockedError } from "../connector/ssrf.ts";
 import { config } from "../config.ts";
 import { deleteCredentialIfOrphan, readSecret } from "../credentials/store.ts";
 import type { Db } from "../db/client.ts";
-import { mailAccount, type MailAccount } from "../db/schema.ts";
+import { mailAccount, mailRead, type MailAccount } from "../db/schema.ts";
 import type {
   MailClient,
   MailClientFactory,
@@ -187,6 +188,21 @@ async function assertReachable(account: MailAccount): Promise<void> {
   );
 }
 
+/** D64（用户反馈③，2026-10-02）：**本地已读标记**（幂等）—— 未读徽标归 Workspace
+ *  （同 RSS `feed_read` 语义：任一组件标记，其它组件同步）。只写本地表；
+ *  服务商侧维持 D3 只读，IMAP SEEN / Gmail UNREAD 原样不动。 */
+export async function markMessageRead(
+  db: Db,
+  userId: string,
+  accountId: string,
+  uid: number | string,
+): Promise<void> {
+  await db
+    .insert(mailRead)
+    .values({ id: randomUUID(), userId, itemKey: `${accountId}:${uid}`, readAt: new Date() })
+    .onConflictDoNothing(); // 唯一索引封竞态 + 重复点击幂等
+}
+
 export async function fetchMessages(
   db: Db,
   userId: string,
@@ -231,6 +247,12 @@ export async function fetchMessages(
       }
     }),
   );
+  // D64（用户反馈③）：本地已读标记并入 —— `seen = 服务商标记 || 本地点开过`
+  const reads = await db.select().from(mailRead).where(eq(mailRead.userId, userId));
+  const readSet = new Set(reads.map((r) => r.itemKey));
+  for (const i of items) {
+    if (!i.seen && readSet.has(`${i.accountId}:${i.uid}`)) i.seen = true;
+  }
   items.sort((a, b) => (a.date < b.date ? 1 : -1));
   return { items, errors };
 }

@@ -10,7 +10,7 @@ import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
 import { createCredential, readSecret } from "../credentials/store.ts";
-import { credential as credentialTable } from "../db/schema.ts";
+import { credential as credentialTable, mailRead as mailReadTable } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 import { user } from "../db/schema.ts";
 import type {
@@ -169,6 +169,28 @@ describe("mail read-only aggregation (Q7a, D3/SEC3/SEC4)", () => {
     expect(hosts.filter((h) => h === HOST_B)).toHaveLength(1);
     // 凭证明文只在连接期传给客户端（SEC3：不入响应/日志）
     expect(calls.find((c) => c.host === HOST_A)?.password).toBe(PASSWORD);
+  });
+
+  it("D64（用户反馈③）：点开标记已读 = **本地**幂等；seen = 服务商标记 || 本地已读", async () => {
+    clearMailCache();
+    const before = (await req("GET", "/api/mail/messages?limit=10")).json();
+    const a2 = before.items.find((i: { subject: string }) => i.subject === "A2");
+    expect(a2.seen).toBe(false);
+    // 标记已读：连点两次都 200（幂等），mail_read 只留一行
+    const r1 = await req("POST", `/api/mail/messages/${a2.accountId}/${a2.uid}/read`);
+    expect(r1.statusCode).toBe(200);
+    const r2 = await req("POST", `/api/mail/messages/${a2.accountId}/${a2.uid}/read`);
+    expect(r2.statusCode).toBe(200);
+    const rows = await db.select().from(mailReadTable);
+    expect(rows.filter((r) => r.itemKey === `${a2.accountId}:${a2.uid}`)).toHaveLength(1);
+    // 列表合并：A2 变已读；B1 不受影响；服务商标记的 A1 仍是已读
+    const after = (await req("GET", "/api/mail/messages?limit=10")).json();
+    const seenOf = (s: string) => after.items.find((i: { subject: string }) => i.subject === s).seen;
+    expect(seenOf("A2")).toBe(true);
+    expect(seenOf("B1")).toBe(false);
+    expect(seenOf("A1")).toBe(true);
+    // D3 不回写服务商：假客户端的 fixture 里 A2 永远 seen:false（合并只在读侧）
+    expect(messages[HOST_A].find((m) => String(m.uid) === String(a2.uid))?.seen).toBe(false);
   });
 
   it("force=1 bypasses the list cache (manual refresh, FR-I3)", async () => {

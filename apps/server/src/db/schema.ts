@@ -274,7 +274,8 @@ export type NewKanbanCard = typeof kanbanCard.$inferInsert;
 /**
  * 邮件账号（二期 Q7a，只读聚合 01 FR-E3/§2.3；D21：user_id 代位 Workspace 归属）。
  * 密码/应用专用密码存凭证库（SEC3）——本表只存 credential_id 引用，明文永不落库。
- * D3 边界：**只读** —— 不发送、不删除、不回写 IMAP 状态（无 SEEN 标记）。
+ * D3 边界：**只读** —— 不发送、不删除、不回写 IMAP/Gmail 状态；**D64**：已读标记归
+ * Workspace（`mail_read` 本地表，点开即标、跨组件同步），服务商侧 SEEN 原样不动。
  */
 export const mailAccount = sqliteTable("mail_account", {
   id: text("id").primaryKey(),
@@ -300,6 +301,32 @@ export const mailAccount = sqliteTable("mail_account", {
 
 export type MailAccount = typeof mailAccount.$inferSelect;
 export type NewMailAccount = typeof mailAccount.$inferInsert;
+
+/**
+ * 邮件已读标记（**D64**，用户反馈③ 2026-10-02）：未读徽标归 Workspace —— 点开邮件即标
+ * 已读，跨组件/刷新保持；服务商侧维持 D3 只读（不回写 IMAP SEEN / Gmail UNREAD）。
+ * itemKey = `${accountId}:${uid}`（同 IMAP UID / Gmail 消息 id 稳定对应）。
+ */
+export const mailRead = sqliteTable(
+  "mail_read",
+  {
+    id: text("id").primaryKey(),
+    /** Ownership field (D21/NFR5) — 亦即 Workspace 归属。 */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    itemKey: text("item_key").notNull(),
+    readAt: integer("read_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [
+    index("mail_read_user_id_idx").on(t.userId),
+    // 同 feed_read：唯一索引封死「select 查重 → insert」两步竞态（标记幂等）
+    uniqueIndex("mail_read_user_item_idx").on(t.userId, t.itemKey),
+  ],
+);
+
+export type MailRead = typeof mailRead.$inferSelect;
+export type NewMailRead = typeof mailRead.$inferInsert;
 
 /**
  * Workspace 标签（Q22b-1 / FR-D1 / D40）：标签本身是 Workspace 级数据（D21）。

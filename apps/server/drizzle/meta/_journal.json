@@ -113,6 +113,13 @@
       "when": 1790911987462,
       "tag": "0015_windy_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1790943702103,
+      "tag": "0016_glamorous_boom_boom",
+      "breakpoints": true
     }
   ]
 }

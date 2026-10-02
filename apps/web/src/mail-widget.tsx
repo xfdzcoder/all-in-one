@@ -32,8 +32,14 @@ export function MailWidget({
   // **入参防呆**（Q93 同族）：multiselect 默认值是空串 `""`，`("" ?? []).filter` 直接 TypeError
   // ⇒ 整卡进错误态（实测崩因 `(n ?? []).filter is not a function`）——非数组一律归一为空。
   const selectedIds = Array.isArray(accountIds) ? accountIds.filter((x) => typeof x === "string" && x) : [];
-  const { agg, loading, error, refresh } = useMailMessages(selectedIds, limit, refreshSec);
+  const { agg, loading, error, refresh, markRead } = useMailMessages(selectedIds, limit, refreshSec);
   const { message: detail, error: detailError } = useMailMessage(open?.accountId ?? null, open?.uid ?? null);
+  // D64（用户反馈③）：点开即取消「未读标记」—— 乐观更新 + 本地已读落库（幂等），
+  // 未读徽标归 Workspace（跨组件/刷新保持）；邮箱服务商侧 SEEN 不回写（D3 只读）
+  const openMessage = (item: MailListEntry) => {
+    setOpen(item);
+    markRead(item.accountId, item.uid);
+  };
   // Q29e/四.2：配置多选邮箱（留空 = 全部）；过滤已下推服务端（WEB-1），这里只用于标签展示
   const allowIds = selectedIds.length > 0 ? new Set(selectedIds) : null;
 
@@ -78,11 +84,11 @@ export function MailWidget({
               type="button"
               className="wb-card--interactive wb-mail-row"
               style={{ cursor: "pointer", textAlign: "inherit" }}
-              onClick={() => setOpen(item)}
+              onClick={() => openMessage(item)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setOpen(item);
+                  openMessage(item);
                 }
               }}
             >
