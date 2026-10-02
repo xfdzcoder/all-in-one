@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   changePasswordBody,
   changeUsernameBody,
+  cssRestoreBody,
+  cssSaveBody,
   dashboardCreateBody,
   dashboardPatchBody,
   layoutUpdateBody,
@@ -68,6 +70,18 @@ export const openApiDoc = {
     "/api/health": { get: op("Health check", { auth: false }) },
     "/api/openapi.json": { get: op("This document") },
     "/custom.css": { get: op("用户样式表 + Mantine 变量桥（CSS，非 JSON）", { ok: "css" }) },
+    "/api/styles/custom-css": {
+      get: op("自定义 CSS 当前内容 + 历史清单（FR-S3/Q111）", { ok: "{ css, backups }" }),
+      put: op("保存自定义 CSS（写前自动备份旧版）", { body: cssSaveBody, bodyDesc: "css text", ok: "{ ok, backupId, backups }" }),
+    },
+    "/api/styles/custom-css/restore": {
+      post: op("回滚自定义 CSS 到某备份（当前内容同样先备份）", {
+        body: cssRestoreBody,
+        bodyDesc: "backup id",
+        ok: "{ ok, css, backupId, backups }",
+        codes: { "400": { description: "invalid backup id" }, "404": { description: "备份不存在" } },
+      }),
+    },
     "/api/events": { get: op("SSE 事件流（失效广播）", { ok: "event stream" }) },
 
     // ── 认证（D11/D17）──

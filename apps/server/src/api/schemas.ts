@@ -80,3 +80,7 @@ export const layoutUpdateBody = z.object({ layoutJson: layoutJsonSchema });
 
 export type DashboardCreateBody = z.infer<typeof dashboardCreateBody>;
 export type DashboardPatchBody = z.infer<typeof dashboardPatchBody>;
+
+/** FR-S3（Q111/D70）：自定义 CSS 保存 / 回滚（备份 id 严格白名单，防路径穿越）。 */
+export const cssSaveBody = z.object({ css: z.string().max(256_000) });
+export const cssRestoreBody = z.object({ id: z.string().regex(/^[\w.-]{1,80}$/) });

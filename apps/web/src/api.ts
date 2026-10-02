@@ -25,6 +25,11 @@ export type Dashboard = {
 
 export type Me = { id: string; username: string };
 
+/** 自定义 CSS 历史备份条目（FR-S3/Q111）。 */
+export type CustomCssBackup = { id: string; at: string; size: number };
+export type CustomCssView = { css: string; backups: CustomCssBackup[] };
+export type CustomCssSave = { ok: boolean; backupId: string | null; backups: CustomCssBackup[] };
+
 export type TodoItem = {
   id: string;
   list: string;
@@ -199,6 +204,12 @@ export const api = {
     req<Me>("POST", "/api/auth/change-username", { currentPassword, username }),
   changePassword: (currentPassword: string, newPassword: string) =>
     req<{ ok: boolean }>("POST", "/api/auth/change-password", { currentPassword, newPassword }),
+  // FR-S3（Q111/D70）：自定义 CSS（设置页内编辑；保存自动备份旧版、可回滚）
+  getCustomCss: () => req<CustomCssView>("GET", "/api/styles/custom-css"),
+  saveCustomCss: (css: string) =>
+    req<CustomCssSave>("PUT", "/api/styles/custom-css", { css }),
+  restoreCustomCss: (id: string) =>
+    req<CustomCssSave & { css: string }>("POST", "/api/styles/custom-css/restore", { id }),
   listDashboards: () => req<Dashboard[]>("GET", "/api/dashboards"),
   // CON-10：与服务端 dashboardCreateBody 对齐（icon/columns/cellHeight 此前漏传）
   createDashboard: (

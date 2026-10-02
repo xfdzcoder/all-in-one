@@ -647,3 +647,16 @@
 - **验收脚本同步（TST-23 双实现）**：kit 新增 `openSettings(page, tab)` 统一入口，12 个 puppeteer 脚本 + Playwright `journeys.spec.ts` 同步改（`数据源管理`→`设置`→`数据源`、`插件管理`→`设置`→`插件`）；「返回工作台」入口保留在设置页顶栏（脚本零迁移）。
 - **被否备选**：① 设置用 Modal 弹窗（数据源管理 7 页签在弹窗里体验差，Q25c 已有「弹窗改全页」先例）；② 保留旧四按钮做快捷入口（用户明确「整合为一个」）；③ 菜单项沿用旧名「数据源管理/插件管理」以省脚本改动（脚本该跟 UI 语义走，不反向迁就脚本）。
 - **影响**：`settings-admin.tsx`（新）、`App.tsx`（视图状态机 + 头部）、`plugin-admin.tsx`（去 Modal）、`data-admin.tsx`（`embedded`）、widgets.css（`.wb-settings*`）、verify-kit + 12 脚本 + e2e。
+
+## D70 · 自定义 CSS 页内编辑器：CodeMirror 6 + 令牌/类名提示 + 自动备份回滚（2026-10-02）
+
+- **背景**：用户指令「外观中主要包含深浅色主题切换、**自定义 CSS**」并补充「CSS 编辑器要支持**基本的语法高亮和代码提示**」。现状是「手工编辑服务器上 `./data/custom.css`」（D39 契约，`GET /custom.css` 合成下发）。
+- **决策（用户拍板）**：
+  1. **内核 = CodeMirror 6**（`@codemirror/{state,view,language,lang-css,autocomplete,commands}` + `@lezer/highlight`）：模块化按需、体积可控、主题可桥 `--wb-*` 令牌跟随深浅色；React 接入层**自写薄封装**（`css-editor.tsx`，对齐 D55「自写 useEcharts」风格，不引 react 封装层）。
+  2. **提示范围**：标准 CSS 属性/取值（`cssCompletionSource`）+ **本工作台 `--wb-*` 设计令牌与 `.wb-*` 语义类名**。提示数据源 = `?raw` 导入 `tokens.css`/`widgets.css` **运行时提取**（`css-hints.ts`）——零生成物、改令牌/加类提示自动跟上；另加括号配对/自动闭合/撤销重做。
+  3. **保存前轻校验**（`lintCss`：括号配平、注释/字符串感知）——**不阻断保存**，只提示「原因 + 怎么修」（D47 口径）。
+  4. **自动备份 + 回滚**：保存前旧内容自动入 `dataDir/custom-css-history/`（id = 时间戳 + 随机后缀，严格白名单防穿越；封顶 20 份）；回滚前当前内容同样先备份（回滚也可回滚）。REST：`GET/PUT /api/styles/custom-css` + `POST /api/styles/custom-css/restore`（登录态 + 256KB 上限 + **固定文件路径**，不接受路径参数）。
+  5. **保存即生效**：bust `<link href="/custom.css">` 缓存重取（D39 层叠不变：用户段仍拼在桥接段后）。
+- **被否备选**：① Monaco（体积 ~1MB+、Worker 配置复杂，LAN 单用户工作台偏重）；② textarea + Prism 只做高亮（用户明确要"代码提示"）；③ 构建期生成提示清单 JSON（多一步生成物、易失同步，`?raw` 更简单）。
+- **验证**：`css-hints` 单测（提取规则 + lint 语义）、`styles/routes` 契约测试 5 项（保存/备份/回滚/穿越拒绝/上限/封顶）；**真机 `verify-css.mjs` 14/14**（提示给到真令牌与真类名 = `?raw`→提取→补全 UI 全链路；保存生效对账 `/custom.css`；备份条目；回滚后 hotpink 消失；结尾还原原始内容）。
+- **坑留档**：vitest 下 `?raw` 的 CSS 被 stub 成空串（`test.css` 默认 false）——「真实样式表→提示」这类断言只能在浏览器面验（verify-css），单测保持纯函数。

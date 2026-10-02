@@ -1,4 +1,4 @@
-import { Button, Group, PasswordInput, SegmentedControl, Stack, Text, TextInput, Title, UnstyledButton } from "@mantine/core";
+import { Button, Group, PasswordInput, Stack, Text, TextInput, Title, UnstyledButton } from "@mantine/core";
 import {
   IconDatabase,
   IconInfoCircle,
@@ -10,6 +10,7 @@ import {
 import { useState, type ReactNode } from "react";
 
 import { api, type Me } from "./api";
+import { AppearancePanel } from "./appearance-panel";
 import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
 import { WbAlert } from "./ui";
@@ -82,28 +83,7 @@ export function SettingsAdmin(props: {
           {tab === "account" && (
             <AccountPanel me={me} onProfileChanged={onProfileChanged} onLogout={onLogout} />
           )}
-          {tab === "appearance" && (
-            <Stack gap="md" className="wb-settings__section">
-              <Title order={5}>外观</Title>
-              <Group gap="xs">
-                <Text size="sm" c="dimmed">
-                  主题
-                </Text>
-                <SegmentedControl
-                  size="xs"
-                  value={themeMode}
-                  onChange={(v) => {
-                    // SegmentedControl 单选语义：只有真的切换才触发（避免重复 set）
-                    if ((v === "dark") !== (themeMode === "dark")) onToggleTheme();
-                  }}
-                  data={[
-                    { label: "深色", value: "dark" },
-                    { label: "浅色", value: "light" },
-                  ]}
-                />
-              </Group>
-            </Stack>
-          )}
+          {tab === "appearance" && <AppearancePanel themeMode={themeMode} onToggleTheme={onToggleTheme} />}
           {tab === "plugins" && (
             <Stack gap="md" className="wb-settings__section">
               <Title order={5}>插件管理</Title>

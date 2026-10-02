@@ -29,6 +29,7 @@ import { registerPluginRoutes } from "./plugin/routes.ts";
 import { registerKanbanRoutes } from "./kanban/routes.ts";
 import { registerMailRoutes } from "./mail/routes.ts";
 import { registerPortainerRoutes } from "./portainer/routes.ts";
+import { registerStyleRoutes } from "./styles/routes.ts";
 import { MANTINE_BRIDGE_CSS } from "./styles-bridge.ts";
 import type { MailClientFactory } from "./mail/client.ts";
 
@@ -125,6 +126,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerMailRoutes(app, { clientFactory: deps.mailClientFactory });
   // D54：Navidrome 播放遥控 / Mihomo 策略组切换已移除 —— 两个深度组件回归只读
   registerPortainerRoutes(app);
+  // FR-S3（Q111/D70）：自定义 CSS 读写 + 历史备份/回滚（页面内编辑器的数据面）
+  registerStyleRoutes(app);
 
   // NFR1 单镜像部署：PUBLIC_DIR 存在时伺服前端静态资源（SPA fallback 到 index.html）
   const publicDir = process.env.PUBLIC_DIR;
