@@ -153,7 +153,7 @@ try {
   ok("J7 add iframe via picker (blocked url, default sandbox)", await addIframe(blockedUrl, null));
   await sleep(500);
   const b1 = await frameState(blockedUrl);
-  ok("J7 default sandbox = allow-scripts + allow-same-origin (D67)", b1.sandbox === "allow-scripts allow-same-origin", `sandbox="${b1.sandbox}"`);
+  ok("J7 default sandbox = allow-scripts + allow-same-origin + allow-forms (D67/Q115)", b1.sandbox === "allow-scripts allow-same-origin allow-forms", `sandbox="${b1.sandbox}"`);
   let b2 = b1;
   for (let i = 0; i < 16 && !b2.hint; i++) {
     await sleep(500);

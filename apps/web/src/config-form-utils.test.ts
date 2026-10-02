@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { configForSubmit, normalizeTagIds, resolveSourceConfig } from "./config-form-utils";
+import { configForSubmit, normalizeTagIds, resolveSourceConfig, valuesWithDefaults } from "./config-form-utils";
 
 describe("configForSubmit（WEB-2：空=显式清空，secret 空=不改）", () => {
   const schema = [
@@ -73,5 +73,31 @@ describe("resolveSourceConfig（D65，用户反馈⑤：卡片配置优先 + 相
     expect(resolveSourceConfig({ url: "/api/stats" }, {}, undefined, opts).url).toBe("/api/stats");
     // 来源缺地址：同样原样保留
     expect(resolveSourceConfig({ url: "/api/stats" }, { apiToken: "t" }, undefined, opts).url).toBe("/api/stats");
+  });
+});
+
+// Q115：编辑态表单显示**生效值** —— 缺失/空字段回填 manifest default（用户要求默认值直接出现在输入框）
+describe("valuesWithDefaults（编辑态初值回填默认）", () => {
+  const schema = [
+    { key: "sandbox", label: "沙箱能力", type: "text" as const, default: "allow-scripts allow-same-origin allow-forms" },
+    { key: "url", label: "页面地址", type: "text" as const },
+    { key: "limit", label: "条目数", type: "number" as const, default: 10 },
+  ];
+
+  it("缺失/空串字段回填 default；已填值原样保留", () => {
+    expect(valuesWithDefaults(schema, {})).toEqual({
+      sandbox: "allow-scripts allow-same-origin allow-forms",
+      url: "",
+      limit: 10,
+    });
+    expect(valuesWithDefaults(schema, { sandbox: "allow-scripts", limit: 3 })).toEqual({
+      sandbox: "allow-scripts",
+      url: "",
+      limit: 3,
+    });
+  });
+
+  it("空串按未填处理（D23 空 = 回落默认），但不改提交语义", () => {
+    expect(valuesWithDefaults(schema, { sandbox: "" }).sandbox).toBe("allow-scripts allow-same-origin allow-forms");
   });
 });

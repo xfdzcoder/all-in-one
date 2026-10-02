@@ -6,10 +6,10 @@ import { isSameOriginAsHost, resolveSandbox } from "./iframe-widget";
 // 同源地址必须拒绝嵌入（同源 + allow-scripts + allow-same-origin = 绕过沙箱隔离）。
 describe("iframe 沙箱策略（D67）", () => {
   it("默认沙箱含 allow-same-origin（框内请求 Origin 不再是 null）", () => {
-    expect(resolveSandbox(undefined)).toBe("allow-scripts allow-same-origin");
+    expect(resolveSandbox(undefined)).toBe("allow-scripts allow-same-origin allow-forms");
     // 空串 = 未配置（configSchema 默认值语义，D23），同样回落默认
-    expect(resolveSandbox("")).toBe("allow-scripts allow-same-origin");
-    expect(resolveSandbox("   ")).toBe("allow-scripts allow-same-origin");
+    expect(resolveSandbox("")).toBe("allow-scripts allow-same-origin allow-forms");
+    expect(resolveSandbox("   ")).toBe("allow-scripts allow-same-origin allow-forms");
   });
 
   it("自定义沙箱优先（trim 后生效）", () => {

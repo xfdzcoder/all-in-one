@@ -17,6 +17,20 @@ export function defaultsFromSchema(schema: ConfigSchema): ConfigValues {
   return out;
 }
 
+/**
+ * 编辑态表单初值（Q115）：**生效值直接可见** —— props 里缺失/为空的字段回填 manifest
+ * `default`（用户要求「默认规则直接作为值出现在输入框中」，如 iframe 沙箱）。
+ * 空串按「未填」处理，与 D23「空 = 回落默认」语义一致；**提交语义不变**（清空后保存
+ * 仍存空串，见 `configForSubmit`）——本函数只决定表单显示什么。
+ */
+export function valuesWithDefaults(schema: ConfigSchema, props: ConfigValues): ConfigValues {
+  const out: ConfigValues = { ...defaultsFromSchema(schema) };
+  for (const [k, v] of Object.entries(props)) {
+    if (v !== undefined && v !== null && v !== "") out[k] = v;
+  }
+  return out;
+}
+
 export type FieldError = { key: string; message: string };
 
 /** D65（用户反馈⑤，2026-10-02）：连接配置合并（**纯函数**，`useResolvedSourceConfig` 委托实现）。

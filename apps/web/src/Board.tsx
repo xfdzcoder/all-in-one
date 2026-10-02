@@ -17,7 +17,7 @@ import { WidgetPicker } from "./WidgetPicker";
 import { ConfigForm } from "./ConfigForm";
 import { PluginFrame } from "./plugin-frame";
 import { usePlugins } from "./data-hooks";
-import { propsWithSecretRefs } from "./config-form-utils";
+import { propsWithSecretRefs, valuesWithDefaults } from "./config-form-utils";
 import { IconAction, WbAlert } from "./ui";
 
 const SAVE_DEBOUNCE_MS = 800;
@@ -388,7 +388,8 @@ export function Board({
       if (!grid || !node || !manifest) return;
       setConfigureId(id);
       setConfigManifest(manifest);
-      setConfigValues({ ...node.props });
+      // Q115：表单显示**生效值** —— 缺失/空的字段回填 manifest default（如 iframe 沙箱默认规则）
+      setConfigValues(valuesWithDefaults(manifest.configSchema, node.props ?? {}));
       setConfigOriginal({ ...node.props });
       setConfigError(null);
     },

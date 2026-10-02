@@ -3,6 +3,7 @@ import { Loader, Stack, Text } from "@mantine/core";
 
 import { useEmbedCheck } from "./data-hooks";
 import { WbAlert } from "./ui";
+import { WidgetTitle } from "./widget-title";
 
 /**
  * iframe Widget（FR-J7：sandbox 属性 + CSP + 禁嵌明确提示）。
@@ -23,9 +24,10 @@ export type IframeConfig = {
   sandbox?: string;
 };
 
-/** 默认沙箱（D67）：可跑脚本 + 正常源（框内请求 Origin 正确、cookie 可用）。
- *  仍禁：顶层导航、表单提交、弹窗。 */
-const DEFAULT_SANDBOX = "allow-scripts allow-same-origin";
+/** 默认沙箱（D67 + **Q115 微调**）：可跑脚本 + 正常源（框内请求 Origin 正确、cookie 可用）
+ *  + 可提交表单（登录/搜索类页面要用）。仍禁：顶层导航、弹窗。
+ *  用户要求默认规则**直接作为输入框的值**出现在配置弹窗（不是 placeholder 提示）。 */
+const DEFAULT_SANDBOX = "allow-scripts allow-same-origin allow-forms";
 
 /** 纯函数：生效沙箱 —— 配置值优先（trim 后非空），空回落默认（D23 语义）。 */
 export function resolveSandbox(custom: string | undefined): string {
@@ -81,9 +83,8 @@ export function IframeWidget({ url, sandbox }: IframeConfig) {
   return (
     <div className="wb-widget">
       <div className="wb-widget__header">
-        <Text className="wb-url wb-grow" truncate>
-          {url}
-        </Text>
+        {/* 用户要求：标题（URL）可点击、新标签页打开 —— 复用 D59 标题链接形态 */}
+        <WidgetTitle title={url} href={url} className="wb-url" tip={url} />
       </div>
       {blocked && (
         <WbAlert tone="warning">

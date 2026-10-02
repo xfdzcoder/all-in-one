@@ -185,13 +185,15 @@ const iframeManifest: WidgetManifest = {
   minSize: { w: 3, h: 2 },
   configSchema: [
     { key: "url", label: "页面地址", type: "text", required: true, placeholder: "http://192.168.31.133:9000" },
-    // D67：默认含 allow-same-origin（框内请求 Origin 正确、登录态可用）；去掉它会让页面请求 Origin 变 null
+    // D67：默认含 allow-same-origin（框内请求 Origin 正确、登录态可用）；Q115：补 allow-forms。
+    // 默认值直接作为**输入框的值**出现（不是 placeholder）——用户能看清并编辑生效规则。
     {
       key: "sandbox",
       label: "沙箱能力",
       type: "text",
-      placeholder: "默认 allow-scripts allow-same-origin",
-      help: "默认已含 allow-same-origin（页面请求 Origin 正确、登录态可用）；去掉它会让框内请求的 Origin 变成 null 并丢失登录态。与工作台同源的地址不允许嵌入",
+      default: "allow-scripts allow-same-origin allow-forms",
+      placeholder: "allow-scripts allow-same-origin allow-forms",
+      help: "默认已含 allow-same-origin（页面请求 Origin 正确、登录态可用）与 allow-forms（可提交表单）；去掉 allow-same-origin 会让框内请求的 Origin 变成 null 并丢失登录态。与工作台同源的地址不允许嵌入",
     },
   ],
   capabilities: {

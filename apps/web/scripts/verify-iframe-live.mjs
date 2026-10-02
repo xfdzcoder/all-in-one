@@ -93,7 +93,7 @@ try {
         (u) => [...document.querySelectorAll("iframe")].find((f) => f.getAttribute("src") === u)?.getAttribute("sandbox") ?? null,
         EMBED_URL,
       );
-      ok("LIVE-IFRAME 默认沙箱含 allow-same-origin", sandbox === "allow-scripts allow-same-origin", `sandbox="${sandbox}"`);
+      ok("LIVE-IFRAME 默认沙箱含 allow-same-origin + allow-forms", sandbox === "allow-scripts allow-same-origin allow-forms", `sandbox="${sandbox}"`);
     }
 
     if (BLOCKED_URL) {

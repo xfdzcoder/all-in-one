@@ -671,3 +671,13 @@
 - **效果**：dev 首屏 **40.9MB / 43 脚本 → 11.9MB / 99 小请求（-71%）**，16MB 单文件消失；剩余大头为 `@mantine/core` 3.9MB + `react-dom` 2.7MB（核心，不可省）。
 - **被否备选**：① 仅建议用户用 preview 看效果（不解决开发期体感）；② 换图标库（改动面大于收益）；③ 关 DevTools sourcemap（根因不在 map）。
 - **残余（P2 跟进）**：`acorn` 仍被 `widget-sdk` 的 index 重出口拽进首屏（`jsx-template.ts` 从 index 导出）——需 SDK 入口拆分（`exports` 子路径）才能移出，记 Q116。
+
+## D72 · iframe 卡三项微调：默认沙箱补 `allow-forms` / 默认值直接入输入框 / 标题 URL 可点跳转（2026-10-03）
+
+- **背景**：用户两条反馈（2026-10-03）：①「iframe 的配置弹窗中，规则默认包含 `allow-scripts allow-same-origin allow-forms`，并且需要**直接作为值出现在输入框中**」；②「iframe 卡片的标题文本，展示链接可以，但是得**可以点击在新标签页打开**」。
+- **决策（用户拍板）**：
+  1. **默认沙箱 = `allow-scripts allow-same-origin allow-forms`**（在 D67 基础上补 `allow-forms`：登录/搜索类页面要提交表单）。仍禁顶层导航与弹窗；`allow-same-origin` 的语义与同源自嵌防护（D67）不变。manifest 的 `sandbox` 字段加 `default`，placeholder/help 同步。
+  2. **默认值直接作为输入框的值**（不是 placeholder）：新增弹窗走 `defaultsFromSchema`（有 `default` 即预填）；**编辑弹窗**新增 `valuesWithDefaults(schema, props)` —— 缺失/空串字段回填 manifest `default`，让**生效值直接可见可编辑**（空 = 回落默认，D23 语义）。**提交语义不变**（`configForSubmit` 仍把空串当显式清空存库，WEB-2 口径）。
+  3. **标题 URL 可点击、新标签页打开**：iframe 头部的 URL 文本改用 **D59 的 `WidgetTitle` 链接形态**（`href={url}` → `target="_blank" rel="noopener noreferrer"`，`.wb-widget__title-link` 样式），同源自嵌拒绝分支同改；URL 仍以 `.wb-url` 等宽弱化样式展示（观感基本不变，字重跟全站标题统一 fw 600）。
+- **被否备选**：① 自己手写 `<a>`（重复 D59 已有形态）；② 把「默认值显示」做成 iframe 专属硬编码（通用 `valuesWithDefaults` 对所有组件一致生效，行为可解释）。
+- **验证**：`config-form-utils` +2 单测（回填规则/空串回落）、`iframe-widget` 单测随新默认值更新；**verify-j7 13/13**（默认沙箱三令牌断言、自定义沙箱优先、同源拒绝、框内 Origin 非 null）+ **verify-iframe-live 5/5（真机）**；smoke 5/5。
