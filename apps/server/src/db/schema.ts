@@ -159,7 +159,8 @@ export const feedRead = sqliteTable(
   },
   (t) => [
     index("feed_read_user_id_idx").on(t.userId),
-    index("feed_read_user_item_idx").on(t.userId, t.itemKey),
+    // SRV-22：唯一索引封死「select 查重 → insert」两步竞态（读标幂等）
+    uniqueIndex("feed_read_user_item_idx").on(t.userId, t.itemKey),
   ],
 );
 

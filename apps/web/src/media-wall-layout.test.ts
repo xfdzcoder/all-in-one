@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countCells, packRows } from "./media-wall-layout.ts";
+import { countCells, packRows } from "./media-wall-layout";
 
 const EPS = 1e-6;
 

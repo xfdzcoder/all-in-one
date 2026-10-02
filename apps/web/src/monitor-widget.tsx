@@ -1,5 +1,5 @@
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
 import { useDataSources, useMonitorData, useResolvedSourceConfig, useSourceHomeUrl } from "./data-hooks";
@@ -59,6 +59,10 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const { data, loading, error, refresh } = useMonitorData(resolved);
   const [detailOpen, setDetailOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+  }, []);
   // Q36：按解析后配置判定空态（sourceId 命中连接 / 旧内联均算已配置）
   const url = (resolved as { url?: string }).url;
   // Q85（项 11）：标题显示**实际的数据源名称**（未绑定连接时回落组件名）
@@ -183,7 +187,11 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
                 // 下会同步抛（clipboard 是 undefined），`.catch()` 接不住。
                 void copyText(JSON.stringify(data, null, 2)).then((ok) => {
                   setCopied(ok);
-                  if (ok) setTimeout(() => setCopied(false), 2000);
+                  // WEB-28：复位定时器随组件卸载清理，避免卸载后 setState
+                  if (ok) {
+                    if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+                    copyTimer.current = window.setTimeout(() => setCopied(false), 2000);
+                  }
                   return ok; // promise(always-return)：链式语义明确
                 });
               }}

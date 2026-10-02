@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Group, Stack, Text, TextInput } from "@mantine/core";
 
 import { api, type IconRow } from "./api";
@@ -24,6 +24,10 @@ export function IconLibrary() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const copyTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+  }, []);
 
   const rows: IconRow[] = list.data ?? [];
 
@@ -123,7 +127,9 @@ export function IconLibrary() {
                 void copyText(`/api/icons/${r.id}`).then((ok) => {
                   if (!ok) return ok;
                   setCopied(r.id);
-                  setTimeout(() => setCopied(null), 2000);
+                  // WEB-28：复位定时器随组件卸载清理，避免卸载后 setState
+                  if (copyTimer.current !== null) clearTimeout(copyTimer.current);
+                  copyTimer.current = window.setTimeout(() => setCopied(null), 2000);
                   return ok; // promise(always-return)：链式语义明确
                 });
               }}

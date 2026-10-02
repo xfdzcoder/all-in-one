@@ -1,6 +1,6 @@
 /**
  * 动作契约（FR-I5：组件内执行操作；FR-W1 能力声明 data/refresh/action）。
- * 动作统一走服务端 `POST /api/widgets/:id/actions/:name`（审计/权限/限流可集中做，K4）。
+ * 动作统一走服务端 `POST /api/plugins/:id/actions`（action 名在 body；审计/权限/限流可集中做，K4）。
  */
 
 export interface ActionCapability {

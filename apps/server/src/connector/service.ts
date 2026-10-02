@@ -443,12 +443,27 @@ export const serviceOverviewConnector: WidgetConnector = {
         const apiKey = { "X-API-Key": str(config.apiKey) ?? "" };
         // 探活必须成功（否则整体 probe 失败）；版本/统计多路由回落
         await getJson(base, "/api/server/ping", apiKey);
-        const version =
-          (await best("版本", () => getJson(base, "/api/server/version", apiKey))) ??
-          (await best("版本", () => getJson(base, "/api/server-info/version", apiKey)));
-        const stats =
-          (await best("统计", () => getJson(base, "/api/server/statistics", apiKey))) ??
-          (await best("统计", () => getJson(base, "/api/statistics", apiKey)));
+        // SRV-27：多路由回落 —— **只有全部失败才记 note**（旧写法第一路由失败即记，
+        // 第二路由成功后版本有值、note 里却仍报「版本获取失败」，自相矛盾）
+        const firstOk = async (what: string, fns: Array<() => Promise<unknown>>): Promise<unknown> => {
+          for (const fn of fns) {
+            try {
+              const v = await fn();
+              if (v !== undefined && v !== null) return v;
+            } catch {
+              /* 试下一路 */
+            }
+          }
+          return best(what, () => fns[fns.length - 1]!()); // 全败：走 best 记一条诚实 note
+        };
+        const version = await firstOk("版本", [
+          () => getJson(base, "/api/server/version", apiKey),
+          () => getJson(base, "/api/server-info/version", apiKey),
+        ]);
+        const stats = await firstOk("统计", [
+          () => getJson(base, "/api/server/statistics", apiKey),
+          () => getJson(base, "/api/statistics", apiKey),
+        ]);
         // Q49：近 7 天新增 + 最近上传（search/metadata 需 asset.read 权限）
         const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
         const week = await best("近 7 天新增", () =>
@@ -477,6 +492,10 @@ export const serviceOverviewConnector: WidgetConnector = {
         const status = await getJson(base, "/api/system/status", headers);
         const endpoints = await getJson(base, "/api/endpoints", headers);
         const eps = Array.isArray(endpoints) ? (endpoints as Array<Record<string, unknown>>) : [];
+        if (!Array.isArray(endpoints)) {
+          // SRV-26：上游回非数组（对象/错误体）→ 说清原因，别让 `eps[0]?.Id` 报 TypeError
+          throw new Error("Portainer /api/endpoints 返回的不是数组（可能是错误体）—— 检查 URL 是否指向 Portainer API、apiToken 是否有效");
+        }
         const epId = num(eps[0]?.Id);
         let containers: unknown;
         let info: unknown;

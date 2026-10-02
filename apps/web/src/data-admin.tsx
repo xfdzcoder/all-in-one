@@ -249,7 +249,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                       placeholder="选择 ToDo"
                       data={names.map((n: string) => ({
                         value: n,
-                        label: dashboards ? n : n,
+                        label: n,
                       }))}
                       value={current ?? null}
                       onChange={(v) => setActiveTodoName(v ?? undefined)}

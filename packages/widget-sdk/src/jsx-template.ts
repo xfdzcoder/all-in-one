@@ -20,6 +20,16 @@ const parser = Parser.extend(acornJsx());
 
 export const TEMPLATE_MAX_BYTES = 64 * 1024;
 
+/** UTF-8 字节数（零依赖；TextEncoder 在 widget-sdk 的 tsconfig lib 下无类型，SDK-8）。 */
+function utf8Bytes(s: string): number {
+  let n = 0;
+  for (const ch of s) {
+    const c = ch.codePointAt(0) ?? 0;
+    n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4;
+  }
+  return n;
+}
+
 /** 组件白名单由宿主提供（渲染映射同源）；此处校验 tag 是否在名单内。 */
 export interface ParseOptions {
   allowedTags: readonly string[];
@@ -454,7 +464,8 @@ export function parseJsxTemplate(src: string, options: ParseOptions): ParseResul
     allowedProps: options.allowedProps ?? DEFAULT_ALLOWED_PROPS,
   };
   if (!src.trim()) return { tree: null, errors: ["模板为空"] };
-  if (src.length > TEMPLATE_MAX_BYTES) return { tree: null, errors: [`模板超过 ${TEMPLATE_MAX_BYTES / 1024}KB 上限`] };
+  // SDK-8：按**字节**封顶（UTF-16 code unit 数会让 CJK 源码少算一半）
+  if (utf8Bytes(src) > TEMPLATE_MAX_BYTES) return { tree: null, errors: [`模板超过 ${TEMPLATE_MAX_BYTES / 1024}KB 上限`] };
 
   // 二道闸：源码级拒绝名单（允许名单制已足够，纵深防御）
   for (const bad of FORBIDDEN_SOURCE) {

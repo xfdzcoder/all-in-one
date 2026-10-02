@@ -204,7 +204,7 @@ export function useTodoMutations() {
   return { create, toggle, toggleArchive, remove, deleteGroup };
 }
 
-/** 组件卸载安全的本地输入状态。 */
+/** 表单草稿输入（受控文本框用；提交后由调用方置空）。 */
 export function useDraft(initial = ""): [string, (v: string) => void] {
   const [v, setV] = useState(initial);
   return [v, setV];

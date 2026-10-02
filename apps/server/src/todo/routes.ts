@@ -112,6 +112,8 @@ export function registerTodoRoutes(app: FastifyInstance, onChanged: () => void):
       .delete(todo)
       .where(and(eq(todo.userId, req.user!.id), eq(todo.list, parsed.data.name)))
       .returning({ id: todo.id });
+    // SRV-23：整组真删同样清 tag_target（D40 多态关联无外键，应用层清理）——原实现漏清致孤儿关联
+    for (const r of rows) await deleteTargetLinks(app.db, req.user!.id, "todo", r.id);
     onChanged();
     return { ok: true, deleted: rows.length };
   });

@@ -155,7 +155,10 @@ const addMonitorWidget = async (sourceName) => {
 const clickRefreshIn = (marker) =>
   page.evaluate((m) => {
     const item = [...document.querySelectorAll(".grid-stack-item")].find((i) => (i.textContent ?? "").includes(m));
-    const btn = [...(item?.querySelectorAll("button") ?? [])].find((b) => b.textContent.trim() === "刷新");
+    // Q85 后监控标题显示数据源名；刷新钮是 icon-only（IconAction，sr-only 文本 + aria-label），两种都认
+    const btn = [...(item?.querySelectorAll("button") ?? [])].find(
+      (b) => b.textContent.trim() === "刷新" || b.getAttribute("aria-label") === "刷新",
+    );
     if (!btn) return false;
     btn.click();
     return true;
@@ -234,7 +237,8 @@ await installLayoutGuard(page);
   await sleep(300);
   await sleep(5200);
   const h0 = hits;
-  ok("MON refresh button", await clickRefreshIn("服务器监控"));
+  // Q85 项 11：标题显示数据源名（回落「服务器监控」仅在未绑定连接时）——marker 用 srcBasic
+  ok("MON refresh button", await clickRefreshIn(srcBasic));
   await sleep(1500);
   ok("MON refresh refetches upstream", hits > h0, `${h0} -> ${hits}`);
 

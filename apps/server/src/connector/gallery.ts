@@ -110,7 +110,8 @@ export const immichAlbumsConnector: WidgetConnector = {
     const list = Array.isArray(JSON.parse(res.text)) ? (JSON.parse(res.text) as Array<Record<string, unknown>>) : [];
     return {
       items: list
-        .map((a) => ({ value: str(a.id) ?? "", label: str(a.albumName) ?? str(a.albumName) ?? "(未命名相册)" }))
+        // SRV-18：原 `?? str(a.albumName)` 是复制笔误（同表达式 ?? 两次），第二顺位应为 description
+        .map((a) => ({ value: str(a.id) ?? "", label: str(a.albumName) ?? str(a.description) ?? "(未命名相册)" }))
         .filter((x) => x.value),
     };
   },

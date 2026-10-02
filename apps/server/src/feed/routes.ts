@@ -77,7 +77,7 @@ export function registerFeedRoutes(app: FastifyInstance, onChanged: () => void):
         userId: req.user!.id,
         itemKey: parsed.data.itemKey,
         readAt: new Date(),
-      });
+      }).onConflictDoNothing();
     }
     onChanged();
     return { ok: true };

@@ -18,7 +18,7 @@ import { IconCheck, IconDatabase, IconLogout, IconPencil, IconPuzzle } from "@ta
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { api, ApiError, DASHBOARD_COLUMNS, type Dashboard, type Me } from "./api";
+import { api, DASHBOARD_COLUMNS, type Dashboard, type Me } from "./api";
 import { rescaleLayout } from "./grid-rescale";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
@@ -526,12 +526,9 @@ export default function App() {
     try {
       const me = await api.me();
       setSession({ kind: "authed", me });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setSession({ kind: "anonymous" });
-      } else {
-        setSession({ kind: "anonymous" });
-      }
+    } catch {
+      // WEB-13：401 与其它错误同样回登录页（原 if/else 两分支完全相同，是死分支）
+      setSession({ kind: "anonymous" });
     }
   }, []);
 

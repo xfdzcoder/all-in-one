@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 
+import { eq } from "drizzle-orm";
 import { createDb, ensureSchema, type Client, type Db } from "../db/client.ts";
+import { tagTarget } from "../db/schema.ts";
 import { ensureInitialUser } from "../auth/ensure-user.ts";
 import { buildApp } from "../app.ts";
 
@@ -146,6 +148,24 @@ describe("todo API (Workspace-level data, D21)", () => {
     expect((left.json() as unknown[]).length).toBe(1);
     const gone = await app.inject({ method: "GET", url: "/api/todos?list=组甲", cookies: { sid } });
     expect((gone.json() as unknown[]).length).toBe(0);
+  });
+
+  it("SRV-23: delete-group 清理 tag_target 关联（不留孤儿）", async () => {
+    const t = await app.inject({ method: "POST", url: "/api/tags", cookies: { sid }, payload: { name: "g-tag-del" } });
+    const tagId = t.json().id as string;
+    const a = await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "gt-a1", list: "组清" } });
+    const b = await app.inject({ method: "POST", url: "/api/todos", cookies: { sid }, payload: { title: "gt-a2", list: "组清" } });
+    for (const id of [a.json().id as string, b.json().id as string]) {
+      await app.inject({
+        method: "PUT",
+        url: "/api/tags/targets",
+        cookies: { sid },
+        payload: { targetType: "todo", targetId: id, tagIds: [tagId] },
+      });
+    }
+    await app.inject({ method: "POST", url: "/api/todos/delete-group", cookies: { sid }, payload: { name: "组清" } });
+    const rows = await db.select().from(tagTarget).where(eq(tagTarget.tagId, tagId));
+    expect(rows.length).toBe(0);
   });
 
   it("Q29b: archived items hidden by default, visible with includeArchived=1", async () => {

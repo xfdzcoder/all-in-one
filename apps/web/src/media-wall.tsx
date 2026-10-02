@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { packRows } from "./media-wall-layout.ts";
+import { packRows } from "./media-wall-layout";
 
 /**
  * 媒体墙（Q71，Immich 照片墙 / Navidrome 专辑墙共用）。

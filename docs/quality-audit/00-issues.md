@@ -76,13 +76,13 @@
 
 | 报告 | P2 条目 ID | 批次 |
 |---|---|---|
-| [10-server.md](10-server.md) | SRV-12, SRV-13, SRV-14, SRV-15, SRV-16, SRV-17, SRV-18, SRV-19, SRV-20, SRV-21, SRV-22, SRV-23, SRV-24, SRV-25, SRV-26, SRV-27, SRV-28 | Q101 |
-| [11-web.md](11-web.md) | WEB-11, WEB-12, WEB-13, WEB-14, WEB-15, WEB-16, WEB-17, WEB-18, WEB-19, WEB-20, WEB-21, WEB-22, WEB-23, WEB-24, WEB-25, WEB-26, WEB-27, WEB-28, WEB-29, WEB-30 | Q101 |
-| [12-sdk-contracts.md](12-sdk-contracts.md) | SDK-2, SDK-3, SDK-4, SDK-5, SDK-6, SDK-7, SDK-8, SDK-9, CON-5, CON-6, CON-7, CON-8, CON-9, CON-10, CON-12, CON-13, CON-14 | Q101 |
-| [13-tests-verify.md](13-tests-verify.md) | TST-3, TST-4, TST-7, TST-8, TST-9, TST-12, TST-13, TST-14, TST-15, TST-16, TST-17, TST-18, TST-22, TST-23 | Q101 |
-| [14-deps-security-lint.md](14-deps-security-lint.md) | DEP-1, DEP-3, SEC-3, SEC-6, SEC-7, LNT-1, LNT-2, LNT-3 | Q101 |
+| [10-server.md](10-server.md) | SRV-12 ✅（Q100a zod 已接；速率限制属公网化需求 §2.3 非目标，不另做）, SRV-13 ✅（Q96c 删除）, SRV-14, SRV-15, SRV-16, SRV-17 ✅（Q100b）, SRV-18 ✅（Q101c-1）, SRV-19, SRV-20, SRV-21, SRV-22 ✅（Q101c-1 唯一索引+迁移 0015）, SRV-23 ✅（Q101c-1 + 回归测试）, SRV-24, SRV-25, SRV-26 ✅（Q101c-1）, SRV-27 ✅（Q101c-1）, SRV-28 | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
+| [11-web.md](11-web.md) | WEB-11, WEB-12, WEB-13 ✅, WEB-14, WEB-15, WEB-16, WEB-17, WEB-18, WEB-19, WEB-20, WEB-21, WEB-22, WEB-23, WEB-24, WEB-25, WEB-26 ✅, WEB-27, WEB-28 ✅, WEB-29 ✅, WEB-30 ✅ | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
+| [12-sdk-contracts.md](12-sdk-contracts.md) | SDK-2, SDK-3, SDK-4, SDK-5, SDK-6, SDK-7 ✅, SDK-8 ✅, SDK-9, CON-5, CON-6, CON-7, CON-8, CON-9, CON-10, CON-12, CON-13, CON-14 | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
+| [13-tests-verify.md](13-tests-verify.md) | TST-3, TST-4, TST-7, TST-8, TST-9 ✅（Q100c 兜底全铺）, TST-12, TST-13, TST-14, TST-15, TST-16 ✅（删死脚本）, TST-17, TST-18, TST-22, TST-23 | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
+| [14-deps-security-lint.md](14-deps-security-lint.md) | DEP-1, DEP-3, SEC-3, SEC-6, SEC-7, LNT-1 ✅, LNT-2 ✅, LNT-3 ✅ | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
 | [15-docs.md](15-docs.md) | DOC-3 ✅, DOC-4 ✅, DOC-5 ✅, DOC-6 ✅, DOC-17 ✅, DOC-18 ✅, DOC-19 ✅, DOC-21 ✅, DOC-22 ✅, DOC-23 ✅, DOC-24 ✅, DOC-25 ✅, DOC-26 ✅, DOC-27 ✅, DOC-28 ✅；余 DOC-7, DOC-8, DOC-9, DOC-10, DOC-11, DOC-12, DOC-13, DOC-14, DOC-15, DOC-16, DOC-20 → Q101b-2 | Q101b-1 ✅ / Q101b-2 ⏳ |
-| QA-002 | minCell→rowHeight 一次性配置迁移 | Q101 |
+| QA-002 | minCell→rowHeight 一次性配置迁移 | Q101b ✅ · Q101c-1 ✅ · 余 Q101c-2~4 |
 | A11Y-1 | `jsx-a11y` 15 条（`prefer-tag-over-role`×9 / `click-events-have-key-events`×2 / `no-noninteractive-element-interactions`×2 / `no-autofocus`×2） | P2 | Q101（a11y 专项：复杂行 `div role=button` 与「真 button」的取舍需专门设计，WEB-3 教训在前） | ⏳ |
 | LNT-1 | 三份 .oxlintrc.json 两份空规则集（静态检测面远窄于拍板目标） | **✅ 已修（Q96a）**：规则开足 + 定向豁免 + 清零 160 条（242→82） | Q96a ✅ |
 | LNT-2 | 全仓仅存 2 处类型断言逃逸（抹 props 类型 / 双重断言绕 zod） | **✅ 已修（Q96b）**：单点收窄函数 + `isServiceOverview` 类型守卫（调用点零断言） | ✅ |
