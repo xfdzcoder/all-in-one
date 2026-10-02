@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { eq } from "drizzle-orm";
 
 import { user } from "../db/schema.ts";
+import { loginBody } from "../api/schemas.ts";
 import { verifyPassword } from "./password.ts";
 import {
   SESSION_COOKIE,
@@ -53,11 +54,13 @@ export function registerAuthRoutes(app: FastifyInstance): void {
   app.post<{
     Body: { username?: string; password?: string };
   }>("/api/auth/login", async (req, reply) => {
-    const username = req.body?.username ?? "";
-    const password = req.body?.password ?? "";
-    if (!username || !password) {
+    // CON-2：接线 zod（此前手写 truthy 检查 —— OpenAPI 声明的 username≤128 / password≤256
+    // 形同虚设，超长口令照样进 argon2；契约与实现漂移）
+    const parsed = loginBody.safeParse(req.body);
+    if (!parsed.success) {
       return reply.code(400).send({ error: "username and password required" });
     }
+    const { username, password } = parsed.data;
 
     const rows = await app.db
       .select()

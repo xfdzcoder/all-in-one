@@ -9,7 +9,10 @@
     "lint": "oxlint",
     "test": "vitest run",
     "typecheck": "tsc -b --pretty false",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pretest": "pnpm --filter @all-in-one/widget-sdk build",
+    "pretypecheck": "pnpm --filter @all-in-one/widget-sdk build",
+    "prebuild": "pnpm --filter @all-in-one/widget-sdk build"
   },
   "dependencies": {
     "@all-in-one/widget-sdk": "workspace:*",
@@ -18,7 +21,7 @@
     "@mantine/hooks": "^9.6.3",
     "@tabler/icons-react": "^3.48.0",
     "@tanstack/react-query": "^5.104.0",
-    "gridstack": "^14.0.0",
+    "gridstack": "14.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

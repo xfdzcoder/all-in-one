@@ -648,7 +648,7 @@ export function useMailMessages(
 }
 
 /** 单封正文（沙箱渲染前取回，D30）。 */
-export function useMailMessage(accountId: string | null, uid: number | null) {
+export function useMailMessage(accountId: string | null, uid: number | string | null) {
   const query = useQuery({
     queryKey: ["mail-message", accountId, uid],
     queryFn: () => api.mailMessage(accountId!, uid!),

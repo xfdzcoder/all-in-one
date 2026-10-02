@@ -9,7 +9,10 @@
     "lint": "oxlint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pretest": "pnpm --filter @all-in-one/widget-sdk build",
+    "pretypecheck": "pnpm --filter @all-in-one/widget-sdk build",
+    "prebuild": "pnpm --filter @all-in-one/widget-sdk build"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",

@@ -19,7 +19,8 @@
     "prepare": "tsc",
     "lint": "oxlint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch --preserveWatchOutput"
   },
   "devDependencies": {
     "oxlint": "^1.81.0",

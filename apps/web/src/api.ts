@@ -113,7 +113,8 @@ export type MailAccountRow = {
   folder: string;
 };
 export type MailListEntry = {
-  uid: number;
+  /** CON-3：IMAP 为数字 UID、Gmail 为字符串消息 id —— 两态都真实存在 */
+  uid: number | string;
   subject: string;
   from: string;
   date: string;
@@ -294,6 +295,6 @@ export const api = {
     const suffix = q.toString() ? `?${q.toString()}` : "";
     return req<MailAgg>("GET", `/api/mail/messages${suffix}`);
   },
-  mailMessage: (accountId: string, uid: number) =>
+  mailMessage: (accountId: string, uid: number | string) =>
     req<MailFull>("GET", `/api/mail/messages/${accountId}/${uid}`),
 };

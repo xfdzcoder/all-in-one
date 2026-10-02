@@ -121,3 +121,20 @@ describe("initial account (D17)", () => {
     expect(again.created).toBe(false);
   });
 });
+
+describe("CON-2：login zod 接线（长度上限真实生效）", () => {
+  it("超长 username/password 400（不再进 argon2）", async () => {
+    const over = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "a".repeat(200), password: "b".repeat(200) },
+    });
+    expect(over.statusCode).toBe(400);
+    const overPw = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { username: "admin", password: "b".repeat(1000) },
+    });
+    expect(overPw.statusCode).toBe(400);
+  });
+});
