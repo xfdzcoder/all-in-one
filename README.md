@@ -131,8 +131,11 @@ UI 行为验收：`pnpm verify list` / `pnpm verify smoke`（puppeteer-core + �
 
 ## 🤝 参与
 
-欢迎 Issue 与 PR。提交前请过 `pnpm test` / `pnpm typecheck` / `pnpm lint`，
+欢迎 Issue 反馈与功能建议。提交前请过 `pnpm test` / `pnpm typecheck` / `pnpm lint`，
 并阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md) 与 [`AGENTS.md`](AGENTS.md)（架构不变量与开发约定）。
+
+> 仓库由内部 Forgejo **单向镜像**到 GitHub：Issue 可以直接在 GitHub 提；
+> **PR 不会回流到源仓库**，较大的改动请先开 Issue 讨论、由维护者落地（详见 CONTRIBUTING.md）。
 
 ## 📄 License
 

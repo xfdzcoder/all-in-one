@@ -60,10 +60,12 @@ jobs:
         if: failure()
         run: docker logs smoke || true
 
-  # 仅 v* tag：推 GHCR（latest + 版本号）并创建 GitHub Release
+  # 仅 v* tag：推 GHCR（latest + 版本号）并创建 GitHub Release。
+  # server_url 守卫：仓库从内部 Forgejo 单向镜像到 GitHub，tag 在两侧都会满足
+  # 触发条件，但 GHCR 认证只在 GitHub 侧成立 —— Forgejo 侧的同名 job 直接跳过。
   release:
     name: Push GHCR + GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.server_url == 'https://github.com'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
