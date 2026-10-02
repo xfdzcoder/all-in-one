@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { str } from "./normalize.ts";
+import { asRecord, asRecordArray, parseJson, str } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs , mapLimit, loadSourceConfig } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
 
@@ -104,7 +104,10 @@ export const immichAlbumsConnector: WidgetConnector = {
       allowPrivate: true,
     });
     if (res.status >= 400) throw new Error(`Immich 相册接口 HTTP ${res.status}`);
-    const list = Array.isArray(JSON.parse(res.text)) ? (JSON.parse(res.text) as Array<Record<string, unknown>>) : [];
+    // SRV-25：解析 + 形状收窄一步（原双次 JSON.parse + `as Array<…>` 断言）
+    const albumsRaw = parseJson(res.text);
+    if (albumsRaw === undefined) throw new Error("Immich 相册接口返回的不是合法 JSON —— 检查连接地址与认证");
+    const list = asRecordArray(albumsRaw) ?? [];
     return {
       items: list
         // SRV-18：原 `?? str(a.albumName)` 是复制笔误（同表达式 ?? 两次），第二顺位应为 description
@@ -161,11 +164,11 @@ export const immichGalleryConnector: WidgetConnector = {
           allowPrivate: true,
         });
         if (res.status >= 400) throw new Error(`service API HTTP ${res.status}`);
-        const parsed = JSON.parse(res.text) as Record<string, unknown>;
-        const pageAssets = parsed.assets as Record<string, unknown> | undefined;
-        const pageItems: Array<Record<string, unknown>> = Array.isArray(pageAssets?.items)
-          ? (pageAssets.items as Array<Record<string, unknown>>)
-          : [];
+        // SRV-25：顶层解析收窄 + 子访问走 asRecord/asRecordArray（原三级 `as` 断言）
+        const parsed = asRecord(parseJson(res.text));
+        if (!parsed) throw new Error("Immich 搜索接口返回的不是 JSON 对象 —— 检查连接地址与认证");
+        const pageAssets = asRecord(parsed.assets);
+        const pageItems = asRecordArray(pageAssets?.items) ?? [];
         for (const a of pageItems) {
           if (a.type === "VIDEO") continue; // 项 3：不展示视频
           if (str(a.id)) picked.push(a);

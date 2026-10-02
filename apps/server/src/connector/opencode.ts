@@ -1,6 +1,6 @@
 import type { WidgetConnector, WidgetDataQuery, FetchContext } from "./registry.ts";
 import { outboundRequest, resolveSecretRefs } from "./registry.ts";
-import { numOf } from "./normalize.ts";
+import { asRecord, numOf, parseJson } from "./normalize.ts";
 
 /**
  * OpenCode connector（FR-E4/06 §1"会话列表/状态/耗时 + API 版本探测"）。
@@ -66,7 +66,7 @@ export const opencodeConnector: WidgetConnector = {
         allowPrivate: true, // D32：opencode server 即本机/内网服务（服务聚合族）
       });
       if (app.status < 400) {
-        const parsed = JSON.parse(app.text) as Record<string, unknown>;
+        const parsed = asRecord(parseJson(app.text)); // SRV-25
         if (typeof parsed?.version === "string") version = parsed.version;
       }
     } catch {

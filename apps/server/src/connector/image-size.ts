@@ -32,6 +32,7 @@ function isJpegSof(marker: number): boolean {
 }
 
 function jpegSize(b: Uint8Array): ImageSize | null {
+  const u8 = (o: number): number => b[o] ?? 0; // SRV-25：索引取值总函数，消 `as number` 噪音
   // SOI(FF D8) 之后是若干 `FF <marker> <len:2be> <payload>` 段，SOF 一定出现在 SOS 之前。
   let i = 2;
   while (i + 1 < b.length) {
@@ -52,13 +53,13 @@ function jpegSize(b: Uint8Array): ImageSize | null {
     // EOI / SOS 之后是熵编码数据 —— SOF 不可能再出现，判定为无尺寸
     if (marker === 0xd9 || marker === 0xda) return null;
     if (i + 3 >= b.length) return null;
-    const segLen = ((b[i + 2] as number) << 8) | (b[i + 3] as number);
+    const segLen = (u8(i + 2) << 8) | u8(i + 3);
     if (segLen < 2) return null; // 长度含自身 2 字节，小于 2 即畸形
     if (isJpegSof(marker)) {
       // payload: <precision:1> <height:2be> <width:2be> <components...>
       if (i + 8 >= b.length) return null;
-      const height = ((b[i + 5] as number) << 8) | (b[i + 6] as number);
-      const width = ((b[i + 7] as number) << 8) | (b[i + 8] as number);
+      const height = (u8(i + 5) << 8) | u8(i + 6);
+      const width = (u8(i + 7) << 8) | u8(i + 8);
       return width > 0 && height > 0 ? { width, height } : null;
     }
     i += 2 + segLen;
@@ -67,52 +68,55 @@ function jpegSize(b: Uint8Array): ImageSize | null {
 }
 
 function pngSize(b: Uint8Array): ImageSize | null {
+  const u8 = (o: number): number => b[o] ?? 0; // SRV-25：索引取值总函数，消 `as number` 噪音
   // 签名 8 字节 + <len:4be> + "IHDR" + <width:4be> + <height:4be>
   if (b.length < 24) return null;
   if (b[12] !== 0x49 || b[13] !== 0x48 || b[14] !== 0x44 || b[15] !== 0x52) return null; // "IHDR"
   const u32 = (o: number): number =>
-    ((b[o] as number) << 24) | ((b[o + 1] as number) << 16) | ((b[o + 2] as number) << 8) | (b[o + 3] as number);
+    (u8(o) << 24) | (u8(o + 1) << 16) | (u8(o + 2) << 8) | u8(o + 3);
   const width = u32(16) >>> 0;
   const height = u32(20) >>> 0;
   return width > 0 && height > 0 ? { width, height } : null;
 }
 
 function webpSize(b: Uint8Array): ImageSize | null {
+  const u8 = (o: number): number => b[o] ?? 0; // SRV-25：索引取值总函数，消 `as number` 噪音
   // "RIFF" <size:4le> "WEBP" <fourcc:4> <chunkSize:4le> <payload>
   if (b.length < 20) return null;
   const fourcc = String.fromCharCode(b[12], b[13], b[14], b[15]);
   if (fourcc === "VP8X") {
     if (b.length < 30) return null;
     // payload: <flags:1> <reserved:3> <canvasW-1:3le> <canvasH-1:3le>
-    const width = 1 + ((b[24] as number) | ((b[25] as number) << 8) | ((b[26] as number) << 16));
-    const height = 1 + ((b[27] as number) | ((b[28] as number) << 8) | ((b[29] as number) << 16));
+    const width = 1 + (u8(24) | (u8(25) << 8) | (u8(26) << 16));
+    const height = 1 + (u8(27) | (u8(28) << 8) | (u8(29) << 16));
     return width > 1 && height > 1 ? { width, height } : null;
   }
   if (fourcc === "VP8L") {
     if (b.length < 25) return null;
     // payload: <0x2F 签名:1> 然后 14bit 宽-1 / 14bit 高-1 按位小端打包
     if (b[20] !== 0x2f) return null;
-    const width = 1 + ((b[21] as number) | (((b[22] as number) & 0x3f) << 8));
+    const width = 1 + (u8(21) | ((u8(22) & 0x3f) << 8));
     const height =
-      1 + (((b[22] as number) >> 6) | ((b[23] as number) << 2) | (((b[24] as number) & 0x0f) << 10));
+      1 + ((u8(22) >> 6) | (u8(23) << 2) | ((u8(24) & 0x0f) << 10));
     return width > 1 && height > 1 ? { width, height } : null;
   }
   if (fourcc === "VP8 ") {
     if (b.length < 30) return null;
     // payload: <frameTag:3> <sync:3 = 9D 01 2A> <width:2le & 0x3FFF> <height:2le & 0x3FFF>
     if (b[23] !== 0x9d || b[24] !== 0x01 || b[25] !== 0x2a) return null;
-    const width = (((b[26] as number) | ((b[27] as number) << 8)) & 0x3fff) >>> 0;
-    const height = (((b[28] as number) | ((b[29] as number) << 8)) & 0x3fff) >>> 0;
+    const width = ((u8(26) | (u8(27) << 8)) & 0x3fff) >>> 0;
+    const height = ((u8(28) | (u8(29) << 8)) & 0x3fff) >>> 0;
     return width > 0 && height > 0 ? { width, height } : null;
   }
   return null;
 }
 
 function gifSize(b: Uint8Array): ImageSize | null {
+  const u8 = (o: number): number => b[o] ?? 0; // SRV-25：索引取值总函数，消 `as number` 噪音
   // "GIF87a"|"GIF89a" + <逻辑屏宽:2le> + <逻辑屏高:2le>
   if (b.length < 10) return null;
-  const width = ((b[6] as number) | ((b[7] as number) << 8)) >>> 0;
-  const height = ((b[8] as number) | ((b[9] as number) << 8)) >>> 0;
+  const width = (u8(6) | (u8(7) << 8)) >>> 0;
+  const height = (u8(8) | (u8(9) << 8)) >>> 0;
   return width > 0 && height > 0 ? { width, height } : null;
 }
 

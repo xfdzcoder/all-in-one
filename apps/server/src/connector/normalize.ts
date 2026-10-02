@@ -26,3 +26,29 @@ export function numOf(v: unknown, fallback: number): number {
 export function strLoose(v: unknown): string {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
+
+/**
+ * 不可信 JSON 收窄（**SRV-25**）：解析 + 形状检查一步到位，
+ * 替代 `JSON.parse(x) as Record<string, unknown>` 式断言逃逸（形状错只会在运行时炸）。
+ * 断言只存在于这四个助手的边界内部 —— 调用点拿到的是已检查的形状。
+ */
+export function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+export function asRecord(v: unknown): Record<string, unknown> | undefined {
+  return v !== null && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : undefined;
+}
+
+/** 对象数组（逐项过滤掉非对象成员）。 */
+export function asRecordArray(v: unknown): Array<Record<string, unknown>> | undefined {
+  return Array.isArray(v)
+    ? v.filter((x) => x !== null && typeof x === "object" && !Array.isArray(x)) as Array<Record<string, unknown>>
+    : undefined;
+}

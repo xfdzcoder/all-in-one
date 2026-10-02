@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { str } from "./normalize.ts";
+import { asRecord, parseJson, str } from "./normalize.ts";
 import { subsonicAuth } from "./subsonic.ts";
 import { outboundRequest, resolveSecretRefs , mapLimit, loadSourceConfig } from "./registry.ts";
 import { imageMimeOf, imageSize } from "./image-size.ts";
@@ -52,7 +52,8 @@ const COVER_FALLBACK_SIZE = 300;
 const COVER_FALLBACK_MAX_BYTES = 400_000;
 
 function sr(x: unknown): Record<string, unknown> {
-  return (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
+  // SRV-25：子访问收窄走 asRecord（原两连 `as` 断言）
+  return asRecord(asRecord(x)?.["subsonic-response"]) ?? {};
 }
 
 /** 从 Subsonic 响应取专辑列表：`albumList2.album`（getAlbumList2）或 `artist.album`（getArtist）。
@@ -114,7 +115,7 @@ export const navidromeArtistsConnector: WidgetConnector = {
       allowPrivate: true,
     });
     if (res.status >= 400) throw new Error(`Navidrome 艺人接口 HTTP ${res.status}`);
-    const artistsObj = sr(JSON.parse(res.text)).artists as Record<string, unknown> | undefined;
+    const artistsObj = asRecord(sr(parseJson(res.text)).artists); // SRV-25
     // Subsonic 有两种形态：扁平 `artists.artist[]` 或分组 `artists.index[].artist[]`（Navidrome 两者都出现过）
     const idx = artistsObj?.index;
     const groups = Array.isArray(idx) ? (idx as Array<Record<string, unknown>>) : [];
@@ -167,10 +168,10 @@ export const navidromeLibraryConnector: WidgetConnector = {
         allowPrivate: true,
       });
       if (res.status >= 400) throw new Error(`subsonic API HTTP ${res.status}`);
-      const parsed = JSON.parse(res.text) as Record<string, unknown>;
+      const parsed = parseJson(res.text); // SRV-25
       // Q94（反馈③）：**必须检查 Subsonic 的业务状态**。HTTP 200 不代表成功 ——
       // `status: "failed"` 时若照常解析会静默拿到 0 项（D47 违规：把 API 报错伪装成「没有数据」）。
-      const body = ((parsed ?? {})["subsonic-response"] ?? {}) as Record<string, unknown>;
+      const body = sr(parsed); // SRV-25：与 sr 同源收窄
       if (body.status === "failed") {
         const e = (body.error ?? {}) as { code?: number; message?: string };
         throw new Error(

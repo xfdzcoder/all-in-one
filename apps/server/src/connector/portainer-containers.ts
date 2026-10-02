@@ -2,7 +2,7 @@ import { dataSource } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
 
 import type { FetchContext, WidgetConnector, WidgetDataQuery } from "./registry.ts";
-import { str } from "./normalize.ts";
+import { asRecordArray, parseJson, str } from "./normalize.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "./registry.ts";
 
 /**
@@ -68,7 +68,7 @@ async function endpointId(base: string, headers: Record<string, string>): Promis
     allowPrivate: true,
   });
   if (res.status >= 400) throw new Error(`portainer API HTTP ${res.status}`);
-  const eps = JSON.parse(res.text) as Array<Record<string, unknown>>;
+  const eps = asRecordArray(parseJson(res.text)) ?? []; // SRV-25
   const id = eps[0]?.Id;
   if (typeof id !== "number") throw new Error("无可用环境（endpoints 为空）");
   return id;
