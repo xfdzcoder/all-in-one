@@ -24,6 +24,7 @@ import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
 import { IconAction, WbAlert } from "./ui";
 import { LoginPage } from "./LoginPage";
+import { WidgetErrorBoundary } from "./error-boundary";
 import { DataAdmin } from "./data-admin";
 import { PluginAdmin } from "./plugin-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
@@ -387,7 +388,9 @@ function Workbench({
           </Group>
         </Group>
       </AppShell.Header>
-      <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
+      <WidgetErrorBoundary name="插件管理">
+        <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
+      </WidgetErrorBoundary>
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
       <AppShell.Main
         className="wb-main"
@@ -395,7 +398,11 @@ function Workbench({
           background: view === "data" ? "transparent" : active?.background ?? "transparent",
         }}
       >
-        {view === "data" && <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />}
+        {view === "data" && (
+          <WidgetErrorBoundary name="数据源管理">
+            <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />
+          </WidgetErrorBoundary>
+        )}
         {view === "workspace" && (
           <>
             {layoutEdit && isDesktop && (
@@ -468,16 +475,18 @@ function Workbench({
               </WbAlert>
             )}
             {active && (
-              <Board
-                key={`${active.id}-${active.columns}`}
-                dashboardId={active.id}
-                layoutJson={active.layoutJson}
-                columns={active.columns}
-                cellHeight={active.cellHeight}
-                canEdit={isDesktop}
-                editMode={layoutEdit}
-                onLayoutSaved={handleLayoutSaved}
-              />
+              <WidgetErrorBoundary name="看板">
+                <Board
+                  key={`${active.id}-${active.columns}`}
+                  dashboardId={active.id}
+                  layoutJson={active.layoutJson}
+                  columns={active.columns}
+                  cellHeight={active.cellHeight}
+                  canEdit={isDesktop}
+                  editMode={layoutEdit}
+                  onLayoutSaved={handleLayoutSaved}
+                />
+              </WidgetErrorBoundary>
             )}
           </>
         )}
@@ -522,6 +531,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       {/* Mantine 变量桥见 apps/server/src/styles-bridge.ts（经 /custom.css 末尾下发，层叠必胜） */}
       <MantineProvider defaultColorScheme="dark" forceColorScheme={themeMode} theme={theme}>
+        {/* WEB-7：根边界兜底（其内各视图另有自己的边界，根边界防「边界之外」的渲染崩溃白屏） */}
+        <WidgetErrorBoundary name="应用">
         {session.kind === "loading" && (
           <Center h="50vh">
             <Loader />
@@ -536,6 +547,7 @@ export default function App() {
             onToggleTheme={() => setThemeMode((m) => (m === "dark" ? "light" : "dark"))}
           />
         )}
+        </WidgetErrorBoundary>
       </MantineProvider>
     </QueryClientProvider>
   );

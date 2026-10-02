@@ -48,6 +48,9 @@ const bodyParams = z.object({
 const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional(),
   account: z.string().max(64).optional(),
+  /** WEB-1（Q99c）：多账号过滤下推 —— 逗号分隔；原先前端先取全局 20 封再客户端过滤，
+   *  选中单个账号时 20 封里可能没几封属于它 ⇒ 列表近乎空白、limit 语义被过滤破坏。 */
+  accountIds: z.string().max(2000).optional(),
   /** 手动刷新：force=1 穿透列表缓存（FR-I3）。 */
   force: z.string().optional(),
 });
@@ -164,7 +167,11 @@ export function registerMailRoutes(
     try {
       return await fetchMessages(app.db, req.user!.id, {
         limit: q.data.limit,
-        accountIds: q.data.account ? [q.data.account] : undefined,
+        accountIds: q.data.accountIds
+          ? q.data.accountIds.split(",").map((x) => x.trim()).filter(Boolean)
+          : q.data.account
+            ? [q.data.account]
+            : undefined,
         clientFactory: deps.clientFactory,
         force: q.data.force === "1",
       });

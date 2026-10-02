@@ -63,9 +63,10 @@ function invalidateAllData(qc: ReturnType<typeof useQueryClient>): void {
     ["custom-api"],
     ["launcher"],
     ["plugin-data"],
-    // Q87（项 4）：补齐服务类组件 —— 此前这些 key 缺失，SSE 失效/轮询兜底都通知不到它们
-    ["immich-gallery"],
-    ["navidrome-library"],
+    // Q87（项 4）：补齐服务类组件 —— 此前这些 key 缺失，SSE 失效/轮询兜底都通知不到它们。
+    // WEB-8（Q99c）：**immich/navidrome 缩略图查询不再进 30s 轮询失效** —— 它们的 payload 是
+    // 整批 base64（12 张 × 数十 KB × N 卡），每 30s 失效重取 = 纯 churn（旧字符串还压 GC）。
+    // 这两张墙按各自 `refreshSec`（默认 300s）与手动刷新取数即可，无需被兜底轮询搅动。
     ["portainer-containers"],
     ["portainer-logs"],
     ["mihomo-nodes"],
@@ -427,6 +428,7 @@ export function useImmichGallery(
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
+    structuralSharing: false, // WEB-8：payload 是整批 base64，深比较纯浪费
   });
   return {
     data: query.data as
@@ -472,6 +474,7 @@ export function useNavidromeLibrary(
     enabled: Boolean(sourceId),
     staleTime: 60_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
+    structuralSharing: false, // WEB-8：同上（封面 base64 整批）
   });
   return {
     data: query.data as
@@ -607,12 +610,18 @@ export function useServiceOverview(sourceId?: string, refreshSec?: unknown) {
 }
 
 /** 聚合邮件列表（只读；服务端 60s 缓存，手动刷新可 force 穿透）。 */
-export function useMailMessages(account: string | undefined, limit = 20, refreshSec?: unknown) {
+export function useMailMessages(
+  accountIds: string[] | undefined,
+  limit = 20,
+  refreshSec?: unknown,
+) {
   const qc = useQueryClient();
-  const key = ["mail-messages", account ?? "all", limit];
+  // WEB-1：账号过滤**下推服务端**（原先传 undefined 取全局再客户端过滤 —— limit 语义被破坏）
+  const ids = Array.isArray(accountIds) ? accountIds.filter((x) => typeof x === "string" && x) : [];
+  const key = ["mail-messages", ids.join(",") || "all", limit];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => api.mailMessages({ account, limit }),
+    queryFn: () => api.mailMessages({ accountIds: ids.length > 0 ? ids : undefined, limit }),
     staleTime: 30_000,
     refetchInterval: refreshInterval(refreshSec, 300_000),
   });
@@ -622,7 +631,10 @@ export function useMailMessages(account: string | undefined, limit = 20, refresh
     error: query.error instanceof Error ? query.error.message : undefined,
     // 手动刷新 = 强制回源（force 穿透服务端列表缓存）
     refresh: () => {
-      void api.mailMessages({ account, limit, force: true }).then((d) => qc.setQueryData(key, d));
+      void api
+        .mailMessages({ accountIds: ids.length > 0 ? ids : undefined, limit, force: true })
+        .then((d) => qc.setQueryData(key, d))
+        .catch((e) => console.error("[mail] 刷新失败：", e)); // WEB-4：不再裸奔 unhandled rejection
     },
   };
 }

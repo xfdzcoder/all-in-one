@@ -53,6 +53,9 @@ const browser = await puppeteer.launch({
   args: ["--no-sandbox", "--window-size=1400,900"],
 });
 const page = await browser.newPage();
+// 诊断：渲染崩溃（如组件整树 throw）会静默吃掉断言 —— 收集 pageerror 供排查
+const pageErrors = [];
+page.on("pageerror", (e) => pageErrors.push(String(e?.message ?? e)));
 await page.setViewport({ width: 1400, height: 900 });
 let listCalls = 0;
 
@@ -170,6 +173,7 @@ await installLayoutGuard(page);
     "MAIL empty state hint",
     await page.evaluate(() => (document.body.textContent ?? "").includes("先在「数据源管理 · 邮箱」添加邮箱账号")),
   );
+
   // 编辑态组件内容惰性（FR-P8）：组件内操作在浏览模式进行
   ok("MAIL exit edit to operate widget", await clickBtn("完成编辑"));
   await sleep(400);
@@ -367,5 +371,6 @@ await installLayoutGuard(page);
 await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 const failed = results.filter((r) => !r.pass);
+if (pageErrors.length > 0) console.error("!! 页面渲染错误（pageerror）：", pageErrors.slice(0, 3));
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 process.exit(failed.length ? 1 : 0);

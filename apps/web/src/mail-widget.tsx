@@ -28,10 +28,14 @@ export function MailWidget({
 }) {
   const [open, setOpen] = useState<MailListEntry | null>(null);
   const { accounts } = useMailAccounts();
-  const { agg, loading, error, refresh } = useMailMessages(undefined, limit, refreshSec);
+  // WEB-1：选中的账号下推服务端过滤（原先取全局 20 封再客户端过滤，选单个账号时近乎空白）。
+  // **入参防呆**（Q93 同族）：multiselect 默认值是空串 `""`，`("" ?? []).filter` 直接 TypeError
+  // ⇒ 整卡进错误态（实测崩因 `(n ?? []).filter is not a function`）——非数组一律归一为空。
+  const selectedIds = Array.isArray(accountIds) ? accountIds.filter((x) => typeof x === "string" && x) : [];
+  const { agg, loading, error, refresh } = useMailMessages(selectedIds, limit, refreshSec);
   const { message: detail, error: detailError } = useMailMessage(open?.accountId ?? null, open?.uid ?? null);
-  // Q29e/四.2：配置多选邮箱过滤（留空 = 全部）
-  const allowIds = (accountIds ?? []).length > 0 ? new Set(accountIds) : null;
+  // Q29e/四.2：配置多选邮箱（留空 = 全部）；过滤已下推服务端（WEB-1），这里只用于标签展示
+  const allowIds = selectedIds.length > 0 ? new Set(selectedIds) : null;
 
   // 项 2：卡片左上角显示本卡覆盖的邮箱（多账号用「，」连接；仅允许一行，超出省略号）。
   // 显示名取 `name`（与组件配置里多选下拉的标签同源，用户看到的就是他勾选的）。
@@ -64,7 +68,7 @@ export function MailWidget({
               {accounts.length === 0 ? "先在「数据源管理 · 邮箱」添加邮箱账号" : "暂无邮件"}
             </Text>
           )}
-          {(agg?.items ?? []).filter((item) => !allowIds || allowIds.has(item.accountId)).map((item) => (
+          {(agg?.items ?? []).map((item) => (
             <Card
               key={`${item.accountId}-${item.uid}`}
               withBorder

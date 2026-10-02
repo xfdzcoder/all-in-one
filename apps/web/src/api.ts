@@ -285,8 +285,9 @@ export const api = {
   deleteMailAccount: (id: string) => req<{ ok: boolean }>("DELETE", `/api/mail/accounts/${id}`),
   gmailAuthorize: (redirectUri: string) =>
     req<{ url: string }>("POST", "/api/mail/gmail/authorize", { redirectUri }),
-  mailMessages: (opts: { account?: string; limit?: number; force?: boolean } = {}) => {
+  mailMessages: (opts: { account?: string; accountIds?: string[]; limit?: number; force?: boolean } = {}) => {
     const q = new URLSearchParams();
+    if (opts.accountIds && opts.accountIds.length > 0) q.set("accountIds", opts.accountIds.join(","));
     if (opts.account) q.set("account", opts.account);
     if (opts.limit) q.set("limit", String(opts.limit));
     if (opts.force) q.set("force", "1");
