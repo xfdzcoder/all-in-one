@@ -86,6 +86,9 @@ function breakpointsFor(cols: number): Array<{ w: number; c: number }> {
 
 /** Host UI must live inside <GridStack> (wrapper constraint — useGridStack scope).
  *  Rendered after the grid root in DOM (wrapper design). */
+/** 组件 id 生成（纯函数上提模块级；Q80：randomId 代替非安全上下文不可用的 crypto.randomUUID） */
+const nextId = (prefix: string) => `${prefix}-${randomId().slice(0, 8)}`;
+
 function BoardToolbar({
   editMode,
   canEdit,
@@ -105,7 +108,6 @@ function BoardToolbar({
   // t100/n100 from earlier runs; collisions leave the new portal empty (M2-④ 实测).
   // Q80：用 randomId() 而非 crypto.randomUUID() —— 后者**只在安全上下文可用**，
   // HTTP 访问（内网 IP / 未启用 TLS）时是 undefined，添加组件即抛 TypeError。
-  const nextId = (prefix: string) => `${prefix}-${randomId().slice(0, 8)}`;
 
   return (
     <Group mb="sm" gap="xs" style={{ position: "relative", zIndex: 2 }}>

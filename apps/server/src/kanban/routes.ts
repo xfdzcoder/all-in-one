@@ -42,11 +42,16 @@ const cardPatchBody = z
   })
   .refine((o) => Object.keys(o).length > 0, "empty patch");
 
+/** 默认空回调（consistent-function-scoping：不必在函数参数位新建） */
+const noop = () => {};
+
+/** 取请求归属用户（纯函数上提模块级） */
+const userId = (req: { user?: { id: string } }) => req.user!.id;
+
 export function registerKanbanRoutes(
   app: FastifyInstance,
-  onChanged: () => void = () => {},
+  onChanged: () => void = noop,
 ): void {
-  const userId = (req: { user?: { id: string } }) => req.user!.id;
 
   // ---- boards -------------------------------------------------------------
   app.get("/api/kanban/boards", { preHandler: authGuard }, async (req) => {

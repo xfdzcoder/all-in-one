@@ -40,6 +40,27 @@ function pickPath(root: unknown, path?: string): unknown {
   return cur;
 }
 
+/** 嵌套值转摘要（P2-5：不再 JSON dump）：数组列前 3 项、对象列前 3 个键。
+ *  纯函数上提模块级（consistent-function-scoping）——**实现原样搬运**，不改行为。 */
+const summarize = (v: unknown): { value: string; hint?: string } => {
+  if (Array.isArray(v)) {
+    // 纯对象/嵌套数组没有可读的单项摘要 —— 只报条数，不输出「…、…」噪音
+    const parts = v
+      .slice(0, 3)
+      .map((x) => (x && typeof x !== "object" ? String(x) : ""))
+      .filter(Boolean);
+    return {
+      value: `${v.length} 项`,
+      hint: parts.length > 0 ? parts.join("、") + (v.length > 3 ? "…" : "") : undefined,
+    };
+  }
+  if (v && typeof v === "object") {
+    const keys = Object.keys(v as Record<string, unknown>);
+    return { value: `${keys.length} 字段`, hint: keys.slice(0, 3).join("、") + (keys.length > 3 ? "…" : "") };
+  }
+  return { value: String(v ?? "") };
+};
+
 export function CustomApiWidget(props: CustomApiConfig) {
   // D42：认证来源（sourceId 提供 authHeader/apiToken），url 仍由组件配置
   const resolved = useResolvedSourceConfig("http", props, ["authHeader", "apiToken"]);
@@ -181,25 +202,6 @@ function ApiDisplay({
     default: {
       // 根为对象 → 键值统计卡；数组 → 前 6 项的 label/value（P2-5：标签在上、数值大）
       type StatCard = { key: string; label: string; value: string; hint?: string };
-      /** 嵌套值转摘要（P2-5：不再 JSON dump）：数组列前 3 项、对象列前 3 个键。 */
-      const summarize = (v: unknown): { value: string; hint?: string } => {
-        if (Array.isArray(v)) {
-          // 纯对象/嵌套数组没有可读的单项摘要 —— 只报条数，不输出「…、…」噪音
-          const parts = v
-            .slice(0, 3)
-            .map((x) => (x && typeof x !== "object" ? String(x) : ""))
-            .filter(Boolean);
-          return {
-            value: `${v.length} 项`,
-            hint: parts.length > 0 ? parts.join("、") + (v.length > 3 ? "…" : "") : undefined,
-          };
-        }
-        if (v && typeof v === "object") {
-          const keys = Object.keys(v as Record<string, unknown>);
-          return { value: `${keys.length} 字段`, hint: keys.slice(0, 3).join("、") + (keys.length > 3 ? "…" : "") };
-        }
-        return { value: String(v ?? "") };
-      };
       const cards: StatCard[] = Array.isArray(data)
         ? data.slice(0, 6).map((it, i) => {
             const rec = (it ?? {}) as Record<string, unknown>;

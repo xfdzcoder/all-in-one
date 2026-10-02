@@ -7,9 +7,9 @@
     "promise"
   ],
   "categories": {
-    "correctness": "warn",
-    "suspicious": "warn",
-    "perf": "warn"
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
   },
   "rules": {
     "import/no-named-as-default-member": "off",
@@ -17,6 +17,24 @@
     "eslint/no-await-in-loop": "off",
     "eslint/no-underscore-dangle": "off",
     "oxc/no-async-endpoint-handlers": "off",
-    "oxc/no-map-spread": "off"
-  }
+    "oxc/no-map-spread": "off",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn",
+    "jsx-a11y/no-autofocus": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "scripts/**",
+        "e2e/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "eslint/no-shadow": "off",
+        "unicorn/consistent-function-scoping": "off"
+      }
+    }
+  ]
 }

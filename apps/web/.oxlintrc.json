@@ -10,9 +10,9 @@
     "promise"
   ],
   "categories": {
-    "correctness": "warn",
-    "suspicious": "warn",
-    "perf": "warn"
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
   },
   "rules": {
     "react/rules-of-hooks": "error",
@@ -23,7 +23,11 @@
     "eslint/no-await-in-loop": "off",
     "eslint/no-underscore-dangle": "off",
     "oxc/no-map-spread": "off",
-    "react/no-array-index-key": "off"
+    "react/no-array-index-key": "off",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn",
+    "jsx-a11y/no-autofocus": "warn"
   },
   "overrides": [
     {
@@ -32,6 +36,18 @@
       ],
       "rules": {
         "eslint/no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/**",
+        "e2e/**",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "rules": {
+        "eslint/no-shadow": "off",
+        "unicorn/consistent-function-scoping": "off"
       }
     }
   ]

@@ -83,6 +83,7 @@
 | [14-deps-security-lint.md](14-deps-security-lint.md) | DEP-1, DEP-3, SEC-3, SEC-6, SEC-7, LNT-1, LNT-2, LNT-3 | Q101 |
 | [15-docs.md](15-docs.md) | DOC-3, DOC-4, DOC-5, DOC-6, DOC-7, DOC-8, DOC-9, DOC-10, DOC-11, DOC-12, DOC-13, DOC-14, DOC-15, DOC-16, DOC-17, DOC-18, DOC-19, DOC-20, DOC-21, DOC-22, DOC-23, DOC-24, DOC-25, DOC-26, DOC-27, DOC-28 | Q101 |
 | QA-002 | minCell→rowHeight 一次性配置迁移 | Q101 |
+| A11Y-1 | `jsx-a11y` 15 条（`prefer-tag-over-role`×9 / `click-events-have-key-events`×2 / `no-noninteractive-element-interactions`×2 / `no-autofocus`×2） | P2 | Q101（a11y 专项：复杂行 `div role=button` 与「真 button」的取舍需专门设计，WEB-3 教训在前） | ⏳ |
 | LNT-1 | 三份 .oxlintrc.json 两份空规则集（静态检测面远窄于拍板目标） | **✅ 已修（Q96a）**：规则开足 + 定向豁免 + 清零 160 条（242→82） | Q96a ✅ |
 | LNT-2 | 全仓仅存 2 处类型断言逃逸（抹 props 类型 / 双重断言绕 zod） | **✅ 已修（Q96b）**：单点收窄函数 + `isServiceOverview` 类型守卫（调用点零断言） | ✅ |
 | LNT-3 | 死代码/未用导出/未用依赖无守卫 | **✅ 全清（Q96b/Q96c）**：knip 引入 + 死文件 1 + 死代码/未用导出 58 条清理 → **knip 零发现** | ✅ |

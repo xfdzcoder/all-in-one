@@ -8,9 +8,10 @@
     "dev:web": "pnpm --filter @all-in-one/web dev",
     "dev:server": "pnpm --filter @all-in-one/server dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
+    "lint": "pnpm -r lint && knip",
     "test": "pnpm -r --if-present test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "knip": "knip"
   },
   "devDependencies": {
     "knip": "^6.39.0"

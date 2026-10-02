@@ -51,3 +51,12 @@
 - **机械清理**：`sort→toSorted` ×16、spread 冗余兜底 ×6、未用变量 ×10、`on*=`→`addEventListener` ×6、`promise(always-return)` ×5、`no-new-array` ×2、`filter+pop→findLast`、`includes→Set.has`、默认数组字面量→常量、循环累积 spread→原地推进。
 - **顺带修掉的真问题**：① 3 处 **fetch GET 带 body**（违反 fetch 规范，会被忽略或抛 TypeError；含 `verify-gallery-live` 的 api() 助手）；② 2 处 catch 重抛**丢 cause**（错误链断裂，已补 `{ cause: err }`）；③ 死代码/死参数清理。
 - **余下 82 条（Q96b）**：`eslint(no-shadow)` 27、`unicorn(consistent-function-scoping)` 26、`react(no-array-index-key)` 9、`oxc(no-map-spread)` 9、react singles 4（`set-state-in-effect`/`refs`/`immutability`/`jsx-no-constructed-context-values` —— 后三者含**潜在真 bug**，需逐个看上下文再改）。Q96b 清零后把 categories 升格 `error` 并引入 knip（LNT-3）。
+
+
+## 5 · Q96 收口（2026-10-02，四批全清）
+
+- **categories 升格 `error`**（correctness/suspicious/perf）——存量清零后，**未来违规直接红**（入 D53 门禁）。
+- **knip 入 `pnpm lint` 门禁**（`pnpm -r lint && knip`）：零发现为常态，回归即红。
+- **产品侧 no-shadow/scoping 全修**（9 处：含 `config` 参数遮蔽全局 app config 的真混淆源、`sr`/`nextId`/`userId`/`pluginsRoot`/`summarize` 纯函数上提）；脚本/测试的旅程级闭包与短回调名**定向豁免**（局部惯用法）。
+- **余量 15 条 jsx-a11y 保 warn**（A11Y-1，P2 专项）：`prefer-tag-over-role` 与既有「复杂行 `div role=button`」模式冲突（换真 button 会重新引入 WEB-3 嵌套交互元素问题，需专门设计）、遮罩点击已有 Esc/焦点路径、composer autoFocus 有意为之。
+- **教训留档**：上提纯函数时**必须原样剪切**——本轮 `summarize` 首版被重写（丢省略号与对象过滤语义），靠 `git diff` 复核抓回并恢复原实现。

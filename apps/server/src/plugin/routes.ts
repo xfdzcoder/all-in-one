@@ -35,11 +35,13 @@ const actionBody = z.object({
   params: z.unknown().optional(),
 });
 
+/** 插件安装目录（纯函数上提模块级） */
+const pluginsRoot = () => path.join(config.dataDir, "plugins");
+
 export function registerPluginRoutes(
   app: FastifyInstance,
   onChanged: (topic: ActionTopic) => void = () => {},
 ): void {
-  const pluginsRoot = () => path.join(config.dataDir, "plugins");
 
   app.post("/api/plugins", { preHandler: authGuard, bodyLimit: 3_000_000 }, async (req, reply) => {
     const parsed = uploadBody.safeParse(req.body);

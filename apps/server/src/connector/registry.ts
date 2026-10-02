@@ -40,11 +40,11 @@ export class UnknownWidgetTypeError extends Error {
 
 /** 把配置中的 SecretRef 解析为明文（仅在 connector 内部使用）。 */
 export async function resolveSecretRefs(
-  config: Record<string, unknown>,
+  rawConfig: Record<string, unknown>, // 不叫 rawConfig：遮蔽全局 app rawConfig（no-shadow 真混淆源）
   ctx: FetchContext,
 ): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(config)) {
+  for (const [k, v] of Object.entries(rawConfig)) {
     if (isSecretRef(v)) {
       out[k] = await ctx.readSecret((v as SecretRef).credentialRef);
     } else {

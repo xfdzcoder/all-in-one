@@ -177,6 +177,10 @@ export function normalizeImmich(parts: {
   return out;
 }
 
+/** Subsonic 响应壳（`subsonic-response`）；纯函数上提模块级（consistent-function-scoping）。 */
+const sr = (x: unknown): Record<string, unknown> =>
+  (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
+
 /** Navidrome（Subsonic；实测 0.58 无 getStats → getScanStatus + getArtists 聚合）。 */
 export function normalizeNavidrome(parts: {
   ping?: unknown;
@@ -185,8 +189,6 @@ export function normalizeNavidrome(parts: {
   newest?: unknown;
   errors?: Array<{ what: string; err: unknown }>;
 }): ServiceOverview {
-  const sr = (x: unknown): Record<string, unknown> =>
-    (((x ?? {}) as Record<string, unknown>)["subsonic-response"] ?? {}) as Record<string, unknown>;
   const ping = sr(parts.ping);
   const out: ServiceOverview = { probe: { ok: true, source: "navidrome" }, metrics: [] };
   const version = str(ping.version) ?? str(ping.serverVersion);

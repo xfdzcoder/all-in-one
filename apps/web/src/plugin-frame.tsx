@@ -157,8 +157,8 @@ export function PluginFrame({
               void queryClient.invalidateQueries({ queryKey: ["plugin-data"] });
               return undefined; // promise(always-return)：链式语义明确
             })
-            .catch((e: unknown) => {
-              setRuntimeError(`动作执行失败：${e instanceof Error ? e.message : String(e)}`);
+            .catch((err: unknown) => {
+              setRuntimeError(`动作执行失败：${err instanceof Error ? err.message : String(err)}`);
             });
           break;
         }

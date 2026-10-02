@@ -519,7 +519,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     onChange={(e) => setNewBoard(e.currentTarget.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newBoard.trim()) {
-                        void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id)).catch((e) => reportError("新建看板失败", e)); // WEB-4
+                        void m.createBoard(newBoard.trim()).then((res) => res && setBoardId(res.id)).catch((err) => reportError("新建看板失败", err)); // WEB-4
                         setNewBoard("");
                         setNewBoardOpen(false);
                       }
@@ -530,7 +530,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
                     size="xs"
                     disabled={!newBoard.trim()}
                     onClick={() => {
-                      void m.createBoard(newBoard.trim()).then((r) => r && setBoardId(r.id)).catch((e) => reportError("新建看板失败", e)); // WEB-4
+                      void m.createBoard(newBoard.trim()).then((res) => res && setBoardId(res.id)).catch((err) => reportError("新建看板失败", err)); // WEB-4
                       setNewBoard("");
                       setNewBoardOpen(false);
                     }}
