@@ -20,7 +20,6 @@ import { httpConnector } from "../connector/http.ts";
 import { rssConnector } from "../feed/connector.ts";
 import { appLauncherConnector } from "../connector/launcher.ts";
 import { iframeEmbedConnector } from "../connector/iframe.ts";
-import { opencodeConnector } from "../connector/opencode.ts";
 import { monitorConnector } from "../connector/monitor.ts";
 import { serviceOverviewConnector } from "../connector/service.ts";
 import { immichGalleryConnector, immichAlbumsConnector, immichPreviewConnector } from "../connector/gallery.ts";
@@ -55,7 +54,6 @@ export function defaultDataChannel(): DataChannelDeps {
   registry.register(rssConnector);
   registry.register(appLauncherConnector);
   registry.register(iframeEmbedConnector);
-  registry.register(opencodeConnector);
   registry.register(monitorConnector);
   registry.register(serviceOverviewConnector);
   registry.register(immichGalleryConnector);

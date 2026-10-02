@@ -2,8 +2,8 @@
  * I4 acceptance (FR-I4 组件内查看详情（抽屉/弹层）): 四个声明 detail 的组件 ——
  *  ① 信息流：条目点击 → 弹层（标题/来源/摘要沙箱渲染、脚本零执行、阅读原文链接）；
  *  ② Todo：任务点击 → 弹层（标题/清单/状态/时间）；
- *  ③ 自定义 API：「详情」→ 完整响应 JSON（超出模板展示的部分可见）；
- *  ④ OpenCode：会话点击 → 弹层（ID/创建/更新/耗时）。
+ *  ③ 自定义 API：「详情」→ 完整响应 JSON（超出模板展示的部分可见）。
+ *  （④ OpenCode 会话详情随组件退役移除 —— D66）
  * 数据通道响应用请求拦截夹具（同 verify-mail 模式；组件行为是验证对象）。
  * Run: node scripts/verify-i4.mjs (server :3000, preview :4173)
  */
@@ -27,10 +27,6 @@ const rssItem = {
 };
 const rssFixture = { items: [rssItem], unread: 1, sourceCount: 1, errors: [] };
 const apiFixture = { marker: `i4-full-response-${uniq}`, nested: { a: 1 } };
-const opcFixture = {
-  probe: { ok: true, version: "9.9.9-test" },
-  sessions: [{ id: `s-i4-${uniq}`, title: `会话-${uniq}`, createdAt: 1000, updatedAt: 65000, durationMs: 64000 }],
-};
 
 const browser = await puppeteer.launch({
   executablePath: "/usr/bin/google-chrome",
@@ -60,35 +56,7 @@ const setField = (label, value) =>
     { l: label, v: value },
   );
 
-const selectOption = async (label, optionText) => {
-  await page.evaluate((l) => {
-    const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
-      w.querySelector("label")?.textContent.includes(l),
-    );
-    wrapper?.querySelector("[role=combobox]")?.click();
-  }, label);
-  await sleep(300);
-  return page.evaluate((o) => {
-    const opt = [...document.querySelectorAll("[data-combobox-option]")].find((e) => e.textContent.includes(o));
-    opt?.click();
-    return Boolean(opt);
-  }, optionText);
-};
-
 // Q42：连接信息在「数据源管理 · 数据连接」维护（数据通道被夹具拦截，url 仅占位）
-const createOpencodeSource = (name, url) =>
-  page.evaluate(
-    async ({ name, url }) => {
-      const res = await fetch("/api/data-sources", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "opencode", name, config: { url } }),
-      });
-      return res.ok;
-    },
-    { name, url },
-  );
-
 const clickInWidget = (marker, label) =>
   page.evaluate(
     ({ m, l }) => {
@@ -118,7 +86,7 @@ await installLayoutGuard(page);
       } catch {
         /* ignore */
       }
-      const payload = type === "rss" ? rssFixture : type === "opencode" ? opcFixture : apiFixture;
+      const payload = type === "rss" ? rssFixture : apiFixture;
       void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify({ data: payload }) });
     } else {
       void req.continue();
@@ -214,8 +182,6 @@ await installLayoutGuard(page);
   await sleep(400);
 
   // ③ 自定义 API 详情（完整响应）
-  const srcName = `I4 OC 源-${uniq}`;
-  ok("I4 create opencode data source", await createOpencodeSource(srcName, "http://fixture.local"));
   ok("I4 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
   // Q34/Q41：编辑态隐藏「未读」徽标（与外框「配置/移除」重叠被遮挡；Q41 起随头部动作簇统一 CSS 隐藏）
@@ -230,23 +196,6 @@ await installLayoutGuard(page);
   ok("I4 custom-api url", await setField("接口地址", "http://fixture.local/api"));
   await sleep(200);
   ok("I4 custom-api submit", await clickBtn("确认添加", true));
-  await sleep(1500);
-  ok("I4 add opencode", await clickBtn("添加组件"));
-  await sleep(300);
-  ok("I4 pick opencode", await clickBtn("OpenCode"));
-  await sleep(400);
-  // Q42：组件表单只做选择 —— 连接信息（服务地址/访问令牌）不再重填
-  ok(
-    "I4 opencode form has no connection fields",
-    await page.evaluate(() =>
-      ![...document.querySelectorAll(".mantine-Modal-root label")].some(
-        (l) => l.textContent.includes("服务地址") || l.textContent.includes("访问令牌"),
-      ),
-    ),
-  );
-  ok("I4 opencode pick source", await selectOption("数据连接", srcName));
-  await sleep(200);
-  ok("I4 opencode submit", await clickBtn("确认添加", true));
   await sleep(1500);
   ok("I4 exit edit", await clickBtn("完成编辑"));
   await sleep(400);
@@ -263,26 +212,6 @@ await installLayoutGuard(page);
   ok("I4 custom-api detail shows full response", bodyAfterApi.includes(`i4-full-response-${uniq}`), bodyAfterApi.slice(-120));
   await page.keyboard.press("Escape");
   await sleep(400);
-
-  // ④ OpenCode 会话详情
-  ok(
-    "I4 opencode session opens detail",
-    await page.evaluate((t) => {
-      const el = [...document.querySelectorAll(".grid-stack-item *")].find(
-        (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),
-      );
-      if (!el) return false;
-      el.click();
-      return true;
-    }, `会话-${uniq}`),
-  );
-  await sleep(600);
-  const bodyAfterOpc = await page.evaluate(() => document.body.textContent ?? "");
-  ok(
-    "I4 opencode detail shows id/duration",
-    bodyAfterOpc.includes("会话详情") && bodyAfterOpc.includes(`s-i4-${uniq}`) && bodyAfterOpc.includes("1 分"),
-    bodyAfterOpc.slice(-120),
-  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }

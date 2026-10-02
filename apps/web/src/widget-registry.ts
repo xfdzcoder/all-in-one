@@ -9,7 +9,6 @@ import { LauncherWidget } from "./launcher-widget";
 import { IframeWidget } from "./iframe-widget";
 import { KanbanWidget } from "./kanban-widget";
 import { MailWidget } from "./mail-widget";
-import { OpencodeWidget } from "./opencode-widget";
 import { TERMS } from "./terms";
 import { MonitorWidget } from "./monitor-widget";
 import { ServiceOverviewWidget } from "./service-overview-widget";
@@ -207,27 +206,6 @@ const kanbanManifest: WidgetManifest = {
   ],
   capabilities: {
     data: { source: "workspace", resource: "kanban" },
-    refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
-    detail: true,
-  },
-};
-
-/** OpenCode 组件（FR-E4/Q8）：会话列表/状态/耗时 + API 版本探测（D32）。 */
-const opencodeManifest: WidgetManifest = {
-  type: "opencode",
-  name: "OpenCode",
-  description: "opencode 会话列表 / 状态 / 耗时 + API 版本探测（实验性接口）",
-  icon: "opencode", // Q38a：官方品牌图标
-  category: "服务",
-  defaultSize: { w: 4, h: 4 },
-  minSize: { w: 3, h: 2 },
-  configSchema: [
-    // Q42（一.2）：只需选择已配置的数据连接 —— 连接信息在「数据源管理 · 数据连接」维护，不在组件表单重填
-    { key: "sourceId", label: "数据连接", type: "select", dynamic: "data-source:opencode", help: "在「数据源管理 · 数据连接」维护；旧组件的内联配置仍生效（兼容）" },
-    { key: "limit", label: "会话条数", type: "number", default: 20 },
-  ],
-  capabilities: {
-    data: { source: "http-connector" },
     refresh: { minRefreshSec: 5, defaultRefreshSec: 60, supportsManualRefresh: true },
     detail: true,
   },
@@ -452,7 +430,6 @@ export const widgetComponents = {
   rss: RssWidget,
   kanban: KanbanWidget,
   mail: MailWidget,
-  opencode: OpencodeWidget,
   monitor: MonitorWidget,
   "service-overview": ServiceOverviewWidget,
   "immich-gallery": ImmichGalleryWidget,
@@ -477,7 +454,6 @@ const manifestsByComponent: Record<string, WidgetManifest> = {
   rss: rssManifest,
   kanban: kanbanManifest,
   mail: mailManifest,
-  opencode: opencodeManifest,
   monitor: monitorManifest,
   "service-overview": serviceOverviewManifest,
   "immich-gallery": immichGalleryManifest,
@@ -504,7 +480,6 @@ export const builtinManifests: WidgetManifest[] = [
   rssManifest,
   kanbanManifest,
   mailManifest,
-  opencodeManifest,
   monitorManifest,
   serviceOverviewManifest,
   immichGalleryManifest,

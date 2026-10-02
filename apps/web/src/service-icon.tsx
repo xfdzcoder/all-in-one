@@ -2,7 +2,6 @@ import glancesSvg from "./icons/brand/glances.svg?raw";
 import immichSvg from "./icons/brand/immich.svg?raw";
 import navidromeSvg from "./icons/brand/navidrome.svg?raw";
 import gmailSvg from "./icons/brand/gmail.svg?raw";
-import opencodeSvg from "./icons/brand/opencode.svg?raw";
 import rssSvg from "./icons/brand/rss.svg?raw";
 import portainerSvg from "./icons/brand/portainer.svg?raw";
 // PNG 品牌标走构建资产 URL（mihomo 家族 logo）
@@ -16,7 +15,6 @@ import mihomoPng from "./icons/brand/mihomo.png";
  */
 const BRAND: Record<string, string> = {
   glances: glancesSvg,
-  opencode: opencodeSvg,
   gmail: gmailSvg,
   rss: rssSvg,
   immich: immichSvg,

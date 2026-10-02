@@ -140,7 +140,7 @@ export function cacheKeyOf(query: WidgetDataQuery): string {
 }
 
 /** 供 http-connector 复用的出站 GET/POST 封装（SSRF + 超时 + 体积上限）。
- *  allowPrivate：服务聚合场景（app-launcher/OpenCode/监控源）目标即内网服务（D22/D32/D36）。 */
+ *  allowPrivate：服务聚合场景（app-launcher/监控源等）目标即内网服务（D22/D36）。 */
 export async function outboundRequest(
   rawUrl: string,
   opts: {

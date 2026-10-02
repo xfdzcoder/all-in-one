@@ -63,15 +63,6 @@ const monitorFixture = {
   ],
 };
 
-const opencodeFixture = {
-  probe: { ok: true, version: "1.4.2" },
-  sessions: [
-    { id: "s-8f21", title: "重构深色主题令牌", createdAt: now - 7200000, updatedAt: now - 600000, durationMs: 6600000 },
-    { id: "s-3c07", title: "修复邮件分页", createdAt: now - 20000000, updatedAt: now - 17000000, durationMs: 3000000 },
-    { id: "s-91ab", title: "插件沙箱评审", createdAt: now - 86400000, updatedAt: now - 82000000, durationMs: 4400000 },
-  ],
-};
-
 const customApiFixture = {
   title: "构建状态",
   cpu: 23.5,
@@ -130,7 +121,6 @@ const LAYOUT = [
   { id: "w-mail", x: 7, y: 5, w: 5, h: 5, component: "mail", props: { limit: 20 } },
   { id: "w-api", x: 0, y: 10, w: 4, h: 4, component: "custom-api", props: { url: "http://127.0.0.1:9/stats", display: "stat", labelField: "title", valueField: "cpu" } },
   { id: "w-jsx", x: 4, y: 10, w: 4, h: 4, component: "custom-api", props: { url: "http://127.0.0.1:9/stats", display: "jsx", templateJsx: jsxTemplate } },
-  { id: "w-opc", x: 8, y: 10, w: 4, h: 4, component: "opencode", props: { url: "http://127.0.0.1:4096" } },
   { id: "w-launcher", x: 0, y: 14, w: 6, h: 3, component: "app-launcher", props: { itemsJson: JSON.stringify(launcherFixture.items.map((i) => ({ name: i.name, url: i.url, probe: "http" }))) } },
   { id: "w-iframe", x: 6, y: 14, w: 6, h: 3, component: "iframe", props: { url: "http://127.0.0.1:39997/frame" } },
 ];
@@ -178,7 +168,6 @@ try {
       if (type === "rss") return json({ data: rssFixture });
       if (type === "app-launcher") return json({ data: launcherFixture });
       if (type === "monitor") return json({ data: monitorFixture });
-      if (type === "opencode") return json({ data: opencodeFixture });
       return json({ data: customApiFixture });
     }
     if (url.includes("/api/mail/accounts")) return json(mailAccounts);
@@ -228,7 +217,6 @@ await installLayoutGuard(page);
     "16-widget-mail": "w-mail",
     "17-widget-customapi-stat": "w-api",
     "18-widget-customapi-jsx": "w-jsx",
-    "19-widget-opencode": "w-opc",
     "20-widget-launcher": "w-launcher",
     "21-widget-iframe": "w-iframe",
   };

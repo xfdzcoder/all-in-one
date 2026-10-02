@@ -100,7 +100,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const [newBoard, setNewBoard] = useState("");
   const [newBoardOpen, setNewBoardOpen] = useState(false);
   const [newColumn, setNewColumn] = useState("");
-  // Q26b/D42：命名数据连接（monitor / opencode / http）
+  // Q26b/D42：命名数据连接（monitor / http 等）
   const dsMut = useDataSourceMutations();
   const [dsKind, setDsKind] = useState<string>("monitor");
   const dsRows = useDataSources(dsKind);
@@ -116,7 +116,6 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   const [dsView, setDsView] = useState<string>("gallery");
   const DS_KINDS = [
     { value: "monitor", label: "监控源", desc: "Glances 等服务监控（CPU / 内存 / 磁盘 / 运行时长）", icon: "monitor" },
-    { value: "opencode", label: "OpenCode", desc: "opencode server 会话与状态（实验性接口）", icon: "opencode" },
     { value: "http", label: "HTTP / 自定义 API", desc: "任意 HTTP 接口的认证来源（Bearer / 自定义头）", icon: "http" },
     // Q39/D46：第三方服务四类（服务概览组件消费）
     { value: "immich", label: "Immich", desc: "照片库（API Key 认证；版本/照片/视频计数）", icon: "immich" },
@@ -131,10 +130,6 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
       { key: "username", label: "用户名", type: "text" },
       // Q36：键与连接器/组件对齐（apiToken）——旧 password 行仍被连接器兼容
       { key: "apiToken", label: "口令 / 令牌", type: "secret" },
-    ],
-    opencode: [
-      { key: "url", label: "服务地址", type: "text" },
-      { key: "apiToken", label: "访问令牌", type: "secret" },
     ],
     http: [
       { key: "url", label: "接口地址", type: "text" },
@@ -920,7 +915,7 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
 /** 数据源 logo（Q27c：自绘简洁 SVG 标 —— 离线环境无官方资源）。 */
 function SourceLogo({ kind }: { kind: string }) {
   // Q38a（三.1）：已接入服务用官方图标（vendored，SOURCES.md 登记）；通用概念保留自绘
-  const brand: Record<string, string> = { monitor: "glances", opencode: "opencode", immich: "immich", navidrome: "navidrome", portainer: "portainer", mihomo: "mihomo" };
+  const brand: Record<string, string> = { monitor: "glances", immich: "immich", navidrome: "navidrome", portainer: "portainer", mihomo: "mihomo" };
   if (brand[kind]) {
     return (
       <span className="wb-source-logo" aria-hidden>

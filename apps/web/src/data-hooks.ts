@@ -327,43 +327,6 @@ export function useKanbanMutations(boardId: string | undefined) {
   };
 }
 
-/** OpenCode 会话数据（FR-E4：会话列表/状态/耗时 + API 版本探测，D32）。 */
-export type OpencodeSession = {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  durationMs: number;
-};
-type OpencodeData = {
-  probe: { ok: boolean; version?: string; error?: string };
-  sessions: OpencodeSession[];
-};
-
-export function useOpencodeData(config: Record<string, unknown>) {
-  const qc = useQueryClient();
-  const key = qk.opencode(JSON.stringify(config));
-  const query = useQuery({
-    queryKey: key,
-    queryFn: () => api.widgetData<OpencodeData>("opencode", config),
-    enabled: Boolean(config.url),
-    staleTime: 30_000,
-    refetchInterval: refreshInterval(config.refreshSec, 60_000),
-  });
-  return {
-    data: query.data?.data,
-    loading: query.isLoading,
-    error: query.error instanceof Error ? query.error.message : undefined,
-    fetchedAt: query.data?.fetchedAt,
-    // 手动刷新 = 强制回源（跳过客户端 staleTime 与服务端 TTL 缓存）
-    refresh: () => {
-      void api.widgetData("opencode", config, true)
-        .then((d) => qc.setQueryData(key, d))
-        .catch((e) => reportError("OpenCode 刷新失败", e)); // WEB-4
-    },
-  };
-}
-
 /** 监控源数据（FR：服务器监控，D36 打通第三方服务只做连接与展示）。 */
 type MonitorMetrics = {
   probe: { ok: boolean; source: string; version?: string; error?: string };
@@ -944,7 +907,6 @@ export function useDynamicOptionsMap(
   // Q33：mail-accounts 选项源（此前缺失 —— 邮箱多选下拉恒空）
   const mailAccounts = useMailAccounts();
   const monitor = useDataSources("monitor");
-  const opencode = useDataSources("opencode");
   const http = useDataSources("http");
   // Q39/D46：服务概览可选连接（immich/navidrome/portainer/mihomo）
   const svcImmich = useDataSources("immich");
@@ -972,7 +934,6 @@ export function useDynamicOptionsMap(
       label: n,
     })),
     "data-source:monitor": (monitor.data ?? []).map((r) => ({ value: r.id, label: r.name })),
-    "data-source:opencode": (opencode.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:http": (http.data ?? []).map((r) => ({ value: r.id, label: r.name })),
     "data-source:service": [...(svcImmich.data ?? []), ...(svcNavidrome.data ?? []), ...(svcPortainer.data ?? []), ...(svcMihomo.data ?? [])].map(
       (r: { id: string; name: string }) => ({ value: r.id, label: r.name }),

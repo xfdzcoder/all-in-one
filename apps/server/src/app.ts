@@ -22,6 +22,7 @@ import { registerTodoRoutes } from "./todo/routes.ts";
 import { registerFeedRoutes } from "./feed/routes.ts";
 import { registerTagRoutes } from "./tag/routes.ts";
 import { registerDataSourceRoutes } from "./data-source/routes.ts";
+import { cleanupRetiredDataSources } from "./data-source/legacy-cleanup.ts";
 import { loadWsSourceRows, WsSourceManager } from "./ws/manager.ts";
 import { registerIconRoutes } from "./icon/routes.ts";
 import { registerPluginRoutes } from "./plugin/routes.ts";
@@ -175,6 +176,11 @@ export async function startServer(): Promise<FastifyInstance> {
   await seedDefaultDashboard(db);
   // Housekeeping: drop expired sessions on boot.
   await db.delete(session).where(lt(session.expiresAt, new Date()));
+  // D66：退役组件/数据源（opencode）的一次性存量清理 —— 不留不可管理的僵尸连接
+  const retired = await cleanupRetiredDataSources(db);
+  if (retired > 0) {
+    console.log(`[@all-in-one/server] removed ${retired} retired data source row(s) (D66)`);
+  }
 
   const app = buildApp({ db });
   await app.listen({ port: config.port, host: config.host });

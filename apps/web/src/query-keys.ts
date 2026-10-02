@@ -19,7 +19,6 @@ export const qkRoot = {
   mailAccounts: ["mail-accounts"] as const,
   mailMessages: ["mail-messages"] as const,
   mailMessage: ["mail-message"] as const,
-  opencode: ["opencode"] as const,
   customApi: ["custom-api"] as const,
   launcher: ["launcher"] as const,
   plugins: ["plugins"] as const,
@@ -54,7 +53,6 @@ export const qk = {
   mailMessages: (idsKey: string, limit: number) => [...qkRoot.mailMessages, idsKey || "all", limit] as const,
   mailMessage: (accountId: string | null, uid: number | string | null) =>
     [...qkRoot.mailMessage, accountId, uid] as const,
-  opencode: (configJson: string) => [...qkRoot.opencode, configJson] as const,
   customApi: (configJson: string) => [...qkRoot.customApi, configJson] as const,
   launcher: (itemsJson: string) => [...qkRoot.launcher, itemsJson] as const,
   plugins: qkRoot.plugins,
@@ -98,7 +96,6 @@ export const DATA_ROOT_KEYS: ReadonlyArray<readonly unknown[]> = [
   qkRoot.mailMessages,
   qkRoot.mailAccounts,
   qkRoot.mailMessage,
-  qkRoot.opencode,
   qkRoot.customApi,
   qkRoot.launcher,
   qkRoot.pluginData,

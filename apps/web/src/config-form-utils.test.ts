@@ -38,7 +38,7 @@ describe("normalizeTagIds（WEB-5：查询与刷新同一份清洗）", () => {
 describe("resolveSourceConfig（D65，用户反馈⑤：卡片配置优先 + 相对地址拼接）", () => {
   const src = { url: "https://svc.example.com", apiToken: "src-token", authHeader: "X-Src" };
 
-  it("缺省（D42 旧语义）：来源优先、内联回落 —— monitor/opencode 兼容路径不受影响", () => {
+  it("缺省（D42 旧语义）：来源优先、内联回落 —— monitor 等兼容路径不受影响", () => {
     const out = resolveSourceConfig(
       { sourceId: "s1", apiToken: "card-token", authHeader: "" },
       src,

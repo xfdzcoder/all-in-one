@@ -142,7 +142,6 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
     portainer: "portainer",
     mihomo: "mihomo",
     monitor: "glances",
-    opencode: "opencode",
     http: "",
   };
 

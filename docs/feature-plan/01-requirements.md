@@ -118,7 +118,7 @@ Workspace（空间/工作台）      ← 业务数据的属主
 | 多项目 Kanban | 嵌套拖拽与数据模型复杂，二期 |
 | 多邮箱聚合（只读） | 工作量最大的 connector，二期（D3 范围已收敛） |
 | 服务器性能监控 | 数据来源选型未定 |
-| OpenCode 会话及状态 | API 标注 experimental，薄封装后置 |
+| OpenCode 会话及状态 | API 标注 experimental，薄封装后置（**已按用户指令退役**：Q8 曾落地，Q106/**D66** 下线） |
 
 ### 2.4 组件系统需求（扩展规范）
 
@@ -140,7 +140,7 @@ Workspace（空间/工作台）      ← 业务数据的属主
 | FR-E1 | 凭证仓库（Credential Store）：加密保存第三方 Token/密码，供适配器使用 | 【必须】 |
 | FR-E2 | 集成适配器（Connector）模式：每个第三方服务一个 connector，统一超时/重试/限流 | 【必须】 |
 | FR-E3 | 邮件：IMAP 只读聚合、多账号；Gmail OAuth 专项（D37）；**D64**（用户反馈③ 2026-10-02）：未读徽标归 Workspace —— 点开邮件即标已读（本地幂等，跨组件/刷新保持），服务商 SEEN/UNREAD 不回写 | 【必须】（**已落地**：Q7a/Q7b、Q-G1~G3、D64） |
-| FR-E4 | OpenCode：对接 opencode server HTTP API（实验性，已验证存在）（D32） | 【必须】（**已落地**：Q8） |
+| FR-E4 | OpenCode：对接 opencode server HTTP API（实验性，已验证存在）（D32） | 【必须】（**已落地**：Q8；**已退役**：Q106/**D66**（2026-10-02 用户指令「移除专门的 OpenCode 卡片及其数据源」）——组件/connector/数据源 kind/品牌图标全量下线，存量连接行启动时一次性清理） |
 | FR-E5 | 现有服务（Immich/Portainer/n8n 等）按需以 connector 或 iframe Widget 接入，不强依赖 | 【应该】 |
 | FR-E6 | Webhook 接收（如 Apprise 通知进工作台） | 【暂不考虑】 |
 

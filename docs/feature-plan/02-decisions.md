@@ -602,3 +602,15 @@
 - **兼容**：`useResolvedSourceConfig` **缺省语义不变**（来源优先、内联回落 —— D42 monitor/opencode 的旧内联兼容路径不动）；新语义仅图表/自定义 API 调用点显式开启（`inlineWins` / `resolveRelativeUrl`）。
 - **被否备选**：① 只改示例文案不改行为 —— 相对地址直接打不通，误导更大；② token 一律重填 —— 用户明确「相同没必要二次填写」；③ 卡片令牌写回来源 —— 用户明确否定（改的是本卡优先级，不是来源）。
 - **影响**：`config-form-utils.resolveSourceConfig` 纯函数（+3 单测）；`httpConnector` 相对地址报错（D47「原因+怎么修」）；两处 manifest 字段文案；ConfigForm help 渲染修复（福及全部组件表单）；verify-chart +4 断言（placeholder/帮助文案/相对地址+来源令牌/卡片覆盖且来源不动）。
+
+## D66 · OpenCode 组件与数据源**退役**（2026-10-02）
+
+- **背景**：用户指令「Dashboard：① 移除专门的 OpenCode 卡片及其数据源」。该组件（FR-E4/Q8，D32）对接 opencode server experimental API，用户不再需要此卡片。
+- **决策（用户拍板）**：**整体退役**，不留隐藏开关——
+  1. **前端**：`opencode-widget.tsx`、manifest 与 `widgetComponents`/`manifestsByComponent`/`builtinManifests` 三清单条目、`useOpencodeData` 与 `OpencodeSession`/`OpencodeData` 类型、`data-source:opencode` 选项源、`qkRoot.opencode` 查询键、数据源类型画廊 `DS_KINDS`/`DS_FIELDS` 条目、品牌图标 `icons/brand/opencode.svg`（及 SOURCES.md 登记行）、service-overview `kindIcon` 映射。
+  2. **服务端**：`connector/opencode.ts`、`data/routes.ts` 注册、`data-source` kind 白名单与 config 键表、`plugin/install.ts` `BUILTIN_TYPES`（插件不得占用 `opencode` 类型名）。
+  3. **存量数据**：`data-source/legacy-cleanup.ts` 启动时一次性删除 `kind="opencode"` 连接行并**回收孤儿凭证**（复用 Q98b 的 `deleteCredentialIfOrphan`，仍被引用则保留）——这些行在新类型画廊中不可见也不可管理，留着就是僵尸数据。**只删连接配置，不动任何业务数据**（01 §1.3）。
+- **顺带修正**：Q98b 的孤儿凭证回收正则只认 `"credentialId"` 键，而 config 实际存的是 SecretRef `{ credentialRef }` —— 回收从未生效过；抽出 `collectCredentialRefs()`（两种键名都认），删除路径与退役清理共用。
+- **兼容口径**：旧布局 JSON 里的 `opencode` 实例走 gridstack `components[component]` 未命中 → **渲染空卡**（与插件卸载后同语义），编辑态可配置/移除；`plugin/install.ts` 类型表同步收窄，插件不能再声明 `opencode` 类型。
+- **被否备选**：① 留作隐藏组件（用户明确「移除」，且依赖 experimental API 的代码本就是维护负担）；② 只删前端留 connector（孤儿 API 面，无消费方，knip 必清）。
+- **影响**：apps/web 9 文件 + apps/server 5 文件 + verify 脚本 4 份（`verify-opc.mjs` 整删、`verify-i4.mjs` ④段、`verify-j8.mjs` 期望名、`capture-design.mjs` fixture）+ `legacy-cleanup` 新模块与测试；契约文档（widget-sdk README/config.ts）同步。

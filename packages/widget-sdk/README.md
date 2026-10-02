@@ -53,7 +53,7 @@ configSchema: [
 |---|---|---|
 | `required` / `default` / `placeholder` / `help` | 全部 | 校验 / 初值 / 占位 / 说明 |
 | `options` | select | 静态选项 `{ value, label }[]` |
-| `dynamic` | select · multiselect | **动态选项源 key**（与 `options` 二选一，Q26b/D42）：`kanban-boards` / `todo-names` / `tags` / `data-source:monitor|opencode|http|immich|navidrome|portainer|mihomo` / `immich-albums` / `navidrome-artists` |
+| `dynamic` | select · multiselect | **动态选项源 key**（与 `options` 二选一，Q26b/D42）：`kanban-boards` / `todo-names` / `tags` / `data-source:monitor|http|immich|navidrome|portainer|mihomo` / `immich-albums` / `navidrome-artists` |
 | `dependsOn` | dynamic | 选项源**依赖另一字段**（Q72/**D57**）：被依赖字段值变化 → 宿主带参重取选项（如「只看某相册」的列表跟着「数据连接」走） |
 | `creatable` | select + dynamic | 允许输入新值创建（Q29b，如 Todo 名称「选已有或新建」） |
 

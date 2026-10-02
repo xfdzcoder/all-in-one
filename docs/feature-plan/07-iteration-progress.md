@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 最近更新 | 2026-10-02（第 189 轮 · **Q103 ✅** 真机待验销项（图表真源对账）；余 Glances/WS 真源待实例） |
+| 最近更新 | 2026-10-02（第 190 轮 · **Q106** OpenCode 卡片与数据源退役（D66）；新一轮队列 Q106–Q113：Dashboard 三修 + 设置页整合） |
 
 ## 迭代队列
 
@@ -227,6 +227,19 @@
 - [x] Q103 · **真机待验销项（可达面）**：`verify-chart-live.mjs` 5/5 —— 真 HTTP 源（Immich `/api/albums`）喂图表，**点数与官方 API 对账**（16 相册=16 点）；产品修 2 处（chart 缺 url 空白无提示 → SourceHint 降级；**SEC-3 钉 IP lookup 未答 autoSelectFamily `all=true` 形态** → 真机 `Invalid IP address: undefined` 502，两处 lookup 补 `{address,family}[]` 分支）；两脚本加前置清理自愈（调试轮无还原留卡致错卡假红实证）；Glances 液面/真 WS 源**无实例保持待办** **✅ 2026-10-02**（见记录 184）
 - [x] Q101a · **P2 批·QA-002（⑮）**：`minCell`→`rowHeight` —— 键改名 + 两组件双读兜底 + 服务端 `normalizeLayoutJson` **读写双向规范化（懒收敛）** + `LAYOUT_SCHEMA_VERSION` 升 2，迁移回归测试 3 条 **✅ 2026-10-02**（见记录 153）
 
+### 新一轮队列（2026-10-02 新指令：Dashboard 三修 + 设置页整合）
+
+> **用户已拍板**：① iframe 默认沙箱加 `allow-same-origin`（+同源自嵌防护）；② RSS 走**自研归一收口**（不引 feed 库）；③ 忘记密码**保持现状**（登录页指引 = 服务器改环境变量重启，不做找回流程）；④ 自定义 CSS = **页内编辑器 + 自动备份**，内核 **CodeMirror 6**，提示范围 = 标准 CSS + `--wb-*` 令牌 + `.wb-*` 语义类；⑤ 数据源管理 **7 页签整体收进**设置页「数据源」。
+
+- [x] Q106 · **Dashboard 修①：OpenCode 卡片与数据源退役**（组件/connector/选项源/查询键/图标/白名单/存量清理，**D66**）**✅ 2026-10-02**（见记录 190）
+- [ ] Q107 · **Dashboard 修②：iframe Origin:null**（默认沙箱加 `allow-same-origin` + 同源自嵌防护 + 配置说明，**D67**）
+- [ ] Q108 · **Dashboard 修③：RSS `[object Object]`**（XML 节点归一 `textOf` 收口 + guid 回落 link 修已读去重，**D68**）
+- [ ] Q109 · **设置页·批1 骨架与头部整合**（四按钮 → 单「设置」；左右分栏设置页 + `?view=settings&tab=` 深链，**D69**）
+- [ ] Q110 · **设置页·批2 账户**（改用户名/改密码需验证当前密码 + 新路由 + 退出登录移入 + 忘记密码维持静态指引）
+- [ ] Q111 · **设置页·批3 外观**（CodeMirror 6 CSS 编辑器：语法高亮 + 标准 CSS/`--wb-*`/`.wb-*` 提示 + 保存前轻校验；读写 + 自动备份/回滚路由，**D70**）
+- [ ] Q112 · **设置页·批4 插件 + 数据源 + 关于**（PluginAdmin 去 Modal 改面板；DataAdmin 7 页签整体嵌入；关于静态页）
+- [ ] Q113 · **设置页·批5 文档收口 + 全量回归**（01/02/06/07 + verify 双实现同步核查 + 全量门禁）
+
 ## 历轮记录
 
 | # | 日期 | 内容 | 验证 | commit |
@@ -421,6 +434,7 @@
 | 187 | 2026-10-02 | **用户反馈⑤ · 批2 Immich 灯箱预览大图（Q105，D47）**：**根因**（真机只读探测）：灯箱用的是墙上缩略图 data URI，实测 `size=thumbnail` 仅 **444×250 webp（11–25KB）**、灯箱按原始像素呈现 ⇒「预览太小」；`size=preview` 为 **2560×1440 JPEG（326–589KB）**（视频该尺寸 404，同 Q70 实例侧结论）。**实现**：① 新数据查询 **`immich-preview`**（`gallery.ts` 连接器：preview → 404 回落 thumbnail 并标 `fallback`；两级皆败才抛「原因+怎么修」；宽高字节头解析 D60）+ `data/routes.ts` 注册；② 前端 `useImmichPreview`（点开才取、单张、按 assetId 缓存）+ 灯箱**缩略图先顶上、大图到货即替换**，回落/失败在 meta 给「预览大图不可用，显示缩略图 —— 可到 Immich 看原片」；③ 不动批量取数面（墙仍取 thumbnail，零额外体积）。**D47**：用户问题「点开想看清」→ 指标=灯箱大图 → 来源 `size=preview`（服务端代取 SEC3）→ 降级=回落缩略图+看原片；探测留痕 `research/02-media-wall-2026-10-02.md`。**测试**：契约 +1（Q105：preview 大图 / 404 回落 / 两级全败抛错含 asset.view 修复指引 / 入参与连接类型防呆 —— 降级分支全覆盖）；verify-svc **Q105** 两面（灯箱 SOF 声明 2560×1920=4× 缩略图；t3 preview 404 → 回落 + 提示）；verify-gallery-live **Q105** 真机对账（naturalWidth 444→**2560**）。 | `pnpm test` **277/277**（server +1）✅；typecheck 0 ✅；lint 0（存量 1 warning）✅；**verify-svc 95/95**（+Q105×2）+ **verify-gallery-live 14/14**（真机，含 Q105 naturalWidth=2560）✅ | （本提交，**本次推送 origin/main**） |
 | 188 | 2026-10-02 | **用户反馈⑤ · 批3 邮件点开取消未读标记（D64，用户拍板方案 A）**：现状 `seen` 直取 IMAP `\Seen`/Gmail `SEEN` 且从不更新（`fetchMessageBody` 返回值硬编码 `seen:true` 是假象、未持久化）。**决策 D64（已入 02 + 01 FR-E3）**：**未读徽标归 Workspace** —— ① 新表 `mail_read`（`user_id + item_key`（`accountId:uid`）唯一索引，照 `feed_read` 模式；迁移 `0016` drizzle 生成）；② `POST /api/mail/messages/:accountId/:uid/read`（幂等，重复点击 200 不重复行）+ OpenAPI 入册（CON-1 双向守卫逮住未入册路由，已补）；③ 列表合并 `seen = 服务商标记 || 本地已读`；④ 组件**点开即乐观标记**（缓存先变 + 端点落库 + 失效所有邮件列表，跨组件同步）。**边界不变**：D3 只读不破 —— 不回写 IMAP SEEN / Gmail UNREAD，Gmail OAuth scope 仍 `gmail.readonly`（无需重新授权）；被否备选（回写服务商）见 D64。**验证**：mail.test +1（标记幂等/合并语义/不回写服务商 fixture 佐证）；verify-mail **+2 UI 断言**（未读蓝点+加粗前置 → 点开 → 返回列表蓝点消失 + 字重 400 + 端点记账命中）；**真机**（真实 qq 邮箱）：列表 1 封未读 → 标记 200 → `seen=true`、幂等重放 200（该封「Token Plan 用量已达 50% 提醒」已本地标读，服务商状态未动）。 | `pnpm test` **278/278**（server +1）✅；typecheck 0 ✅；lint 0（存量 1 warning）✅；**verify-mail 39/39**（+D64×2）✅；真机标记链路 ✅ | （本提交，**本次推送 origin/main**） |
 | 189 | 2026-10-02 | **用户反馈⑤ · 批4 图表/自定义 API 配置语义（D65，用户拍板）**：① **接口地址支持相对路径**（placeholder 示例 `https://api.example.com/…` → `/api/stats`）：相对路径按「认证来源」站点地址拼接（`resolveSourceConfig` 纯函数 `new URL(rel, base)`）；未选来源/来源缺地址 → httpConnector 报「原因+怎么修」（不抛畸形 URL 天书）。② **认证键优先级反转「卡片已填 > 来源」**（`inlineWins`）：令牌/认证头与来源**不同才需填写**（留空自动用来源），填了只覆盖**本卡**、不写回来源（verify 实测 sourceUnchanged=true）；**缺省语义不变**（D42 monitor/opencode 兼容路径零影响，新语义仅图表/自定义 API 显式开启）。③ **顺带修真缺陷**：ConfigForm 的 text/select/secret 分支**不渲染 `f.help`** —— 用户「须体现出」正卡在此，已补齐全字段渲染（福及全部组件表单）。**测试**：`resolveSourceConfig` +3 单测（旧语义兼容/inlineWins 覆盖与回落/相对拼接三态）；verify-chart **+4**（placeholder 相对示例、token help 出「不同」、相对 url+来源令牌 `Bearer src-token`、卡片覆盖 `Bearer card-token` 且来源配置原样）—— **21/21**。**回归面**：表单渲染改动波及全组件 → `pnpm verify smoke` 5/5 全绿（fr3 29 / mon 18 / svc 95 / tag 16 / pl5 22）。 | `pnpm test` **368/368**（web +3）✅；typecheck 0 ✅；lint 0（存量 1 warning）✅；**verify-chart 21/21 + verify-fr3 29/29 + smoke 5/5** ✅ | （本提交，**本次推送 origin/main**） |
+| 190 | 2026-10-02 | **新一轮（Dashboard 三修 + 设置页整合）· Q106 OpenCode 卡片与数据源退役（D66，用户指令）**：① **前端整删**：`opencode-widget.tsx`、manifest 与三清单条目（widgetComponents/manifestsByComponent/builtinManifests）、`useOpencodeData`+`OpencodeSession`/`OpencodeData`、`data-source:opencode` 选项源、`qkRoot.opencode` 三处、数据源画廊 `DS_KINDS`/`DS_FIELDS`、品牌图标 svg+SOURCES.md 行、service-overview `kindIcon` 条目。② **服务端整删**：`connector/opencode.ts`+测试、`data/routes.ts` 注册、`data-source` kind 白名单/config 键表、`plugin/install.ts` `BUILTIN_TYPES`（插件不得再占 `opencode` 类型名）。③ **存量清理（D66）**：新增 `data-source/legacy-cleanup.ts`——启动时删 `kind="opencode"` 连接行 + 回收孤儿凭证（`deleteCredentialIfOrphan`，仍被引用保留），幂等；+2 单测（含共享凭证保留分支）。④ **顺带修真缺陷**：Q98b 孤儿凭证回收正则只认 `"credentialId"`，而 config 实存 SecretRef `{credentialRef}`——**回收从未生效**；抽 `collectCredentialRefs()`（两键名都认）供删除路径与退役清理共用。⑤ **兼容口径**：旧布局残留实例经 gridstack `components[component]` 未命中渲染**空卡**（与插件卸载同语义，编辑态可移除）——记备查，未做占位卡（不扩需求）。⑥ 文档：01 FR-E4 退役标注、02 **D66**、interaction `components/opencode.md` 退役横幅（存档）+ README 索引。**顺带收口 2 条 knip**：`numOf`（opencode 是唯一消费者，退役即死代码）删；`gallery.ts ImmichPreviewData` 摘 `export`（**HEAD 存量 knip 发现**，与本批无关但卡门禁，最小收口）。verify 面：`verify-opc.mjs` 整删、`verify-i4.mjs` ④段与夹具、`verify-j8.mjs` 期望名、`capture-design.mjs` fixture、`verify-svc` 画廊阈值 7/6→6/5（D66 后 6 类 5 图标）。 | `pnpm test` **365/365**（sdk 45+web 45+server 275；opencode.test 5 项随退役删、+2 清理用例）✅；typecheck 0 ✅；lint（含 knip）0 ✅（1 存量 a11y warning）；**verify-j8 + verify-i4 2/2 全绿 + smoke 5/5**（fr3 29/mon 18/svc 95/tag 16/pl5 22）✅ | （本提交，**本次推送 origin/main**） |
 
 ## 待用户确认
 

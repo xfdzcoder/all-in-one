@@ -86,8 +86,9 @@ export function normalizeImmichGallery(
  *  真机实测（Immich v3.2.2）：墙用 `size=thumbnail` 仅 **444×250 webp（11–25KB）** —— 灯箱按
  *  原始像素呈现即「太小」；`size=preview` **2560×1440 JPEG（326–589KB）**，撑满可用区域。
  *  preview 404（视频/预览任务未生成）→ **回落 thumbnail 并标 `fallback`**（组件继续显示图，
- *  并提示到 Immich 看原片）；两级都失败才抛错（原因 + 怎么修，D47）。 */
-export interface ImmichPreviewData {
+ *  并提示到 Immich 看原片）；两级都失败才抛错（原因 + 怎么修，D47）。
+ *  （形状仅连接器内部使用；前端契约类型在 `data-hooks.ts` 的同名接口，未跨包共享。） */
+interface ImmichPreviewData {
   /** data URI（mime 按字节头，QA-001）。 */
   src: string;
   /** true = preview 不可得，已回落缩略图。 */

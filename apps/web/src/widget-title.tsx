@@ -40,7 +40,7 @@ export function WidgetTitle({
   tip?: string;
   /** 标题字号，默认 xs（todo 历史为 sm）。 */
   size?: "xs" | "sm";
-  /** 单行省略，默认 true；历史未省略的组件（launcher/opencode/todo）传 false 保持原行为。 */
+  /** 单行省略，默认 true；历史未省略的组件（launcher/todo）传 false 保持原行为。 */
   truncate?: boolean;
 }) {
   const inner = (

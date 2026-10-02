@@ -102,7 +102,7 @@ try {
   const picker = await page.evaluate(() =>
     [...document.querySelectorAll(".mantine-Modal-root button")].map((b) => b.textContent.trim()),
   );
-  const expectedNames = ["个人 Todo", "信息流", "看板", "邮件", "OpenCode", "服务器监控", "应用入口", "嵌入页面", "自定义 API", "占位组件", "指标卡片"];
+  const expectedNames = ["个人 Todo", "信息流", "看板", "邮件", "服务器监控", "应用入口", "嵌入页面", "自定义 API", "占位组件", "指标卡片"];
   const absent = expectedNames.filter((n) => !picker.some((t) => t.includes(n)));
   ok("J8 picker lists every builtin manifest (manifest-driven)", absent.length === 0, absent.length ? `missing: ${absent.join(",")}` : `${expectedNames.length} manifests`);
   // Q38a：已接入服务用官方品牌图标（vendored SVG，不自绘）
@@ -111,7 +111,7 @@ try {
     await page.evaluate(() => {
       const cards = [...document.querySelectorAll(".wb-picker-card")];
       const iconed = cards.filter((c) => c.querySelector(".wb-service-icon svg"));
-      return ["服务器监控", "信息流", "OpenCode", "邮件"].every((n) =>
+      return ["服务器监控", "信息流", "邮件"].every((n) =>
         iconed.some((c) => c.textContent.includes(n)),
       );
     }),

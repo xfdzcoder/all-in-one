@@ -568,7 +568,8 @@ await installLayoutGuard(page);
       iconed: cards.filter((c) => c.querySelector(".wb-service-icon svg, img.wb-service-icon")).length,
     };
   });
-  ok("SVC gallery shows official brand icons (Q39)", galleryIcons.total >= 7 && galleryIcons.iconed >= 6, JSON.stringify(galleryIcons));
+  // D66（opencode 退役）后画廊为 6 类、其中 5 类有官方品牌图标（http 走自绘通用标）
+  ok("SVC gallery shows official brand icons (Q39)", galleryIcons.total >= 6 && galleryIcons.iconed >= 5, JSON.stringify(galleryIcons));
 
   // Q93（项 5）：计数必须按**全量**统计。原来复用「按选中类型过滤」的查询，
   // 首进 tab 所有类型都是「0 个连接」；进详情页才临时对上，切走又没了。

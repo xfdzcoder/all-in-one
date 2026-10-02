@@ -4,7 +4,6 @@
 |---|---|---|---|
 | `gmail.svg` | Gmail | simple-icons（cdn.simpleicons.org/gmail，品牌色 #EA4335） | CC0 |
 | `rss.svg` | RSS | simple-icons（cdn.simpleicons.org/rss） | CC0 |
-| `opencode.svg` | OpenCode | simple-icons（cdn.simpleicons.org/opencode；单色黑 → 改 currentColor 适配暗色） | CC0 |
 | `glances.svg` | Glances | homarr-labs/dashboard-icons（svg/glances.svg，官方彩标） | 集合 MIT；商标归各自所有者 |
 | `immich.svg` | Immich | simple-icons（cdn.simpleicons.org/immich） | CC0 |
 | `portainer.svg` | Portainer | simple-icons（cdn.simpleicons.org/portainer） | CC0 |

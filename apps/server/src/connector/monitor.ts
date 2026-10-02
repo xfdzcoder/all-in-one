@@ -7,7 +7,7 @@ import { outboundRequest, resolveSecretRefs } from "./registry.ts";
  * v1 = Glances（`glances -w` REST API v4）：quicklook/load/fs/uptime/version，
  * 归一化为 MonitorMetrics；后续可增补其它源（node-exporter/Netdata…）。
  * 目标为本机/内网监控服务（服务聚合核心场景）→ allowPrivate 通道（D22 同族，
- * 同 app-launcher/OpenCode）；认证支持 none/basic/bearer（口令/令牌来自凭证库）。
+ * 同 app-launcher）；认证支持 none/basic/bearer（口令/令牌来自凭证库）。
  */
 
 export interface MonitorMetrics {

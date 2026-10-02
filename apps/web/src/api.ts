@@ -233,7 +233,7 @@ export const api = {
     req<{ ok: boolean; name: string }>("POST", "/api/portainer/restart", { sourceId, containerId }),
   createCredential: (name: string, secret: string, kind = "http-header") =>
     req<{ id: string; name: string }>("POST", "/api/credentials", { name, kind, secret }),
-  // ── 命名数据连接（D42）：monitor / opencode / http ──
+  // ── 命名数据连接（D42）：monitor / http 等 ──
   listDataSources: (kind?: string) =>
     req<DataSourceRow[]>("GET", `/api/data-sources${kind ? `?kind=${encodeURIComponent(kind)}` : ""}`),
   createDataSource: (v: { kind: string; name: string; config: Record<string, unknown> }) =>

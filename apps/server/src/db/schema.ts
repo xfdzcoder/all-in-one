@@ -381,8 +381,8 @@ export type TagTarget = typeof tagTarget.$inferSelect;
 export type NewTagTarget = typeof tagTarget.$inferInsert;
 
 /**
- * 命名数据连接（D42 / Q26）：监控源 / OpenCode 连接 / HTTP(自定义 API) 连接。
- * kind 白名单 ["monitor","opencode","http"]（应用层 zod 校验，扩展=加枚举）。
+ * 命名数据连接（D42 / Q26）：监控源 / HTTP(自定义 API) 连接 / 各第三方服务连接。
+ * kind 白名单 ["monitor","http",…]（应用层 zod 校验，扩展=加枚举；opencode 已退役 D66）。
  * secret 字段不入 config_json —— 经凭证库存引用（SEC3）；邮箱沿用 mail_account。
  */
 export const dataSource = sqliteTable(

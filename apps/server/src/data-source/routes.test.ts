@@ -87,7 +87,7 @@ describe("data sources API（D42 命名连接）", () => {
       method: "POST",
       url: "/api/data-sources",
       cookies: { sid },
-      payload: { kind: "opencode", name: "本机 OC", config: { url: "http://127.0.0.1:4096", apiToken: { credentialRef: "cred:xx" } } },
+      payload: { kind: "http", name: "另一类连接", config: { url: "http://127.0.0.1:9000/api" } },
     });
     const monList = await app.inject({ method: "GET", url: "/api/data-sources?kind=monitor", cookies: { sid } });
     const rows = monList.json() as Array<{ id: string; name: string }>;

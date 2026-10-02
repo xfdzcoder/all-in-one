@@ -6,15 +6,15 @@ import { z } from "zod";
 import { authGuard } from "../auth/guard.ts";
 import { deleteCredentialIfOrphan } from "../credentials/store.ts";
 import { dataSource } from "../db/schema.ts";
+import { collectCredentialRefs } from "./legacy-cleanup.ts";
 
 /** D42：连接类型白名单 —— 扩展 = 加枚举值。 */
-const DATA_SOURCE_KINDS = ["monitor", "opencode", "http", "immich", "navidrome", "portainer", "mihomo", "ws"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）；ws=D56/Q77
+const DATA_SOURCE_KINDS = ["monitor", "http", "immich", "navidrome", "portainer", "mihomo", "ws"] as const; // Q39/D46：第三方服务四类（metacubexd 归 mihomo）；ws=D56/Q77；opencode 已退役（D66）
 type DataSourceKind = (typeof DATA_SOURCE_KINDS)[number];
 
 /** 各类连接的 config 允许键（secret 字段与表单同名，值为凭证库 SecretRef，SEC3）。 */
 const DATA_SOURCE_CONFIG_KEYS: Record<DataSourceKind, readonly string[]> = {
   monitor: ["url", "authMode", "username", "password", "apiToken"], // password=旧键（Q36 起新表单用 apiToken）
-  opencode: ["url", "apiToken"],
   http: ["url", "authHeader", "apiToken"],
   // Q39/D46：服务概览四类（认证字段与各服务 API 对齐；secret 值为凭证库引用 SEC3）
   immich: ["url", "apiKey"],
@@ -168,8 +168,8 @@ export function registerDataSourceRoutes(app: FastifyInstance, opts: { onSources
     const row = rows[0];
     if (!row) return reply.code(404).send({ error: "not found" });
     await app.db.delete(dataSource).where(and(eq(dataSource.userId, userId), eq(dataSource.id, params.data.id)));
-    // Q98b（备查项）：连带回收**孤儿凭证**（configJson 里的 credentialRef；仍被引用则保留）
-    for (const id of [...(row.configJson ?? "").matchAll(/"credentialId"\s*:\s*"([^"]+)"/g)].map((m) => m[1])) {
+    // Q98b（备查项）：连带回收**孤儿凭证**（configJson 里的 SecretRef；仍被引用则保留）
+    for (const id of collectCredentialRefs(row.configJson ?? "")) {
       await deleteCredentialIfOrphan(app.db, userId, id);
     }
     opts.onSourcesChanged?.(); // D56/Q77：连接清单变更 → WS 管理器对账

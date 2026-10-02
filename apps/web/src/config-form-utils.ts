@@ -23,7 +23,7 @@ export type FieldError = { key: string; message: string };
  *
  * - `inlineWins`（图表/自定义 API 的认证键语义）：**卡片已填 > 来源**，空值才回落来源 ——
  *   「与认证来源不同才需填写；填了只覆盖本卡，不修改来源配置」；缺省 `false` = 来源优先、
- *   内联回落（D42 旧语义，monitor/opencode 的兼容路径不动）。
+ *   内联回落（D42 旧语义，monitor 等的兼容路径不动）。
  * - `resolveRelativeUrl`：相对 `url`（无 scheme）按来源的站点地址拼接 —— 「接口地址」不再
  *   要求带域名的绝对地址（来源已有绝对地址）；无来源或拼不出则原样保留（下游报「原因+怎么修」）。 */
 const isEmptyValue = (v: unknown) => v === undefined || v === null || v === "";

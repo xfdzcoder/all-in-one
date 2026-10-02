@@ -1,5 +1,8 @@
 # 组件 · OpenCode
 
+> ⚠️ **已退役（D66，2026-10-02）**：组件、connector 与 `opencode` 数据源类型已整体下线（用户指令）。
+> 本篇为**历史存档**，描述退役前的行为；旧布局中的残留实例渲染为空卡（与插件卸载同语义），编辑态可移除。
+
 > 层级：页面 → 组件 → 按钮。约定见 [../README.md](../README.md)；问题见 [../00-issues.md](../00-issues.md)。
 > FR-E4：对接 opencode server HTTP API（experimental，**D32**：直接 HTTP 薄封装 + API 版本探测容错）。
 
