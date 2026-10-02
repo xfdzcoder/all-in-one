@@ -96,9 +96,52 @@ export function validateServiceOverview(v: unknown): string[] {
       if (mm.hint !== undefined && typeof mm.hint !== "string") errs.push(`metrics[${i}].hint 必须是字符串`);
     }
   }
-  for (const key of ["statuses", "lists"] as const) {
-    const arr = o[key];
-    if (arr !== undefined && !Array.isArray(arr)) errs.push(`${key} 必须是数组`);
+  // SDK-4：条目形状逐层校验 —— 原只查「是数组」，tone 枚举/条目形状全漏
+  //（与注释「用于适配器契约测试与插件数据边界」及 README 口径不符）。
+  // tone 枚举与 ServiceStatus/ServiceListItem 接口对齐（ok|warn|error|info）。
+  const TONES = new Set(["ok", "warn", "error", "info"]);
+  const statuses = o.statuses;
+  if (statuses !== undefined) {
+    if (!Array.isArray(statuses)) errs.push("statuses 必须是数组");
+    else {
+      for (const [i, st] of statuses.entries()) {
+        const s = st as Record<string, unknown>;
+        if (!s || typeof s !== "object") {
+          errs.push(`statuses[${i}] 必须是对象`);
+          continue;
+        }
+        if (typeof s.text !== "string" || !s.text) errs.push(`statuses[${i}].text 必须是非空字符串`);
+        if (!TONES.has(String(s.tone))) errs.push(`statuses[${i}].tone 必须是 ok|warn|error|info`);
+      }
+    }
+  }
+  const lists = o.lists;
+  if (lists !== undefined) {
+    if (!Array.isArray(lists)) errs.push("lists 必须是数组");
+    else {
+      for (const [i, li] of lists.entries()) {
+        const l = li as Record<string, unknown>;
+        if (!l || typeof l !== "object") {
+          errs.push(`lists[${i}] 必须是对象`);
+          continue;
+        }
+        if (typeof l.title !== "string" || !l.title) errs.push(`lists[${i}].title 必须是非空字符串`);
+        if (!Array.isArray(l.items)) errs.push(`lists[${i}].items 必须是数组`);
+        else {
+          for (const [j, it] of l.items.entries()) {
+            const t = it as Record<string, unknown>;
+            if (!t || typeof t !== "object") {
+              errs.push(`lists[${i}].items[${j}] 必须是对象`);
+              continue;
+            }
+            if (typeof t.title !== "string" || !t.title) errs.push(`lists[${i}].items[${j}].title 必须是非空字符串`);
+            if (t.detail !== undefined && typeof t.detail !== "string") errs.push(`lists[${i}].items[${j}].detail 必须是字符串`);
+            if (t.tone !== undefined && !TONES.has(String(t.tone))) errs.push(`lists[${i}].items[${j}].tone 必须是 ok|warn|error|info`);
+            if (t.at !== undefined && typeof t.at !== "string") errs.push(`lists[${i}].items[${j}].at 必须是字符串`);
+          }
+        }
+      }
+    }
   }
   const sample = o.sample as Record<string, unknown> | undefined;
   if (sample !== undefined) {

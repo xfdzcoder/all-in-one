@@ -1,4 +1,5 @@
 import type { ConfigSchema } from "./config.ts";
+import { validateConfigSchema } from "./config.ts";
 import type { DataCapability, RefreshCapability } from "./data.ts";
 import type { ActionCapability } from "./action.ts";
 
@@ -50,11 +51,14 @@ export interface WidgetManifest {
   };
 }
 
-/** 契约校验：供单元测试与未来插件安装器（FR-W6）复用。 */
-export function validateManifest(m: WidgetManifest): string[] {
+/** 契约校验：供单元测试与未来插件安装器（FR-W6）复用。
+ *  SDK-2：入参收 `unknown` —— 校验对象本来就是不可信 JSON，调用方此前被迫
+ *  `validateManifest(parsed as WidgetManifest)` 断言（断言逃逸面外移）。 */
+export function validateManifest(input: unknown): string[] {
   // SDK-1：`JSON.parse("null")` 是合法 JSON —— 入参 null/非对象时 `m.type` 直接 TypeError
   // （插件安装 manifest.json 为 null → 未捕获异常 → 500 而非 400）
-  if (!m || typeof m !== "object") return ["manifest must be an object"];
+  if (!input || typeof input !== "object") return ["manifest must be an object"];
+  const m = input as WidgetManifest; // 唯一断言点：校验器边界（后续逐字段校验产出 errors）
   const errors: string[] = [];
   if (!m.type) errors.push("missing type");
   if (!m.name) errors.push(`${m.type}: missing name`);
@@ -67,5 +71,9 @@ export function validateManifest(m: WidgetManifest): string[] {
     }
   }
   if (!m.capabilities?.data) errors.push(`${m.type}: missing data capability`);
+  // SDK-3：configSchema 是接口必填 —— 缺/坏表单声明的 manifest 不得过安装校验
+  //（此前不校验 → 宿主表单渲染无依据，与 README「安装/加载前校验」口径不符）
+  if (!Array.isArray(m.configSchema)) errors.push(`${m.type}: configSchema must be an array`);
+  else errors.push(...validateConfigSchema(m.configSchema).map((e) => `${m.type}: ${e}`));
   return errors;
 }

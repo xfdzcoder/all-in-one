@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
+import { readSecret } from "../credentials/store.ts";
+
 import { z } from "zod";
 
 import { authGuard } from "../auth/guard.ts";
@@ -104,7 +106,7 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
       db: app.db,
       userId: req.user!.id,
       readSecret: async (credentialId) =>
-        readSecretSafe(app.db, req.user!.id, credentialId),
+        readSecret(app.db, req.user!.id, credentialId),
     };
     try {
       // 插件查询不在此预解析 SecretRef —— fetchPluginData 先按 credentialKinds 把关再解密
@@ -149,12 +151,5 @@ export function registerDataRoutes(app: FastifyInstance, deps: DataChannelDeps):
   });
 }
 
-// readSecret 的惰性 import 包装（避免循环依赖类型问题）
-async function readSecretSafe(
-  db: FastifyInstance["db"],
-  userId: string,
-  credentialId: string,
-): Promise<string | null> {
-  const { readSecret } = await import("../credentials/store.ts");
-  return readSecret(db, userId, credentialId);
-}
+// SRV-28：原「惰性 import 规避循环依赖」的包装已删 —— 实测 credentials/store 只依赖 db 层，
+// 与本模块无循环（误认）；且该包装与 portainer/routes.ts 是整段复制。现静态 import 直呼 readSecret。

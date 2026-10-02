@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { readSecret } from "../credentials/store.ts";
 
 import { dataSource } from "../db/schema.ts";
 import { outboundRequest, resolveSecretRefs, loadSourceConfig } from "../connector/registry.ts";
@@ -88,7 +89,7 @@ export function registerPortainerRoutes(app: FastifyInstance): void {
     const ctx: FetchContext = {
       db: app.db,
       userId: req.user!.id,
-      readSecret: async (credentialId) => readSecretSafe(app.db, req.user!.id, credentialId),
+      readSecret: async (credentialId) => readSecret(app.db, req.user!.id, credentialId),
     };
     try {
       const name = await portainerRestart(ctx, body.data.sourceId, body.data.containerId);
@@ -103,8 +104,4 @@ export function registerPortainerRoutes(app: FastifyInstance): void {
   });
 }
 
-// readSecret 的惰性 import 包装（同 data/routes.ts，避免循环依赖）
-async function readSecretSafe(db: Parameters<typeof import("../credentials/store.ts").readSecret>[0], userId: string, credentialId: string) {
-  const { readSecret } = await import("../credentials/store.ts");
-  return readSecret(db, userId, credentialId);
-}
+// SRV-28：动态 import 包装已删（原与 data/routes.ts 整段复制；无循环依赖）——静态 import 直呼。

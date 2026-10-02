@@ -23,7 +23,7 @@ export interface PluginPermissions {
 /** 代码级插件 manifest = 常规 widget 契约 + 插件块。 */
 export interface PluginManifest extends WidgetManifest {
   plugin: {
-    /** 插件包内入口模块相对路径（ESM，导出 WidgetComponent）。 */
+    /** 插件包内入口模块相对路径（ESM，**默认导出** `render(props, ctx)`；加载器取 `mod.default`，非函数即报错 —— SDK-6：原注释「导出 WidgetComponent」与实际 ABI 不符）。 */
     entry: string;
     /** 目标宿主 ABI 版本（semver；主版本须与宿主一致才可启用）。 */
     apiVersion: string;
@@ -53,9 +53,11 @@ export function isPluginManifest(m: WidgetManifest): m is PluginManifest {
   return p !== undefined && p !== null;
 }
 
-/** 插件契约校验（供安装器 FR-W6 与单元测试复用）：常规 manifest 校验 + 插件块。 */
-export function validatePluginManifest(m: PluginManifest): string[] {
-  if (!m || typeof m !== "object") return ["manifest must be an object"]; // SDK-1：null 不崩
+/** 插件契约校验（供安装器 FR-W6 与单元测试复用）：常规 manifest 校验 + 插件块。
+ *  SDK-2：入参收 `unknown`（不可信 JSON 不该由调用方断言）。 */
+export function validatePluginManifest(input: unknown): string[] {
+  if (!input || typeof input !== "object") return ["manifest must be an object"]; // SDK-1：null 不崩
+  const m = input as PluginManifest; // 唯一断言点：校验器边界
   const errors = validateManifest(m);
   const p = m.plugin;
   if (!p || typeof p !== "object") {

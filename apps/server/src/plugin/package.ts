@@ -95,7 +95,7 @@ export function readPluginPackage(
   } catch {
     throw new PluginPackageError("manifest.json is not valid JSON");
   }
-  const errors = validatePluginManifest(parsed as PluginManifest);
+  const errors = validatePluginManifest(parsed); // SDK-2：入参收 unknown，调用方不再断言
   if (errors.length > 0) throw new PluginPackageError(`manifest invalid: ${errors.join("; ")}`);
 
   const manifest = parsed as PluginManifest;

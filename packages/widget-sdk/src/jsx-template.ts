@@ -167,8 +167,16 @@ function isDangerousProp(name: string): boolean {
 function compileExpr(node: unknown, ctx: Ctx): CompiledExpr | null {
   const n = node as { type: string } & Record<string, unknown>;
   switch (n.type) {
-    case "Literal":
-      return () => n.value as string | number | boolean | null;
+    case "Literal": {
+      // SDK-9：只放行四种标量 —— bigint/regexp 字面量会突破 TemplateValue 声明
+      //（渲染侧 String(v) 兜底不炸，但类型面漏，超范围字面量直接报错更诚实）
+      const v = n.value;
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v === null) {
+        return () => v;
+      }
+      fail(ctx, `不支持的字面量（仅 string/number/boolean/null）：${typeof v}`);
+      return null;
+    }
     case "Identifier": {
       const name = String(n.name);
       if (DANGEROUS_KEYS.has(name)) {
