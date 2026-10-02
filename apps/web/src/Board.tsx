@@ -8,7 +8,7 @@ import type { ConfigValues, PluginManifest, WidgetManifest } from "@all-in-one/w
 import { Group, Modal, Text } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 
-import { api, DASHBOARD_COLUMNS } from "./api";
+import { api, DASHBOARD_COLUMNS, type DashboardColumns } from "./api";
 import { randomId } from "./random-id";
 import { FALLBACK_LAYOUT, manifestForComponent, widgetComponents } from "./widget-registry";
 import { WidgetEditContext } from "./widget-edit-context";
@@ -187,7 +187,7 @@ export function Board({
   dashboardId: string;
   layoutJson: string;
   /** Q91（D58）：页面网格列数档位 12/16/20/24/28/32。切列数靠**重挂载**（App 侧 key 含它）。 */
-  columns?: number;
+  columns?: DashboardColumns;
   /** Q91（D58）：行高 px。实时改，不重挂载。 */
   cellHeight?: number;
   canEdit: boolean;
@@ -243,7 +243,8 @@ export function Board({
   const effectiveEditMode = canEdit && editMode;
 
   // Q91（D58）：页面级网格粒度。档位/范围做防呆（服务端 zod 才是权威校验）
-  const gridColumns = DASHBOARD_COLUMNS.includes(columns as (typeof DASHBOARD_COLUMNS)[number]) ? columns : 12;
+  // CON-14：columns 已是档位联合类型，includes 不再需要断言（运行时校验仍留 —— 历史数据/手改 API 可能越档）
+  const gridColumns = DASHBOARD_COLUMNS.includes(columns) ? columns : 12;
   const gridCellHeight = Math.min(200, Math.max(40, Math.round(Number(cellHeight) || 80)));
 
   // Capture layout ONCE per dashboard mount (key={dashboardId-columns-cellHeight} remounts

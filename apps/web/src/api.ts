@@ -3,6 +3,8 @@
  * 取 4 的倍数只为响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数（列数本身不必是 4 的倍数）。
  */
 export const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
+/** 网格列数档位（CON-14）：与服务端 zod 字面量联合同形 —— 任意 number 不再编译通过。 */
+export type DashboardColumns = (typeof DASHBOARD_COLUMNS)[number];
 
 export type Dashboard = {
   id: string;
@@ -10,7 +12,7 @@ export type Dashboard = {
   icon: string | null;
   background: string | null;
   /** Q91（D58）：网格列数档位 12/16/20/24/28/32（页面级布局配置）。 */
-  columns: number;
+  columns: DashboardColumns;
   /** Q91（D58）：行高 px（40–200）。 */
   cellHeight: number;
   sortOrder: number;
@@ -81,7 +83,8 @@ export type TagRow = {
   id: string;
   name: string;
   color: string | null;
-  targetCount: number;
+  /** GET /api/tags 才补计数；POST /api/tags 返回的行**没有**该字段（CON-5：原必填类型比实现多一字段）。 */
+  targetCount?: number;
 };
 
 /** RSS 聚合响应（Q29c/二.1：含快照兜底信息）。 */
@@ -162,7 +165,17 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
-    throw new ApiError(res.status, await res.text());
+    // CON-9：服务端错误统一 `{"error":"..."}` —— 解出人话再进 UI，
+    // 原实现 message=res.text() 原文 → 用户直接看到 `{"error":"invalid body"}` 这类 JSON。
+    const text = await res.text();
+    let message = text;
+    try {
+      const parsed = JSON.parse(text) as { error?: unknown };
+      if (typeof parsed.error === "string" && parsed.error) message = parsed.error;
+    } catch {
+      /* 非 JSON（代理错误页/空体）→ 保留原文 */
+    }
+    throw new ApiError(res.status, message);
   }
   return (await res.json()) as T;
 }

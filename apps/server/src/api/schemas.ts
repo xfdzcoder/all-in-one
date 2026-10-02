@@ -25,7 +25,7 @@ const layoutJsonSchema = z
  * 响应式断点 `N → N/2 → N/4 → 1` 取半/取四分之一时都是整数。
  * 前端 `apps/web` 有一份同值常量供渲染下拉 —— 服务端这份才是权威校验。
  */
-const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const;
+export const DASHBOARD_COLUMNS = [12, 16, 20, 24, 28, 32] as const; // 导出给 CON-6 同步守卫测试对账
 
 const dashboardColumns = z.union([
   z.literal(DASHBOARD_COLUMNS[0]),

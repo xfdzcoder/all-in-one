@@ -1,7 +1,6 @@
 import { unzipSync } from "fflate";
 
 import {
-  isSafePluginEntry,
   validatePluginManifest,
   type PluginManifest,
 } from "@all-in-one/widget-sdk";
@@ -100,9 +99,7 @@ export function readPluginPackage(
   if (errors.length > 0) throw new PluginPackageError(`manifest invalid: ${errors.join("; ")}`);
 
   const manifest = parsed as PluginManifest;
-  if (!isSafePluginEntry(manifest.plugin.entry)) {
-    throw new PluginPackageError(`unsafe entry path: ${manifest.plugin.entry}`);
-  }
+  // CON-12：原此处再查一次 entry 安全性 —— 与 validatePluginManifest 内检（plugin.ts）完全重复，删
   if (!files.has(manifest.plugin.entry)) {
     throw new PluginPackageError(`entry module missing from package: ${manifest.plugin.entry}`);
   }

@@ -18,7 +18,7 @@ import { IconCheck, IconDatabase, IconLogout, IconPencil, IconPuzzle } from "@ta
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
-import { api, DASHBOARD_COLUMNS, type Dashboard, type Me } from "./api";
+import { api, DASHBOARD_COLUMNS, type Dashboard, type DashboardColumns, type Me } from "./api";
 import { rescaleLayout } from "./grid-rescale";
 import { Board } from "./Board";
 import { ConfirmAction } from "./confirm";
@@ -190,7 +190,7 @@ function Workbench({
     icon?: string | null;
     background?: string | null;
     title?: string;
-    columns?: number;
+    columns?: DashboardColumns;
     cellHeight?: number;
   }) => {
     if (!active) return;
@@ -456,8 +456,9 @@ function Workbench({
                   data={DASHBOARD_COLUMNS.map((c) => ({ value: String(c), label: `${c} 列` }))}
                   value={String(active?.columns ?? 12)}
                   onChange={(v) => {
-                    const n = Number(v);
-                    if (Number.isFinite(n) && n !== active?.columns) void savePageSettingsFields({ columns: n });
+                    // CON-14：档位收窄零断言（Select 只出 DASHBOARD_COLUMNS 值）
+                    const n = DASHBOARD_COLUMNS.find((c) => String(c) === v);
+                    if (n !== undefined && n !== active?.columns) void savePageSettingsFields({ columns: n });
                   }}
                 />
                 <NumberInput

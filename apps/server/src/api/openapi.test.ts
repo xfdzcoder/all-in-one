@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { openApiDoc } from "./openapi.ts";
+import { DASHBOARD_COLUMNS } from "./schemas.ts";
 
 /** CON-1（Q100b）：**OpenAPI ↔ 路由双向漂移守卫**。
  *  此前契约只登记 9/66 个操作（名存实亡，③ 的三方对账无从谈起）；补齐后用本测试锁死：
@@ -58,5 +59,20 @@ describe("OpenAPI 契约覆盖（CON-1）", () => {
   it("规模护栏：契约不是空壳（≥60 个操作）", () => {
     expect(routes.size).toBeGreaterThanOrEqual(60);
     expect(doc.size).toBe(routes.size);
+  });
+});
+
+describe("CON-6：DASHBOARD_COLUMNS 前后端同步守卫", () => {
+  it("web DASHBOARD_COLUMNS 与服务端权威档位逐一相等（任一侧改档位不报错即静默分叉）", () => {
+    // 与本文件的路由守卫同款「源码刮取」法：web 侧常量是渲染下拉的独立副本，
+    // 没有编译期依赖可连（跨包 import 反而把边界搅浑）—— 用文本对账锁死两份一致。
+    const webSrc = readFileSync(
+      join(import.meta.dirname, "..", "..", "..", "web", "src", "api.ts"),
+      "utf8",
+    );
+    const m = webSrc.match(/DASHBOARD_COLUMNS = \[([^\]]+)\] as const/);
+    expect(m, "web/src/api.ts 未找到 DASHBOARD_COLUMNS —— 常量改名请同步本守卫").not.toBeNull();
+    const webCols = m![1]!.split(",").map((x) => Number(x.trim()));
+    expect(webCols).toEqual([...DASHBOARD_COLUMNS]);
   });
 });
