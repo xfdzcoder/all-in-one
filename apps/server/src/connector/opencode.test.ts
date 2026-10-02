@@ -104,7 +104,7 @@ describe("opencode connector (FR-E4, D32)", () => {
       ctx,
     )) as { probe: { ok: boolean; error?: string } };
     expect(data.probe.ok).toBe(false);
-    expect(data.probe.error).toBeTruthy();
+    expect(String(data.probe.error)).toMatch(/失败|不可达|unreachable|fetch|aborted|ECONN|ENOTFOUND|timeout|refused|非 Glances/i); // TST-6：弱断言加固（存在 → 含真实原因）
   });
 
   it("reports missing config and unreachable targets without throwing", async () => {
@@ -121,6 +121,6 @@ describe("opencode connector (FR-E4, D32)", () => {
       ctx,
     )) as { probe: { ok: boolean; error?: string } };
     expect(down.probe.ok).toBe(false);
-    expect(down.probe.error).toBeTruthy();
+    expect(String(down.probe.error)).toMatch(/失败|不可达|unreachable|fetch|aborted|ECONN|ENOTFOUND|timeout|refused|非 Glances/i); // TST-6：弱断言加固（存在 → 含真实原因）
   });
 });

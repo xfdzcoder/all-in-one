@@ -264,3 +264,109 @@ describe("SRV-08：降级文案 D47（原因 + 怎么修）", () => {
     expect(note).not.toContain("该服务未提供");
   });
 });
+
+// TST-5（Q100f）：`best()` 降级分支**逐条**覆盖 —— 此前 13 个分支只测过 /connections 一个。
+// 口径统一（08 §5）：note 必含「原因 + 怎么修」、缺位指标不渲染、**其余块照常**（单点失败不整卡空白）。
+describe("TST-5：best() 降级分支逐条（D47 原因 + 怎么修）", () => {
+  const cases: Array<{
+    name: string;
+    run: (errors: Array<{ what: string; err: unknown }>) => { metrics?: Array<{ label: string }>; lists?: Array<{ title: string }>; notes?: string[] };
+    absent: string[];
+    present: string[];
+  }> = [
+    {
+      name: "immich 版本失败 → note，统计仍在",
+      run: (errors) => normalizeImmich({ version: {}, stats: { photos: 1 }, errors }),
+      absent: [],
+      present: ["照片"],
+    },
+    {
+      name: "immich 统计失败 → 照片/视频/占用不渲染",
+      run: (errors) => normalizeImmich({ version: { major: 3, minor: 2, patch: 2 }, stats: {}, errors }),
+      absent: ["照片", "存储占用"],
+      present: [],
+    },
+    {
+      name: "immich 近 7 天新增失败 → 该指标缺位",
+      run: (errors) => normalizeImmich({ version: { major: 3 }, stats: { photos: 1 }, errors }),
+      absent: ["近 7 天新增"],
+      present: ["照片"],
+    },
+    {
+      name: "immich 最近上传失败 → 清单缺位",
+      run: (errors) => normalizeImmich({ version: { major: 3 }, stats: { photos: 1 }, errors }),
+      absent: ["最近上传"],
+      present: ["照片"],
+    },
+    {
+      name: "navidrome 扫描状态失败 → 曲目缺位",
+      run: (errors) =>
+        normalizeNavidrome({ ping: { "subsonic-response": { status: "ok", version: "0.53.3" } }, errors }),
+      absent: ["曲目"],
+      present: [],
+    },
+    {
+      name: "navidrome 曲库统计失败 → 专辑/艺术家缺位",
+      run: (errors) =>
+        normalizeNavidrome({
+          ping: { "subsonic-response": { status: "ok", version: "0.53.3" } },
+          scanStatus: { "subsonic-response": { scanStatus: { scanning: false, count: 12 } } },
+          errors,
+        }),
+      absent: ["专辑", "艺术家"],
+      present: ["曲目"],
+    },
+    {
+      name: "navidrome 最近添加失败 → 清单缺位、计数仍在",
+      run: (errors) =>
+        normalizeNavidrome({
+          ping: { "subsonic-response": { status: "ok", version: "0.53.3" } },
+          scanStatus: { "subsonic-response": { scanStatus: { scanning: false, count: 12 } } },
+          errors,
+        }),
+      absent: ["最近添加"],
+      present: ["曲目"],
+    },
+    {
+      name: "portainer 容器列表失败 → 容器状态缺位",
+      run: (errors) => normalizePortainer({ status: { Version: "2.21.4" }, endpoints: [{ Id: 1 }], errors }),
+      absent: [],
+      present: [],
+    },
+    {
+      name: "portainer 宿主信息失败 → 镜像/卷/宿主缺位",
+      run: (errors) => normalizePortainer({ status: { Version: "2.21.4" }, endpoints: [{ Id: 1 }], errors }),
+      absent: ["镜像", "宿主"],
+      present: [],
+    },
+    {
+      name: "mihomo 规则失败 → 规则缺位",
+      run: (errors) => normalizeMihomo({ version: "v1.19.31", proxies: { proxies: {} }, errors }),
+      absent: ["规则"],
+      present: [],
+    },
+    {
+      name: "mihomo 订阅源失败 → 订阅源缺位（note 给怎么修）",
+      run: (errors) => normalizeMihomo({ version: "v1.19.31", proxies: { proxies: {} }, errors }),
+      absent: ["订阅源"],
+      present: [],
+    },
+  ];
+
+  for (const c of cases) {
+    it(c.name, () => {
+      const out = c.run([{ what: c.name.split(" ")[1]!.replace(/失败.*/, ""), err: new Error("boom") }]);
+      const note = (out.notes ?? []).join("；");
+      expect(note).toContain("获取失败"); // 原因
+      expect(note).toMatch(/检查|稍后|后台|权限|直连|忽略/); // 怎么修
+      expect(note).not.toContain("该服务未提供");
+      expect(note).not.toContain("该项暂缺");
+      const labels = [
+        ...(out.metrics ?? []).map((m) => m.label),
+        ...(out.lists ?? []).map((l) => l.title),
+      ].join("|");
+      for (const a of c.absent) expect(labels, `${a} 应缺位`).not.toContain(a);
+      for (const p of c.present) expect(labels, `${p} 应仍在`).toContain(p);
+    });
+  }
+});

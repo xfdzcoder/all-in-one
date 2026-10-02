@@ -126,7 +126,7 @@ describe("monitor source adapter (D36: Glances 打通，只做连接与展示)",
       ctx,
     )) as { probe: { ok: boolean; error?: string } };
     expect(down.probe.ok).toBe(false);
-    expect(down.probe.error).toBeTruthy();
+    expect(String(down.probe.error)).toMatch(/失败|不可达|unreachable|fetch|aborted|ECONN|ENOTFOUND|timeout|refused|非 Glances/i); // TST-6：弱断言加固（存在 → 含真实原因）
 
     const empty = (await monitorConnector.fetch(query({}), ctx)) as {
       probe: { ok: boolean; error?: string };
