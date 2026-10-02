@@ -192,7 +192,7 @@ await installLayoutGuard(page);
       return of(input, init);
     };
   });
-  const beforeUnread = await page.evaluate(() => {
+  const _beforeUnread = await page.evaluate(() => {
     const badge = [...document.querySelectorAll(".wb-widget .mantine-Badge-root")].find((b) => b.textContent.includes("未读"));
     return badge?.textContent ?? "";
   });

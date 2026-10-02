@@ -40,7 +40,7 @@ const api = async (path, body, method = "GET") => {
     method,
     // 只有真的带 body 才设 Content-Type：DELETE/GET 空体带 JSON 头会被 Fastify 当畸形 JSON 拒掉
     headers: body ? { "Content-Type": "application/json", Cookie: cookie } : { Cookie: cookie },
-    body: body ? JSON.stringify(body) : undefined,
+    ...(body ? { body: JSON.stringify(body) } : {}), // unicorn(no-invalid-fetch-options)：GET 禁带 body
   });
   const text = await r.text();
   return text ? JSON.parse(text) : null;
@@ -165,7 +165,7 @@ try {
     ok(
       "LIVE 宽度按原比例（不裁切不变形）",
       rows.every((r) => r.ratios.length > 0) && rows.flatMap((r) => r.ratios).length >= 6,
-      `ratios=${JSON.stringify([...new Set(rows.flatMap((r) => r.ratios))].sort((a, b) => a - b))}`,
+      `ratios=${JSON.stringify([...new Set(rows.flatMap((r) => r.ratios))].toSorted((a, b) => a - b))}`,
     );
     ok(
       "LIVE 任何行都不溢出容器宽度（行尾允许留白，D62 明确接受）",
@@ -267,7 +267,7 @@ try {
   for (const a of liveAlbums.map((x) => ({ id: x.id, name: x.albumName, n: x.assetCount ?? null }))) {
     counted.push({ ...a, n: Number.isFinite(a.n) ? a.n : await albumAssetCount(a.id) });
   }
-  const small = counted.filter((a) => Number.isFinite(a.n) && a.n >= 2 && a.n < 120).sort((x, y) => x.n - y.n);
+  const small = counted.filter((a) => Number.isFinite(a.n) && a.n >= 2 && a.n < 120).toSorted((x, y) => x.n - y.n);
   const [A, B] = small.length >= 2 ? small.slice(0, 2) : counted.filter((a) => (a.n ?? 1) > 0).slice(0, 2);
   ok("LIVE 相册选项源返回真机相册（≥2）", counted.length >= 2, `albums=${counted.length}`);
   if (A) {

@@ -87,9 +87,10 @@ describe("IMAP 适配层（TST-2）", () => {
 
   it("list：fetch 中途抛错也会 release + logout，错误继续上抛", async () => {
     const fake = fakeConn({
-      async *fetch() {
-        throw new Error("boom");
-      },
+      fetch: () =>
+        ({
+          [Symbol.asyncIterator]: () => ({ next: async () => { throw new Error("boom"); } }),
+        }) as AsyncIterable<ImapMessage>,
     });
     await expect(createImapClient(conn, () => fake).list("INBOX", 5)).rejects.toThrow("boom");
     expect(fake.calls.released).toBe(1);

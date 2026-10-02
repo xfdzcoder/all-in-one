@@ -120,7 +120,7 @@ export function normalizeGlances(parts: {
       usedBytes: g.usedBytes,
       totalBytes: g.totalBytes,
     }))
-    .sort((a, b) => b.percent - a.percent);
+    .toSorted((a, b) => b.percent - a.percent);
   return out;
 }
 

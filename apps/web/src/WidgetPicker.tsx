@@ -13,11 +13,14 @@ import { defaultsFromSchema } from "./config-form-utils";
  * ② 按该 manifest 的 configSchema 生成配置表单（默认值预填）→ 确认添加。
  * 新增组件只需注册 manifest + 渲染实现，选择器无需改动（J8"新增组件不改核心"）。
  */
+/** 默认参数用常量而非字面量（字面量每次渲染都是新引用） */
+const EMPTY_MANIFESTS: WidgetManifest[] = [];
+
 export function WidgetPicker({
   opened,
   onClose,
   onAdd,
-  extraManifests = [],
+  extraManifests = EMPTY_MANIFESTS,
 }: {
   opened: boolean;
   onClose: () => void;

@@ -28,7 +28,7 @@ const openSwitcher = async () => {
   });
   await sleep(300);
 };
-const switchPage = async (title) => {
+const _switchPage = async (title) => {
   await openSwitcher();
   return page.evaluate((t) => {
     const btn = [...document.querySelectorAll("[data-page-item]")].find(
@@ -132,7 +132,7 @@ try {
   // Q29b：任务页签 = 单 ToDo 视图（下拉切换）—— 选中目标 ToDo
   ok(
     "J4 data admin select ToDo",
-    await page.evaluate((n) => {
+    await page.evaluate((_n) => {
       const sel = document.querySelector('[aria-label="ToDo 选择"]');
       sel?.click();
       return Boolean(sel);

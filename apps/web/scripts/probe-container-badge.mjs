@@ -24,7 +24,7 @@ const api = async (path, body, method = "GET") => {
   const r = await fetch(`${API}${path}`, {
     method,
     headers: body ? { "Content-Type": "application/json", Cookie: cookie } : { Cookie: cookie },
-    body: body ? JSON.stringify(body) : undefined,
+    ...(body ? { body: JSON.stringify(body) } : {}), // unicorn(no-invalid-fetch-options)：GET 禁带 body
   });
   const t = await r.text();
   return t ? JSON.parse(t) : null;
@@ -68,17 +68,17 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 20000 });
   await new Promise((r) => setTimeout(r, 1500));
 
-  await page.evaluate((title) => {
+  await page.evaluate((_title) => {
     const all = [...document.querySelectorAll("button, a, [role=menuitem], [role=option], li")];
     const trigger = all.find((b) => /▾/.test(b.textContent || ""));
     trigger?.click();
-  }, dash.title);
+  }, dash._title);
   await new Promise((r) => setTimeout(r, 600));
-  await page.evaluate((title) => {
+  await page.evaluate((_title) => {
     [...document.querySelectorAll("button, a, [role=menuitem], [role=option], li")]
-      .find((b) => (b.textContent || "").trim() === title)
+      .find((b) => (b.textContent || "").trim() === _title)
       ?.click();
-  }, dash.title);
+  }, dash._title);
   await page.waitForSelector(".wb-container-row", { timeout: 25000 }).catch(() => null);
   await new Promise((r) => setTimeout(r, 2500));
 

@@ -364,8 +364,8 @@ export function Board({
       if (!grid || !node || !manifest) return;
       setConfigureId(id);
       setConfigManifest(manifest);
-      setConfigValues({ ...(node.props ?? {}) });
-      setConfigOriginal({ ...(node.props ?? {}) });
+      setConfigValues({ ...node.props });
+      setConfigOriginal({ ...node.props });
       setConfigError(null);
     },
     [manifestFor],

@@ -81,7 +81,7 @@ function stableStringify(v: unknown): string {
   if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
   if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
   const o = v as Record<string, unknown>;
-  const keys = Object.keys(o).sort();
+  const keys = Object.keys(o).toSorted();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`).join(",")}}`;
 }
 
@@ -94,7 +94,7 @@ export async function mapLimit<T, R>(
   fn: (item: T, index: number) => Promise<R>,
   opts: { budgetMs?: number } = {},
 ): Promise<Array<R | null>> {
-  const out: Array<R | null> = new Array(items.length).fill(null);
+  const out: Array<R | null> = Array.from({ length: items.length }, () => null); // unicorn(no-new-array)
   const deadline = opts.budgetMs !== undefined ? Date.now() + opts.budgetMs : Infinity;
   let next = 0;
   const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {

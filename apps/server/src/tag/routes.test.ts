@@ -118,7 +118,7 @@ describe("tags API（FR-D1/D4，D40）", () => {
       url: `/api/tags/targets/todo/${todoId}`,
       cookies: { sid },
     });
-    expect((json(got).tagIds as string[]).sort()).toEqual([techId, homeId].sort());
+    expect((json(got).tagIds as string[]).toSorted()).toEqual([techId, homeId].toSorted());
 
     // 覆盖语义：再设 [homeId] → 只剩一个
     await app.inject({

@@ -1,9 +1,21 @@
 {
-  "plugins": ["typescript", "oxc", "import", "unicorn", "promise"],
+  "plugins": [
+    "typescript",
+    "oxc",
+    "import",
+    "unicorn",
+    "promise"
+  ],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn",
     "perf": "warn"
   },
-  "rules": {}
+  "rules": {
+    "import/no-named-as-default-member": "off",
+    "import/no-unassigned-import": "off",
+    "eslint/no-await-in-loop": "off",
+    "eslint/no-underscore-dangle": "off",
+    "oxc/no-async-endpoint-handlers": "off"
+  }
 }

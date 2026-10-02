@@ -135,6 +135,7 @@ export const portainerLogsConnector: WidgetConnector = {
     );
     if (res.status >= 400) throw new Error(`容器日志 HTTP ${res.status}`);
     // Docker logs 流带 8 字节帧头，逐段剥掉后按行整理
+      // eslint-disable-next-line no-control-regex -- 有意：剥离日志流里的 ANSI/控制字符
     const text = res.text.replace(/[\x00-\x08\x0b-\x1f]{1,8}/g, "").trim();
     return { logs: text.slice(-8000) || "(无输出)" };
   },

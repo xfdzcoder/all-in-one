@@ -29,7 +29,7 @@ export function TagFilter({
   const apply = (tagIds: string[]) => {
     const n = node as NodeLike | undefined;
     if (grid && n?.el) {
-      grid.update(n.el, { props: { ...(n.props ?? {}), tagIds } } as GridStackWidget);
+      grid.update(n.el, { props: { ...n.props, tagIds } } as GridStackWidget);
     }
     requestSave();
   };

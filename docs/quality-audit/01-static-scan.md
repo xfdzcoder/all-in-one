@@ -3,7 +3,7 @@
 > 对应用户要求「**引入 lint 工具做静态检测**」与拍板④（强化 oxlint + knip + `pnpm audit`，不引 ESLint）。
 > 本文件是**活文档**：Q96 清零过程中持续更新。
 
-## 1 · oxlint（已开足，2026-10-02）
+## 1 · oxlint（已开足 2026-10-02；**Q96a 清零 160 条：242 → 82**）
 
 - 三份 `.oxlintrc.json` 已从「2 条 react 规则」扩到 **plugins：typescript/oxc/react/import/jsx-a11y/unicorn/promise + categories：correctness/suspicious/perf 全开**（暂以 warn 落地，保证 `pnpm lint` exit 0；Q96 清零后逐类升 error）。
 - 豁免（有理由，勿回退）：
@@ -37,3 +37,17 @@
 
 - **1 条 moderate**：`esbuild <=0.24.2`（GHSA-67mh-4wv8-2f99，dev 链经 `drizzle-kit → @esbuild-kit/*`）；`--prod` 干净。处置：等 drizzle-kit 上游升级，Q100 记录跟踪。
 - gridstack 补丁：`patches/gridstack@14.0.0.patch`（Q43 竞态两处守卫）**仍必要、未过期**（当前 latest=14.0.0）；但 `apps/web/package.json` 声明 `^14.0.0` —— 上游发 14.0.1+ 时补丁会**静默失效**（DEP-2，Q100 修：锁精确版本或加 patch 失效检测）。
+
+
+## 4 · Q96a 清零记录（2026-10-02）
+
+- **定向豁免 6 类**（每条都有理由，不是逃逸）：
+  - `oxc/no-async-endpoint-handlers`：**Express 规则**，Fastify 的 async handler 是官方推荐形态（11 处误报）；
+  - `import/no-named-as-default-member`：全仓统一 `import X from` + `X.fn` 惯例（40 处全是同一形态，如 `puppeteer.launch`）；
+  - `import/no-unassigned-import`：副作用 CSS 导入是 Vite 标准用法；
+  - `eslint/no-await-in-loop`：分页/顺序语义**有意为之**（可并行的抓取已在 Q99a 改 `mapLimit`）；
+  - `eslint/no-underscore-dangle`：外部 schema/既有 API 字段命名（非本库可控）；
+  - `react/only-export-components`：组件与纯函数同文件是既有组织方式（fast-refresh 提示而已）。
+- **机械清理**：`sort→toSorted` ×16、spread 冗余兜底 ×6、未用变量 ×10、`on*=`→`addEventListener` ×6、`promise(always-return)` ×5、`no-new-array` ×2、`filter+pop→findLast`、`includes→Set.has`、默认数组字面量→常量、循环累积 spread→原地推进。
+- **顺带修掉的真问题**：① 3 处 **fetch GET 带 body**（违反 fetch 规范，会被忽略或抛 TypeError；含 `verify-gallery-live` 的 api() 助手）；② 2 处 catch 重抛**丢 cause**（错误链断裂，已补 `{ cause: err }`）；③ 死代码/死参数清理。
+- **余下 82 条（Q96b）**：`eslint(no-shadow)` 27、`unicorn(consistent-function-scoping)` 26、`react(no-array-index-key)` 9、`oxc(no-map-spread)` 9、react singles 4（`set-state-in-effect`/`refs`/`immutability`/`jsx-no-constructed-context-values` —— 后三者含**潜在真 bug**，需逐个看上下文再改）。Q96b 清零后把 categories 升格 `error` 并引入 knip（LNT-3）。

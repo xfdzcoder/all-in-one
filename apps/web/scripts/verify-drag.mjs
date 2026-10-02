@@ -38,7 +38,7 @@ try {
 await installLayoutGuard(page);
   await page.evaluate(async () => {
     const J = (u, m, b) =>
-      fetch(u, { method: m, headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) =>
+      fetch(u, { method: m, headers: { "Content-Type": "application/json" }, ...(b ? { body: JSON.stringify(b) } : {}) }).then((r) => // GET 禁带 body
         r.json(),
       );
     const b = await J("/api/kanban/boards", "POST", { title: `drag-${Date.now()}` });

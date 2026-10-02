@@ -129,8 +129,7 @@ try {
   ok("ICON delete confirm names the icon", await page.evaluate((n) => (document.body.textContent ?? "").includes(`确认删除图标「${n}」`), `svg-icon-${uniq}`));
   await page.evaluate(() =>
     [...document.querySelectorAll(".mantine-Modal-root button")]
-      .filter((b) => b.offsetParent !== null && b.textContent.trim() === "确认")
-      .pop()
+      .findLast((b) => b.offsetParent !== null && b.textContent.trim() === "确认")
       ?.click(),
   );
   await sleep(800);

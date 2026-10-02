@@ -187,7 +187,7 @@ export const immichGalleryConnector: WidgetConnector = {
       }
     } catch (err) {
       // 列表失败 = 整卡失败（probe 语义由组件按 error 呈现）
-      throw new Error(err instanceof Error ? err.message : "Immich 列表获取失败");
+      throw new Error(err instanceof Error ? err.message : "Immich 列表获取失败", { cause: err });
     }
 
     const wanted = picked.slice(0, want);
@@ -249,7 +249,7 @@ export const immichGalleryConnector: WidgetConnector = {
       reasons.set("抓取超出时间预算（缩略图较多或上游较慢）", budgetSkip);
     }
     if (failCount > 0 && wanted.length > 0) {
-      const [reason, n] = [...reasons.entries()].sort((x, y) => y[1] - x[1])[0];
+      const [reason, n] = [...reasons.entries()].toSorted((x, y) => y[1] - x[1])[0];
       const fix = reason.includes("Missing required permission")
         ? "Immich 后台「账号设置 → API Keys」勾选 asset.view 权限"
         : reason.includes("Asset media not found")

@@ -295,10 +295,10 @@ await installLayoutGuard(page);
   ok(
     "KAN columns rendered",
     await page.evaluate(() => {
-      const titles = [...document.querySelectorAll("[data-col-title]")].map((e) =>
-        e.getAttribute("data-col-title"),
+      const titles = new Set(
+        [...document.querySelectorAll("[data-col-title]")].map((e) => e.getAttribute("data-col-title")),
       );
-      return titles.includes("待办") && titles.includes("进行中");
+      return titles.has("待办") && titles.has("进行中"); // unicorn(prefer-set-has)
     }),
   );
   ok("KAN open add-card composer (click column)", await clickInColumn("待办", "＋ 添加卡片"));

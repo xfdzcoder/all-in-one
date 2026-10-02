@@ -90,8 +90,8 @@ export function PluginAdmin({ opened, onClose }: { opened: boolean; onClose: () 
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("读取文件失败"));
+        reader.addEventListener("load", () => resolve(String(reader.result)));
+        reader.addEventListener("error", () => reject(new Error("读取文件失败")));
         reader.readAsDataURL(file);
       });
       const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);

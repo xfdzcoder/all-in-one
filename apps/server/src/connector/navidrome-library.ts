@@ -205,7 +205,7 @@ export const navidromeLibraryConnector: WidgetConnector = {
       }
       newest = parsed;
     } catch (err) {
-      throw new Error(err instanceof Error ? err.message : "Navidrome 列表获取失败");
+      throw new Error(err instanceof Error ? err.message : "Navidrome 列表获取失败", { cause: err });
     }
 
 
@@ -274,7 +274,7 @@ export const navidromeLibraryConnector: WidgetConnector = {
       reasons.set("抓取超出时间预算（封面较多或上游较慢）", budgetSkip);
     }
     if (failCount > 0 && wanted.length > 0) {
-      const [reason, n] = [...reasons.entries()].sort((x, y) => y[1] - x[1])[0];
+      const [reason, n] = [...reasons.entries()].toSorted((x, y) => y[1] - x[1])[0];
       const fix = reason.includes("too large")
         ? "封面原图过大 —— 已自动回落小尺寸仍超限，可在 Navidrome 后台重跑「扫描/生成封面」或降低封面质量"
         : "检查 Navidrome 地址与账号权限（getCoverArt）";

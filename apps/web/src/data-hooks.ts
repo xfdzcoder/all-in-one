@@ -111,7 +111,7 @@ export function useSseInvalidation(): void {
       es?.close();
       const src = new EventSource("/api/events");
       es = src;
-      src.onopen = () => stopPolling();
+      src.addEventListener("open", () => stopPolling());
       src.addEventListener("invalidation", (e: MessageEvent<string>) => {
         let topic = "todo";
         try {
@@ -125,7 +125,7 @@ export function useSseInvalidation(): void {
           void qc.invalidateQueries({ queryKey: ["kanban-boards"] });
         } else void qc.invalidateQueries({ queryKey: ["todos"] });
       });
-      src.onerror = () => {
+      src.addEventListener("error", () => {
         // CONNECTING = 浏览器自动重连中（无需兜底）；CLOSED = 放弃 → 轮询兜底 + 定期重试
         if (src.readyState === EventSource.CLOSED) {
           startPolling();
@@ -136,7 +136,7 @@ export function useSseInvalidation(): void {
             }, SSE_RETRY_MS);
           }
         }
-      };
+      });
     };
     connect();
     return () => {

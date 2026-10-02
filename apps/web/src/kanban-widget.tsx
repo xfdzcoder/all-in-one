@@ -62,7 +62,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
   const moveCardToIndex = (cardId: string, columnId: string, index: number) => {
     const others = (tree?.cards ?? [])
       .filter((c) => c.columnId === columnId && !c.archived && c.id !== cardId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      .toSorted((a, b) => a.sortOrder - b.sortOrder);
     const clamped = Math.max(0, Math.min(index, others.length));
     const next = [...others.slice(0, clamped), { id: cardId }, ...others.slice(clamped)];
     const moving = (tree?.cards ?? []).find((c) => c.id === cardId);

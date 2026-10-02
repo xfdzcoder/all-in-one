@@ -62,15 +62,15 @@ export function rescaleLayout<T extends RescalableWidget>(
   });
 
   // 碰撞消解：按 y、x 排序后逐个放置，压到不与已放置的重叠为止
-  const order = scaled.map((s, i) => ({ s, i })).sort((a, b) => a.s.y - b.s.y || a.s.x - b.s.x || a.i - b.i);
-  const out: T[] = new Array(scaled.length);
+  const order = scaled.map((s, i) => ({ s, i })).toSorted((a, b) => a.s.y - b.s.y || a.s.x - b.s.x || a.i - b.i);
+  const out: T[] = Array.from<T>({ length: scaled.length }); // unicorn(no-new-array)
   const placed: RescalableWidget[] = [];
   for (const { s, i } of order) {
     let cur = { id: s.w.id, x: s.x, y: s.y, w: s.w2, h: s.h };
     // 单调下推；极端情况也不会死循环（每次 y+1，guard 上限宽松）
     let guard = 0;
     while (placed.some((p) => overlaps(p, cur)) && guard < placed.length + scaled.length + 1) {
-      cur = { ...cur, y: cur.y + 1 };
+      cur.y += 1; // oxc(no-accumulating-spread)：局部对象，原地推进即可
       guard += 1;
     }
     placed.push(cur);

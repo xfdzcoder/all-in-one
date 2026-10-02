@@ -558,7 +558,7 @@ await installLayoutGuard(page);
   );
   ok(
     "Q93 数据源计数首进即正确（不随选中类型过滤而归零）(项 5)",
-    dsCounts.length > 0 && dsCounts.some((n) => n > 0),
+    dsCounts.some((n) => n > 0), // unicorn(no-useless-length-check)：some() 已蕴含非空
     JSON.stringify({ counts: dsCounts }),
   );
 
@@ -931,7 +931,7 @@ await installLayoutGuard(page);
     const gal = items.find((i) => i.component === "immich-gallery");
     let put = 0;
     if (gal) {
-      gal.props = { ...(gal.props ?? {}), albumId: "album-should-be-sent" };
+      gal.props = { ...gal.props, albumId: "album-should-be-sent" };
       const resp = await fetch(`/api/dashboards/${home.id}/layout`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -966,7 +966,7 @@ await installLayoutGuard(page);
         const items = JSON.parse(home?.layoutJson ?? "[]");
         const card = items.find((i) => i.component === comp);
         if (!card) return;
-        card.props = { ...(card.props ?? {}), ...p };
+        card.props = { ...card.props, ...p };
         await fetch(`/api/dashboards/${home.id}/layout`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -991,7 +991,7 @@ await installLayoutGuard(page);
           const r = c.getBoundingClientRect();
           return r.height ? Number((r.width / r.height).toFixed(2)) : 0;
         }),
-        titles: cells.map((c) => c.getAttribute("title") ?? "").sort(),
+        titles: cells.map((c) => c.getAttribute("title") ?? "").toSorted(),
       };
     }, marker);
 

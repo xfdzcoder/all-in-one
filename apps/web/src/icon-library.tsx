@@ -42,8 +42,8 @@ export function IconLibrary() {
     try {
       const dataBase64 = await new Promise<string>((resolve, reject) => {
         const r = new FileReader();
-        r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
-        r.onerror = () => reject(new Error("读取文件失败"));
+        r.addEventListener("load", () => resolve(String(r.result).split(",")[1] ?? ""));
+        r.addEventListener("error", () => reject(new Error("读取文件失败")));
         r.readAsDataURL(file);
       });
       await api.createIcon({ name: name.trim(), mime: file.type, dataBase64 });
@@ -121,9 +121,10 @@ export function IconLibrary() {
               onClick={() => {
                 // Q80：copyText 自带降级（HTTP 下 navigator.clipboard 不可用）
                 void copyText(`/api/icons/${r.id}`).then((ok) => {
-                  if (!ok) return;
+                  if (!ok) return ok;
                   setCopied(r.id);
                   setTimeout(() => setCopied(null), 2000);
+                  return ok; // promise(always-return)：链式语义明确
                 });
               }}
             >

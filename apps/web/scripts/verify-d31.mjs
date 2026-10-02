@@ -42,7 +42,7 @@ const clickBtn = (label, exact = false) =>
   );
 
 /** 点击某元素（按文本前缀找叶子节点）。 */
-const clickLeaf = (text) =>
+const _clickLeaf = (text) =>
   page.evaluate((t) => {
     const el = [...document.querySelectorAll("body *")].find(
       (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),

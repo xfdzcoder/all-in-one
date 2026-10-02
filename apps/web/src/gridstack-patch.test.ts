@@ -1,5 +1,8 @@
+// oxlint-disable-next-line import/default -- `?raw` 导入的默认导出是文件文本，规则识别不了
 import gridstackItemSrc from "gridstack/dist/react/gridstack-item.js?raw";
+// oxlint-disable-next-line import/default -- 同上
 import gridstackSrc from "gridstack/dist/react/gridstack.js?raw";
+// oxlint-disable-next-line import/default -- 同上
 import gridstackPkgRaw from "gridstack/package.json?raw";
 import { describe, expect, it } from "vitest";
 

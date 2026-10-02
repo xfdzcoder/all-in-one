@@ -75,7 +75,7 @@ const clickBtn = (label, exact = false) =>
     { l: label, ex: exact },
   );
 
-const setField = (label, value) =>
+const _setField = (label, value) =>
   page.evaluate(
     ({ l, v }) => {
       const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>

@@ -101,7 +101,7 @@ export const opencodeConnector: WidgetConnector = {
       const sessions = list
         .map(normalizeSession)
         .filter((s): s is OpencodeSession => s !== null)
-        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .toSorted((a, b) => b.updatedAt - a.updatedAt)
         .slice(0, limit);
       return { probe: { ok: true, version }, sessions };
     } catch (e) {

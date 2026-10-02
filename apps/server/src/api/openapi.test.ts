@@ -46,12 +46,12 @@ describe("OpenAPI 契约覆盖（CON-1）", () => {
   const doc = documentedOps();
 
   it("每个已注册路由都在 OpenAPI 里有名字（新路由必须入册）", () => {
-    const missing = [...routes].filter((r) => !doc.has(r)).sort();
+    const missing = [...routes].filter((r) => !doc.has(r)).toSorted();
     expect(missing).toEqual([]);
   });
 
   it("OpenAPI 里的每个操作都对应真实路由（不登记幽灵路径）", () => {
-    const ghosts = [...doc].filter((d) => !routes.has(d)).sort();
+    const ghosts = [...doc].filter((d) => !routes.has(d)).toSorted();
     expect(ghosts).toEqual([]);
   });
 

@@ -214,7 +214,7 @@ export function normalizeNavidrome(parts: {
     detail: str(a.artist),
   }));
   // Q94（反馈②）：**去掉「正在播放」** —— 用户要求移除（绝大多数时间恒为「正在播放 / 暂无」，无信息量）
-  out.lists = [...(newestItems.length > 0 ? [{ title: "最近添加", items: newestItems }] : [])];
+  out.lists = newestItems.length > 0 ? [{ title: "最近添加", items: newestItems }] : []; // unicorn(no-useless-spread)
 
   if (scan) {
     const scanning = scan.scanning === true;

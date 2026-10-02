@@ -40,7 +40,7 @@ function op(
       "200": { description: opts.ok ?? "ok" },
       "400": { description: "invalid request" },
       "401": { description: "unauthorized" },
-      ...(opts.codes ?? {}),
+      ...opts.codes,
     },
   };
 }

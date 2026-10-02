@@ -87,7 +87,7 @@ const readField = (label) =>
     return wrapper?.querySelector("input, textarea")?.value ?? null;
   }, label);
 
-const selectOption = async (label, optionText) => {
+const _selectOption = async (label, optionText) => {
   const clicked = await page.evaluate((l) => {
     const wrapper = [...document.querySelectorAll(".mantine-Modal-root .mantine-InputWrapper-root")].find((w) =>
       w.querySelector("label")?.textContent.includes(l),

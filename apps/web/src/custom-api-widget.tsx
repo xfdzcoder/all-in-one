@@ -90,6 +90,7 @@ export function CustomApiWidget(props: CustomApiConfig) {
                 void copyText(JSON.stringify(data, null, 2)).then((ok) => {
                   setCopied(ok);
                   if (ok) setTimeout(() => setCopied(false), 2000);
+                  return ok; // promise(always-return)：链式语义明确
                 });
               }}
             >

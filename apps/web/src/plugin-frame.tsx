@@ -115,6 +115,7 @@ export function PluginFrame({
       .getPluginEntry(pluginId)
       .then((entry) => {
         if (!cancelled) setCode(entry.code);
+        return entry; // promise(always-return)：链式语义明确
       })
       .catch((e: unknown) => {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
@@ -154,6 +155,7 @@ export function PluginFrame({
             .then(() => {
               // 动作可能改动 todo/feed 数据 —— 刷新插件数据桥（SSE 另有失效通知）
               void queryClient.invalidateQueries({ queryKey: ["plugin-data"] });
+              return undefined; // promise(always-return)：链式语义明确
             })
             .catch((e: unknown) => {
               setRuntimeError(`动作执行失败：${e instanceof Error ? e.message : String(e)}`);

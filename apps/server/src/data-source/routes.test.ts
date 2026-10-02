@@ -112,7 +112,7 @@ describe("data sources API（D42 命名连接）", () => {
     const res = await app.inject({ method: "GET", url: "/api/data-sources/kinds", cookies: { sid } });
     const kinds = res.json() as Array<{ kind: string; configKeys: string[] }>;
     // Q39/D46：含第三方服务四类（immich/navidrome/portainer/mihomo）
-    expect(kinds.map((k) => k.kind).sort()).toEqual([
+    expect(kinds.map((k) => k.kind).toSorted()).toEqual([
       "http",
       "immich",
       "mihomo",

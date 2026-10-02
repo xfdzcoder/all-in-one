@@ -71,16 +71,16 @@ const clickBtn = (label, exact = false) =>
   );
 
 /** 叠层弹窗取顶层（最后一个可见 root）——避免勾到下层筛选弹窗。 */
-const TOP = `(() => {
+const _TOP = `(() => {
   const roots = [...document.querySelectorAll(".mantine-Modal-root")].filter((r) => r.offsetParent !== null && r.textContent.trim().length > 0);
   return roots[roots.length - 1] ?? null;
 })()`;
 
 /** Mantine Tabs 面板挂载但隐藏 —— 所有面板内选择器必须过滤可见元素。 */
-const vis = "(el) => el.offsetParent !== null";
+const _vis = "(el) => el.offsetParent !== null";
 
 /** 在某容器内按文本找行（用于数据源管理列表定位）。 */
-const rowByText = (text) =>
+const _rowByText = (text) =>
   page.evaluate((t) => {
     const leaf = [...document.querySelectorAll(".mantine-Modal-root *")].find(
       (n) => n.children.length === 0 && (n.textContent ?? "").includes(t),

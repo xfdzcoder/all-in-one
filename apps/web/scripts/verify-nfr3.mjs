@@ -45,7 +45,7 @@ try {
     samples.push(Date.now() - t);
     await sleep(300);
   }
-  const median = [...samples].sort((a, b) => a - b)[Math.floor(samples.length / 2)];
+  const median = [...samples].toSorted((a, b) => a - b)[Math.floor(samples.length / 2)];
   ok("NFR3 first-screen interactive median < 2s", median < 2000, `samples=${JSON.stringify(samples)} median=${median}ms`);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
