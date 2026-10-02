@@ -155,6 +155,14 @@ function Workbench({
   const pendingDirRef = useRef<0 | 1 | -1>(0); // 动画期最多排队一条（后到覆盖，防一次手势连跳多页）
   const scrollTimerRef = useRef<number | null>(null);
   const [anim, setAnim] = useState<{ phase: "out" | "in" | "settle"; dir: 1 | -1 } | null>(null);
+  // Q120：「循环切换」开关（设置·外观持久化）——到头继续滑 = 切到另一头（默认关 = 回弹）
+  const [pageWrap, setPageWrap] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("wb-pages-wrap") === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const activeIdRef = useRef(activeId);
   useEffect(() => {
@@ -206,9 +214,12 @@ function Workbench({
         return;
       }
       const idx = dashboards.findIndex((d) => d.id === activeId);
-      const target = idx + dir;
-      // 首尾页：回弹（循环切换开关在 Q120）
-      if (idx < 0 || target < 0 || target >= dashboards.length) return;
+      if (idx < 0) return;
+      // 首尾页：默认回弹；「循环切换」开 = 切到另一头（Q120）
+      const target = pageWrap
+        ? (idx + dir + dashboards.length) % dashboards.length
+        : idx + dir;
+      if (!pageWrap && (target < 0 || target >= dashboards.length)) return;
       const nextId = dashboards[target].id;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduced) {
@@ -235,11 +246,62 @@ function Workbench({
         );
       }, 150);
     },
-    [activeId, dashboards, layoutEdit, selectPage],
+    [activeId, dashboards, layoutEdit, pageWrap, selectPage],
   );
   useEffect(() => {
     switchPageRef.current = switchPage;
   }, [switchPage]);
+
+  // Q120：键盘等价操作（可达性）——Alt+←/→、Ctrl+PageUp/PageDown；
+  // Ctrl+Tab 由浏览器保留（拦不住也切不动标签页），同样尝试 preventDefault 后切换。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (view !== "workspace" || layoutEdit) return;
+      const target = e.target as HTMLElement | null;
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if (target?.isContentEditable) return;
+      let dir: 1 | -1 | 0 = 0;
+      if (e.altKey && e.key === "ArrowRight") dir = 1;
+      else if (e.altKey && e.key === "ArrowLeft") dir = -1;
+      else if (e.ctrlKey && e.key === "PageDown") dir = 1;
+      else if (e.ctrlKey && e.key === "PageUp") dir = -1;
+      else if (e.ctrlKey && e.key === "Tab") dir = e.shiftKey ? -1 : 1;
+      if (dir === 0) return;
+      e.preventDefault();
+      switchPageRef.current(dir);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layoutEdit, view]);
+
+  // Q120：触屏横滑切页 —— 中部起手（避开系统「边缘返回」手势）、同一冲突规则、松手过阈值才切
+  const touchRef = useRef<{ x: number; y: number; at: number } | null>(null);
+  const onTouchStartSwitch = useCallback((e: React.TouchEvent) => {
+    if (view !== "workspace" || layoutEdit) return;
+    const t = e.touches[0];
+    if (!t) return;
+    const edge = window.innerWidth * 0.2;
+    if (t.clientX < edge || t.clientX > window.innerWidth - edge) {
+      touchRef.current = null; // 边缘起手让给系统返回手势
+      return;
+    }
+    if (!shouldSwitchPages(chainOf(e.target as Element, window))) {
+      touchRef.current = null;
+      return;
+    }
+    touchRef.current = { x: t.clientX, y: t.clientY, at: Date.now() };
+  }, [layoutEdit, view]);
+  const onTouchEndSwitch = useCallback((e: React.TouchEvent) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // 横向主导 + 过阈值
+    switchPageRef.current(dx < 0 ? 1 : -1);
+  }, []);
 
   const onWheelSwitch = useCallback(
     (e: React.WheelEvent) => {
@@ -529,6 +591,8 @@ function Workbench({
         className="wb-main"
         ref={mainRef}
         onWheel={onWheelSwitch}
+        onTouchStart={onTouchStartSwitch}
+        onTouchEnd={onTouchEndSwitch}
         onScroll={onScrollSave}
         style={{
           background: view === "workspace" ? active?.background ?? "transparent" : "transparent",
@@ -546,6 +610,18 @@ function Workbench({
               isDesktop={isDesktop}
               dataTab={dataTab}
               onProfileChanged={onProfileChanged}
+              pageWrap={pageWrap}
+              onTogglePageWrap={() =>
+                setPageWrap((v) => {
+                  const next = !v;
+                  try {
+                    localStorage.setItem("wb-pages-wrap", next ? "1" : "0");
+                  } catch {
+                    /* 隐私模式等：本次会话内仍生效 */
+                  }
+                  return next;
+                })
+              }
             />
           </WidgetErrorBoundary>
         )}
@@ -625,6 +701,24 @@ function Workbench({
               <WbAlert tone="error" size="sm" onClose={() => setAsyncError(null)}>
                 {asyncError}
               </WbAlert>
+            )}
+            {/* Q120：页面指示器（当前页可见 + 点击直达）。移动端隐藏 —— 触控目标 44px（NFR2）
+                与 8px 圆点冲突，触屏用横滑 + 顶部切换器（已备）。 */}
+            {(dashboards?.length ?? 0) > 1 && (
+              <nav className="wb-page-dots" aria-label="页面指示器">
+                {dashboards.map((d, i) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className={`wb-page-dots__dot${d.id === activeId ? " wb-page-dots__dot--active" : ""}`}
+                    aria-label={`切换到页面：${d.title}`}
+                    aria-current={d.id === activeId ? "page" : undefined}
+                    onClick={() => selectPage(d.id)}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </nav>
             )}
             {active && (
               // Q119 动画壳：「缩小凹入 → 换页 → 铺满」只动 transform/opacity（合成层）

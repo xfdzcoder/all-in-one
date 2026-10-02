@@ -48,8 +48,11 @@ export function SettingsAdmin(props: {
   dataTab: string | undefined;
   /** 改用户名后刷新会话（头部 `me.username` 跟着变）。 */
   onProfileChanged: () => void;
+  /** Q120：页面切换「到头循环」开关（设置·外观持久化）。 */
+  pageWrap: boolean;
+  onTogglePageWrap: () => void;
 }) {
-  const { tab, onTab, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab, onProfileChanged } = props;
+  const { tab, onTab, me, themeMode, onToggleTheme, onLogout, isDesktop, dataTab, onProfileChanged, pageWrap, onTogglePageWrap } = props;
   const items = SETTINGS_TABS.filter((t) => t.key !== "plugins" || isDesktop);
 
   return (
@@ -80,7 +83,9 @@ export function SettingsAdmin(props: {
           {tab === "account" && (
             <AccountPanel me={me} onProfileChanged={onProfileChanged} onLogout={onLogout} />
           )}
-          {tab === "appearance" && <AppearancePanel themeMode={themeMode} onToggleTheme={onToggleTheme} />}
+          {tab === "appearance" && (
+            <AppearancePanel themeMode={themeMode} onToggleTheme={onToggleTheme} pageWrap={pageWrap} onTogglePageWrap={onTogglePageWrap} />
+          )}
           {tab === "plugins" && (
             <Stack gap="md" className="wb-settings__section">
               <Title order={5}>插件管理</Title>

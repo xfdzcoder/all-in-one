@@ -1310,6 +1310,60 @@ a.wb-widget__title-link:focus-visible {
   max-width: 760px;
 }
 
+/* ── 页面指示器（Q120）：当前页可见 + 点击直达；移动端隐藏（NFR2 触控 44px vs 小圆点） ── */
+.wb-page-dots {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-1);
+  padding: 4px 8px;
+  border-radius: var(--wb-radius-pill);
+  background: color-mix(in srgb, var(--wb-color-surface) 82%, transparent);
+  border: var(--wb-border);
+  backdrop-filter: blur(6px);
+  z-index: 30;
+  font-size: 0; /* 序号只给读屏（sr 语义由 aria-label 承担），视觉只留点 */
+}
+
+.wb-page-dots__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: var(--wb-radius-pill);
+  background: var(--wb-color-text-muted);
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    width var(--wb-transition),
+    background var(--wb-transition),
+    opacity var(--wb-transition);
+}
+
+.wb-page-dots__dot:hover {
+  opacity: 1;
+}
+
+.wb-page-dots__dot--active {
+  width: 18px;
+  background: var(--wb-color-accent);
+  opacity: 1;
+}
+
+.wb-page-dots__dot:focus-visible {
+  outline: 2px solid var(--wb-color-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .wb-page-dots {
+    display: none;
+  }
+}
+
 /* ── 横向多页面切换（Q119，用户需求 2026-10-03）：「缩小凹入 → 换页 → 铺满」──
  * 只动 transform / opacity（合成层，不触发布局）；三段时序由 JS 相位驱动：
  * anim-out（当前页凹入）→ 换页 + anim-in（新页从对侧缩小态入场，无过渡）→ anim-settle（铺满）。

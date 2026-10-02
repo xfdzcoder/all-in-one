@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { lazy, Suspense } from "react";
-import { Button, Group, Select, SegmentedControl, Stack, Text, Title } from "@mantine/core";
+import { Button, Group, SegmentedControl, Select, Stack, Switch, Text, Title } from "@mantine/core";
 
 import { api, type CustomCssBackup } from "./api";
 import { lintCss } from "./css-hints";
@@ -26,9 +26,14 @@ function reloadCustomCss() {
 export function AppearancePanel({
   themeMode,
   onToggleTheme,
+  pageWrap,
+  onTogglePageWrap,
 }: {
   themeMode: "dark" | "light";
   onToggleTheme: () => void;
+  /** Q120：多页面横向切换「到头循环」（默认关 = 回弹）。 */
+  pageWrap: boolean;
+  onTogglePageWrap: () => void;
 }) {
   const [css, setCss] = useState("");
   const [backups, setBackups] = useState<CustomCssBackup[]>([]);
@@ -111,6 +116,15 @@ export function AppearancePanel({
               { label: "深色", value: "dark" },
               { label: "浅色", value: "light" },
             ]}
+          />
+          {/* Q120：多页面横向切换的首尾行为（默认回弹；开 = 到头切到另一头） */}
+          <Switch
+            label="循环切换页面"
+            description="横向切换到头时继续滑动，切到另一头（关闭则到头回弹）"
+            checked={pageWrap}
+            onChange={onTogglePageWrap}
+            labelPosition="left"
+            w="fit-content"
           />
         </Stack>
       </div>

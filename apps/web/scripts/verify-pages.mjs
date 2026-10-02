@@ -10,8 +10,10 @@
 import puppeteer from "puppeteer-core";
 import {
   ADMIN_PASSWORD,
+  backToWorkspace,
   createScratchDashboard,
   login,
+  openSettings,
   makeApiFetch,
   makeOk,
   sleep,
@@ -199,6 +201,58 @@ try {
   ok("PAGES swipe backward on first page", await swipeOver(".grid-stack-item", -160));
   await sleep(800);
   ok("PAGES first page bounces (no wrap yet, Q120 adds toggle)", (await pageTitle()) === firstPageTitle, await pageTitle());
+
+  // ── ⑤ Q120：键盘 / 指示器 / 循环开关 ──
+  await page.goto(`${WEB}/?page=${dashA.id}`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 10000 });
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.up("Alt");
+  ok(
+    "PAGES keyboard Alt+→ switches forward (Q120)",
+    await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, dashB.title, { timeoutMs: 3000 }),
+  );
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.up("Alt");
+  ok(
+    "PAGES keyboard Alt+← switches back (Q120)",
+    await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, dashA.title, { timeoutMs: 3000 }),
+  );
+
+  const dots = await page.evaluate(() => document.querySelectorAll(".wb-page-dots__dot").length);
+  ok("PAGES page indicator rendered (Q120)", dots >= 2, `dots=${dots}`);
+  ok(
+    "PAGES active dot marks current page",
+    await page.evaluate((t) => document.querySelector(".wb-page-dots__dot--active")?.getAttribute("aria-label")?.includes(t) ?? false, dashA.title),
+  );
+  ok("PAGES click a dot jumps to that page", await page.evaluate(() => {
+    const dots = [...document.querySelectorAll(".wb-page-dots__dot")];
+    dots[dots.length - 1]?.click();
+    return dots.length >= 2;
+  }));
+  ok(
+    "PAGES dot click switched to last page",
+    await waitFor(page, () => document.querySelector(".wb-page-dots__dot--active") === document.querySelectorAll(".wb-page-dots__dot")[document.querySelectorAll(".wb-page-dots__dot").length - 1], undefined, { timeoutMs: 3000 }),
+  );
+
+  // 循环开关（设置 · 外观，真实 UI 路径）→ 到头继续滑 = 切到另一头
+  ok("PAGES open appearance settings", await openSettings(page, "外观"));
+  ok("PAGES toggle wrap switch", await page.evaluate(() => {
+    const sw = [...document.querySelectorAll(".wb-settings__panel label")].find((l) => (l.textContent ?? "").includes("循环切换页面"))?.querySelector("input");
+    sw?.click();
+    return Boolean(sw);
+  }));
+  ok("PAGES back to workspace", await backToWorkspace(page));
+  await page.goto(`${WEB}/?page=${dashB.id}`, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector(".grid-stack", { timeout: 10000 });
+  ok("PAGES lands on last page", (await pageTitle()) === dashB.title, await pageTitle());
+  ok("PAGES swipe forward past the end", await swipeOver(".grid-stack-item", 160));
+  ok(
+    "PAGES wrap-around enabled (Q120) — 到头切到另一头",
+    await waitFor(page, (t) => (document.querySelector('[aria-label="返回工作台"]')?.textContent ?? "") === t, firstPageTitle, { timeoutMs: 3000 }),
+    await pageTitle(),
+  );
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));
 }
