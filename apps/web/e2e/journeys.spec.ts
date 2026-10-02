@@ -27,7 +27,7 @@ async function resetHomeLayout(page: Page) {
     id: string;
     title: string;
   }>;
-  const home = dashboards.find((d) => d.title === "首页");
+  const home = dashboards.find((d) => d.title === "首页") ?? dashboards[0]; // TST-10：回落首屏
   await page.request.put(`/api/dashboards/${home!.id}/layout`, {
     data: { layoutJson: JSON.stringify(seed) },
   });

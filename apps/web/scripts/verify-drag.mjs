@@ -46,7 +46,7 @@ await installLayoutGuard(page);
     for (const t of ["卡A", "卡B", "卡C"]) await J("/api/kanban/cards", "POST", { columnId: col.id, title: t });
     const seed = [{ id: "k1", x: 0, y: 0, w: 6, h: 6, component: "kanban", props: { boardId: b.id } }];
     const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页");
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款，TST-10）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

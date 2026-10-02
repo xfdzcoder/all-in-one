@@ -181,7 +181,7 @@ await installLayoutGuard(page);
       { id: "seed-5", x: 6, y: 3, w: 6, h: 4, component: "rss", props: { limit: 10, filter: "all" } },
     ];
     const list = await (await fetch("/api/dashboards")).json();
-    const home = list.find((d) => d.title === "首页");
+    const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款，TST-10）
     await fetch(`/api/dashboards/${home.id}/layout`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

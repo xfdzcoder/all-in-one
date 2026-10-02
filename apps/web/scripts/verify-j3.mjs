@@ -36,7 +36,9 @@ try {
   await page.evaluate(() => {
     const switcher = document.querySelector('[aria-label="切换页面"]');
     switcher?.click();
-    const tab = [...document.querySelectorAll("[data-page-item]")].find((t) => t.getAttribute("data-page-item") === "首页");
+    const tabs = [...document.querySelectorAll("[data-page-item]")];
+    // TST-10：首屏未必叫「首页」——回落首个页签
+    const tab = tabs.find((t) => t.getAttribute("data-page-item") === "首页") ?? tabs[0];
     tab?.click();
   });
   await sleep(600);

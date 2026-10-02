@@ -109,7 +109,7 @@ await installLayoutGuard(page);
         { id: "seed-2", x: 6, y: 0, w: 6, h: 5, component: "rss", props: { limit: 10, filter: "all" } },
       ];
       const list = await (await fetch("/api/dashboards")).json();
-      const home = list.find((d) => d.title === "首页");
+      const home = list.find((d) => d.title === "首页") ?? list[0]; // 回落首屏：真机/历史库可能没有「首页」（Q82 同款，TST-10）
       await fetch(`/api/dashboards/${home.id}/layout`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -285,6 +285,7 @@ await installLayoutGuard(page);
     { a: srcA, b: srcB },
   );
   ok(rssFiltered.a && !rssFiltered.b, "TAG rss filtered by source tag", JSON.stringify(rssFiltered));
+
 
   // ⑤ 数据源管理：删除标签确认标题情境化（D34）+ 数据仍在（FR-D4）
   ok(await clickBtn("数据源管理"), "TAG reopen data admin page");
