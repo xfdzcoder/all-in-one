@@ -114,14 +114,14 @@ jobs:
         with:
           generate_release_notes: true
           body: |
-            镜像：`ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
+            镜像标签：`ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}`、`:${{ steps.meta.outputs.version }}` 的 major.minor 形态与 `:latest`（注意：镜像 tag 不带 `v` 前缀）
 
             ```bash
             docker run -d --name all-in-one -p 3000:3000 \
               -e ADMIN_PASSWORD='你的口令' \
               -e CREDENTIALS_MASTER_KEY='你的主密钥' \
               -v "$PWD/data:/app/data" \
-              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+              ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}
             ```
 
             变更记录见 [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)。
