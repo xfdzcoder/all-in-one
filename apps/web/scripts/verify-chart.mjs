@@ -63,6 +63,23 @@ const setField = (label, value) =>
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await login(page);
+  // 前置清理历史残留 chart 卡（TST-22 家族自愈：失败/调试轮次可能留卡，find 会命中错卡）
+  await page.evaluate(async () => {
+    const list = await (await fetch("/api/dashboards", { credentials: "same-origin" })).json();
+    const home = list.find((d) => d.title === "首页") ?? list[0];
+    const items = JSON.parse(home.layoutJson ?? "[]");
+    const kept = items.filter((i) => i.component !== "chart");
+    if (kept.length !== items.length) {
+      await fetch(`/api/dashboards/${home.id}/layout`, {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layoutJson: JSON.stringify(kept) }),
+      });
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".grid-stack", { timeout: 8000 });
+    }
+  });
   await installLayoutGuard(page);
 
   // ① 添加组件 → 图表 → 配置表单

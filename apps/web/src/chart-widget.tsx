@@ -7,7 +7,7 @@ import { useEcharts } from "./chart/use-echarts";
 import { useCustomApiData, useResolvedSourceConfig } from "./data-hooks";
 import { useWsStream } from "./ws-stream";
 import { WidgetTitle } from "./widget-title";
-import { IconAction, WbAlert, WbLoading } from "./ui";
+import { IconAction, SourceHint, WbAlert, WbLoading } from "./ui";
 
 /**
  * 自定义图表 v1（**批H2 / Q76，D47 + D57**）：**配置即 spec**（非预设指标）。
@@ -66,7 +66,14 @@ export function ChartWidget(props: Record<string, unknown>) {
         title="图表"
         actions={<IconAction label="刷新" onClick={refresh}><IconRefresh size={14} /></IconAction>}
       />
-      {wsSourceId && <span className="wb-sr-only">{`实时 · ${streamRows.length} 点`}</span>}
+      {wsSourceId ? (
+        <span className="wb-sr-only">{`实时 · ${streamRows.length} 点`}</span>
+      ) : (
+        compiled && "rows" in compiled && <span className="wb-sr-only">{`${compiled.rows} 点`}</span>
+      )}
+      {!resolved.url && (
+        <SourceHint text="未配置接口地址 —— 在配置里填「接口地址」（认证头可选「认证来源」连接）" />
+      )}
       {loading && <WbLoading />}
       {/* D47：错误/降级一律「原因 + 怎么修」，不整卡空白不留白 */}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}

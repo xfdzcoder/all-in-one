@@ -23,6 +23,7 @@
 | J4 数据/视图分离（D43） | ✓ | `verify-j4`（**超集**：多 SSE 同步断言） | **双实现，见下** |
 | J5/J6/J7/J8（MVP 出口系列） | — | `verify-j5`/`j6`/`j7`/`j8` | verify 独有 |
 | 服务接入 / 插件 / 真机 | — | `verify-svc`/`pl5–pl8`/`verify-live`/`verify-gallery-live` | verify 独有 |
+| 图表卡（mock / 真源） | — | `verify-chart`/`verify-chart-live`（Immich 真相册对账） | verify 独有 |
 | 暗色 / 灰阶对比度 | — | `verify-dark`/`verify-gray` | verify 独有 |
 
 ## 双实现同步规则（**TST-23 核心**）

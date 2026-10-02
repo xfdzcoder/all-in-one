@@ -86,9 +86,22 @@ export class WsSourceManager {
     }
 
     const secure = row.url.startsWith("wss:");
+    // Node autoSelectFamily 走 lookup(all=true) 期望 {address,family}[]（回标量会炸
+    // ERR_INVALID_IP_ADDRESS）—— 两种回调形态都答。
     const lookupPinned = pinned
-      ? (_h: string, _o: unknown, cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) =>
-          cb(null, pinned, isIP(pinned) === 6 ? 6 : 4)
+      ? (
+          _h: string,
+          o: { all?: boolean } | undefined,
+          cb: (
+            err: NodeJS.ErrnoException | null,
+            address: string | Array<{ address: string; family: number }>,
+            family?: number,
+          ) => void,
+        ) => {
+          const family = isIP(pinned) === 6 ? 6 : 4;
+          if (o?.all) cb(null, [{ address: pinned, family }]);
+          else cb(null, pinned, family);
+        }
       : undefined;
     const agent = secure
       ? new HttpsAgent({ lookup: lookupPinned, keepAlive: false })

@@ -165,9 +165,22 @@ export async function outboundRequest(
   // DNS rebinding 的 TOCTOU 窗口）。core http(s).request 的 `lookup` 直接回填验证过的地址；
   // SNI / 证书校验仍按原 hostname（host 头不变），功能语义与 fetch 一致。
   // `accept-encoding: identity`：fetch 原本自动解压，裸流不解 —— 显式要原文（连接器只吃纯文本/JSON）。
+  // Node autoSelectFamily 走 lookup(all=true) 期望 {address,family}[]（回标量会炸
+  // ERR_INVALID_IP_ADDRESS）—— 两种回调形态都答。
   const lookupPinned = pinnedIp
-    ? (_h: string, _o: unknown, cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) =>
-        cb(null, pinnedIp, isIP(pinnedIp) === 6 ? 6 : 4)
+    ? (
+        _h: string,
+        o: { all?: boolean } | undefined,
+        cb: (
+          err: NodeJS.ErrnoException | null,
+          address: string | Array<{ address: string; family: number }>,
+          family?: number,
+        ) => void,
+      ) => {
+        const family = isIP(pinnedIp) === 6 ? 6 : 4;
+        if (o?.all) cb(null, [{ address: pinnedIp, family }]);
+        else cb(null, pinnedIp, family);
+      }
     : undefined;
 
   return await new Promise<{ status: number; text: string; bytes: Uint8Array }>((resolve, reject) => {
