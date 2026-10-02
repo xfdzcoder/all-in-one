@@ -391,7 +391,10 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
         </Modal>
       )}
 
-      <Modal opened={editing !== null} onClose={() => setEditing(null)} title="卡片">
+      {/* WEB-16：条件挂载（confirm.tsx:46 教训）——原 `opened={editing !== null}` 常驻挂载，
+          多卡看板长期多挂一棵 Modal 子树；关窗即卸载，DOM 不膨胀 */}
+      {editing && (
+      <Modal opened onClose={() => setEditing(null)} title="卡片">
         {editing && (
           <Stack gap="xs">
             <TextInput
@@ -452,6 +455,7 @@ export function KanbanWidget({ boardId, refreshSec }: { boardId?: string; refres
           </Stack>
         )}
       </Modal>
+      )}
     </div>
   );
 }
