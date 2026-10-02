@@ -9,7 +9,7 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, summarize } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, summarize } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -122,7 +122,7 @@ await installLayoutGuard(page);
   await sleep(1200);
 
   // ① 数据源管理面：三页签 + UI 新建标签
-  ok( "TAG open data admin page",await clickBtn("数据源管理"));
+  ok( "TAG open data admin page",await openSettings(page, "数据源"));
   await sleep(500);
   ok(
     "TAG admin has 3 tabs (任务/信息源/标签)",
@@ -275,7 +275,7 @@ await installLayoutGuard(page);
 
 
   // ⑤ 数据源管理：删除标签确认标题情境化（D34）+ 数据仍在（FR-D4）
-  ok( "TAG reopen data admin page",await clickBtn("数据源管理"));
+  ok( "TAG reopen data admin page",await openSettings(page, "数据源"));
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "标签");

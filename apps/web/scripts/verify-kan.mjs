@@ -7,7 +7,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -181,7 +181,7 @@ await installLayoutGuard(page);
 
   // 建板（数据源管理 · 看板 —— Q26c：组件内不再建板）
   const boardTitle = `kan-${uniq}`;
-  ok("KAN open data source manager", await clickBtn("数据源管理"));
+  ok("KAN open data source manager", await openSettings(page, "数据源"));
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "看板");
@@ -247,7 +247,7 @@ await installLayoutGuard(page);
 
   // ② 加列（Q27d：唯一入口 = 数据源管理 · 看板）/ 加卡（整列点按）
   const addColumnViaAdmin = async (name) => {
-    await clickBtn("数据源管理");
+    await openSettings(page, "数据源");
     await sleep(500);
     await page.evaluate(() => {
       const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "看板");

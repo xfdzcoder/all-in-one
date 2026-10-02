@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActionIcon,
   AppShell,
   Button,
   createTheme,
@@ -14,7 +13,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconCheck, IconDatabase, IconLogout, IconPencil, IconPuzzle } from "@tabler/icons-react";
+import { IconCheck, IconPencil, IconSettings } from "@tabler/icons-react";
 import { useMediaQuery } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -26,8 +25,7 @@ import { IconAction, WbAlert } from "./ui";
 import { reportError } from "./feedback";
 import { LoginPage } from "./LoginPage";
 import { WidgetErrorBoundary } from "./error-boundary";
-import { DataAdmin } from "./data-admin";
-import { PluginAdmin } from "./plugin-admin";
+import { SettingsAdmin, isSettingsTab, type SettingsTab } from "./settings-admin";
 import { queryClient, useSseInvalidation } from "./data-hooks";
 
 /** Q19b：主题令牌（theme 字段在同一规则内无竞争，值全部引用 --wb-* 令牌）。
@@ -63,6 +61,9 @@ type SessionState =
   | { kind: "anonymous" }
   | { kind: "authed"; me: Me };
 
+/** URL 查询参数快照（深链初始化用；后续同步走 gotoView 写回）。 */
+const queryOf = () => new URLSearchParams(window.location.search);
+
 /** Q63（D52 双主题）：主题模式 —— 深色默认，[data-theme=light] 切浅色（localStorage 持久化）。 */
 type ThemeMode = "dark" | "light";
 const initialThemeMode = (): ThemeMode => {
@@ -88,36 +89,64 @@ function Workbench({
   const [dashboards, setDashboards] = useState<Dashboard[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [pluginAdminOpen, setPluginAdminOpen] = useState(false);
   // D10/FR-P7: phones & tablets are browse-only — layout editing is desktop-only.
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  // Q22a：布局编辑态上提 —— 入口按钮常驻头部（插件管理旁），不再在页面底部
+  // Q22a：布局编辑态上提 —— 入口按钮常驻头部，不再在页面底部
   const [layoutEdit, setLayoutEdit] = useState(false);
-  // FR-D2 / Q25c：数据源管理 = 独立全页视图（大数量好展示；?view=data 深链）
+  // 数据源管理已并入设置页「数据源」（B1）；?dataTab= 组件内跳转的目标页签（wb:navigate）
   const [dataTab, setDataTab] = useState<string | undefined>(undefined);
   // Q27d#1：页面切换器弹层
   const [menuOpen, setMenuOpen] = useState(false);
-  const [view, setView] = useState<"workspace" | "data">(() =>
-    new URLSearchParams(window.location.search).get("view") === "data" ? "data" : "workspace",
-  );
-  // 组件 → 数据源管理 的跳转入口（Q26b：邮箱等数据源配置统一在管理页）
+  // B1（用户指令）：头部「数据源管理/插件管理/主题切换/退出登录」四按钮 → 单个「设置」。
+  // 深链：?view=settings&tab=<账户|外观|插件|数据源|关于>；旧 ?view=data 视为 settings+数据源。
+  const [view, setView] = useState<"workspace" | "settings">(() => {
+    const v = queryOf().get("view");
+    return v === "settings" || v === "data" ? "settings" : "workspace";
+  });
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>(() => {
+    const q = queryOf();
+    const tab = q.get("tab");
+    if (isSettingsTab(tab)) return tab;
+    return q.get("view") === "data" ? "data" : "account";
+  });
+  // 组件 → 数据源管理 的跳转入口（Q26b：邮箱等数据源配置统一在管理页）；B1 起落在设置页「数据源」
   useEffect(() => {
     const onNav = (e: Event) => {
       const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
       setDataTab(tab);
-      gotoView("data");
+      gotoView("settings", "data");
     };
     window.addEventListener("wb:navigate", onNav);
     return () => window.removeEventListener("wb:navigate", onNav);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const gotoView = (v: "workspace" | "data") => {
+  const gotoView = (v: "workspace" | "settings", tab?: SettingsTab) => {
     setView(v);
+    const next = tab ?? settingsTab;
+    if (tab) setSettingsTab(tab);
     const url = new URL(window.location.href);
-    if (v === "data") url.searchParams.set("view", "data");
-    else url.searchParams.delete("view");
+    if (v === "settings") {
+      url.searchParams.set("view", "settings");
+      url.searchParams.set("tab", next);
+    } else {
+      url.searchParams.delete("view");
+      url.searchParams.delete("tab");
+    }
     window.history.replaceState(null, "", url.toString());
   };
+
+  // 退出登录（B1 起入口在设置页 · 账户）：清会话 + 清客户端缓存
+  const handleLogout = useCallback(() => {
+    void api
+      .logout()
+      .then(() => {
+        // WEB-14：清客户端缓存 —— 上一会话的任务/邮件/**缩略图 base64** 不残留内存（换用户场景直接可见旧数据）
+        queryClient.clear();
+        onLogout();
+        return true; // promise(always-return)：链式语义明确
+      })
+      .catch((e) => reportError("退出登录失败", e)); // WEB-4
+  }, [onLogout]);
 
   // ISS-1 修复：页面 CRUD 统一错误提示（失败不再静默）
   const [pageError, setPageError] = useState<string | null>(null);
@@ -337,88 +366,40 @@ function Workbench({
             )}
             {/* Q29d/三.2：「添加组件」入口在头部（编辑页面旁）—— Board 经 Portal 注入 */}
             <span id="wb-header-edit-slot" />
-            {/* D41：数据源管理属数据操作，移动端开放（布局编辑/插件管理仍桌面专属） */}
+            {/* B1（用户指令）：数据源管理 / 插件管理 / 主题切换 / 退出登录 四按钮 → 单个「设置」。
+                移动端同样开放入口（设置内「插件」菜单按 D10 桌面专属隐藏）。 */}
             <IconAction
-              label="数据源管理"
-              variant="default"
+              label="设置"
+              tooltip="设置"
+              variant={view === "settings" ? "filled" : "default"}
               size="md"
-              onClick={() => gotoView("data")}
+              onClick={() => gotoView("settings", settingsTab)}
             >
-              <IconDatabase size={18} />
-            </IconAction>
-            {isDesktop && (
-              <IconAction
-                label="插件管理"
-                variant="default"
-                size="md"
-                onClick={() => setPluginAdminOpen(true)}
-              >
-                <IconPuzzle size={18} />
-              </IconAction>
-            )}
-            {/* Q63：深浅主题切换（D52 双主题） */}
-            <ActionIcon
-              variant="default"
-              size="md"
-              aria-label={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
-              title={themeMode === "dark" ? "切换浅色主题" : "切换深色主题"}
-              onClick={onToggleTheme}
-            >
-              {themeMode === "dark" ? (
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.5" />
-                  <path
-                    d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <path
-                    d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5 5.8 5.8 0 1 0 13.5 9.6Z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </ActionIcon>
-            <IconAction
-              label="退出登录"
-              variant="default"
-              size="md"
-              onClick={() =>
-                void api
-                  .logout()
-                  .then(() => {
-                    // WEB-14：清客户端缓存 —— 上一会话的任务/邮件/**缩略图 base64** 不残留内存（换用户场景直接可见旧数据）
-                    queryClient.clear();
-                    onLogout();
-                    return true; // promise(always-return)：链式语义明确
-                  })
-                  .catch((e) => reportError("退出登录失败", e))
-              } // WEB-4
-            >
-              <IconLogout size={18} />
+              <IconSettings size={18} />
             </IconAction>
           </Group>
         </Group>
       </AppShell.Header>
-      <WidgetErrorBoundary name="插件管理">
-        <PluginAdmin opened={pluginAdminOpen} onClose={() => setPluginAdminOpen(false)} />
-      </WidgetErrorBoundary>
       {/* FR-P9：页面背景色（留空 = 默认深色底） */}
       <AppShell.Main
         className="wb-main"
         style={{
-          background: view === "data" ? "transparent" : active?.background ?? "transparent",
+          background: view === "workspace" ? active?.background ?? "transparent" : "transparent",
         }}
       >
-        {view === "data" && (
-          <WidgetErrorBoundary name="数据源管理">
-            <DataAdmin onBack={() => gotoView("workspace")} initialTab={dataTab} />
+        {view === "settings" && (
+          <WidgetErrorBoundary name="设置">
+            <SettingsAdmin
+              tab={settingsTab}
+              onTab={(t) => gotoView("settings", t)}
+              onBack={() => gotoView("workspace")}
+              me={me}
+              themeMode={themeMode}
+              onToggleTheme={onToggleTheme}
+              onLogout={handleLogout}
+              isDesktop={isDesktop}
+              dataTab={dataTab}
+            />
           </WidgetErrorBoundary>
         )}
         {view === "workspace" && (

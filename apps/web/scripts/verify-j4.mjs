@@ -7,7 +7,7 @@
  * 选择器/文案/流程改动两处同改（本文件是超集：多 SSE 同步断言；矩阵见 scripts/README.md）。
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeClickBtn, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -115,7 +115,7 @@ try {
   ok("J4 task visible in card", await page.evaluate((t) => document.body.textContent.includes(t), title));
 
   // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
-  ok("J4 open data admin", await clickBtn("数据源管理"));
+  ok("J4 open data admin", await openSettings(page, "数据源"));
   await sleep(600);
   // Q29b：任务页签 = 单 ToDo 视图（下拉切换）—— 选中目标 ToDo
   ok(

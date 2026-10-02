@@ -1,11 +1,11 @@
 /**
  * 深色模式对比度快检（WCAG AA）：对当前可见的文本元素计算与实际底色的对比度，
- * 正文 ≥4.5:1、大号文本（≥24px 或 ≥18.66px 粗体）≥3:1。覆盖主界面 / 插件管理弹窗 /
+ * 正文 ≥4.5:1、大号文本（≥24px 或 ≥18.66px 粗体）≥3:1。覆盖主界面 / 设置页面板 /
  * 组件选择器三类表面（弹层/下拉最容易出问题）。
  * Run: node scripts/verify-dark.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { login, makeClickBtn, makeOk, sleep, waitFor } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, sleep, waitFor } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -113,11 +113,11 @@ try {
   const runThemeChecks = async (label) => {
     report(`${label} main surface AA`, await page.evaluate(AUDIT_FN));
 
-    // 弹层表面：插件管理
-    await clickBtn("插件管理");
+    // 面板表面：设置 · 插件（B1 起插件管理为设置页面板，非弹窗）
+    await openSettings(page, "插件");
     await sleep(600);
-    report(`${label} modal surface AA`, await page.evaluate(AUDIT_FN));
-    await page.keyboard.press("Escape");
+    report(`${label} settings surface AA`, await page.evaluate(AUDIT_FN));
+    await clickBtn("返回工作台");
     await sleep(400);
 
     // 选择器表面：添加组件

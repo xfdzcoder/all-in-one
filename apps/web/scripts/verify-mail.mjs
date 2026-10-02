@@ -10,16 +10,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import {
-  createScratchDashboard,
-  deleteScratchDashboard,
-  login,
-  makeApiFetch,
-  makeClickBtn,
-  makeOk,
-  sleep,
-  uniqId,
-} from "./lib/verify-kit.mjs";
+import { createScratchDashboard, deleteScratchDashboard, login, makeApiFetch, makeClickBtn, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -219,7 +210,7 @@ await installLayoutGuard(page);
   await sleep(400);
 
   // 账号管理（口令 → 凭证库）—— Q68：卡片内「管理邮箱」按钮已移除，入口统一在头部「数据源管理」
-  ok("MAIL open account manager", await clickBtn("数据源管理"));
+  ok("MAIL open account manager", await openSettings(page, "数据源"));
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");
@@ -397,7 +388,7 @@ await installLayoutGuard(page);
     Boolean(readAfter) && readAfter.badge === false && Number(readAfter.fw) < 600 && readMarks.includes("acc-1:101"),
     JSON.stringify({ row: readAfter, readMarks }),
   );
-  ok("MAIL reopen manager for cleanup", await clickBtn("数据源管理"));
+  ok("MAIL reopen manager for cleanup", await openSettings(page, "数据源"));
   await sleep(500);
   ok(
     "MAIL switch to mailbox tab",

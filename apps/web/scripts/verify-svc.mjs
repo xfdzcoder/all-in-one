@@ -9,15 +9,7 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import {
-  ADMIN_PASSWORD,
-  createScratchDashboard,
-  deleteScratchDashboard,
-  makeApiFetch,
-  makeOk,
-  sleep,
-  uniqId,
-} from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, createScratchDashboard, deleteScratchDashboard, makeApiFetch, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -557,7 +549,7 @@ await installLayoutGuard(page);
   await sleep(400);
 
   // ③ 官方品牌图标（数据连接画廊 —— 服务用官方图标不自绘；Q38a/Q39）
-  await clickBtn("数据源管理");
+  await openSettings(page, "数据源");
   await sleep(500);
   await page.evaluate(() => [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "数据连接")?.click());
   await sleep(400);

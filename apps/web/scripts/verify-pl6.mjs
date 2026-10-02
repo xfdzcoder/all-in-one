@@ -6,7 +6,7 @@
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
 
 import { strToU8, zipSync } from "fflate";
 import puppeteer from "puppeteer-core";
@@ -69,8 +69,8 @@ const apiFetch = (path, options = {}) =>
 
 const adminText = () =>
   page.evaluate(() =>
-    // 关闭态 Modal 也留空壳 root —— 合并全部 root 文本（空壳无内容，不影响判定）
-    [...document.querySelectorAll(".mantine-Modal-root")].map((m) => m.textContent ?? "").join(" "),
+    // B1：插件管理已从弹窗改为设置页面板 —— 读设置右侧面板文本（作用域化，防命中别的区块）
+    document.querySelector(".wb-settings__panel")?.textContent ?? "",
   );
 
 try {
@@ -84,9 +84,9 @@ try {
   }
 
   // 打开管理页（FR-W6 入口，桌面端）
-  ok("PL6 open plugin admin", await clickBtn("插件管理"));
+  ok("PL6 open plugin admin", await openSettings(page, "插件"));
   await sleep(400);
-  ok("PL6 admin dialog opens", (await adminText()).includes("插件管理"));
+  ok("PL6 admin panel opens", (await adminText()).includes("插件管理"));
 
   // 校验失败路径：非法包（缺 manifest.json）→ 明确报错
   const badInput = await page.$('input[type="file"]');
@@ -111,7 +111,7 @@ try {
   ok("PL6 enable plugin", await clickBtn("启用"));
   await sleep(800);
   ok("PL6 status becomes 已启用", (await adminText()).includes("已启用"));
-  await page.keyboard.press("Escape");
+  ok("PL6 back to workspace", await clickBtn("返回工作台")); // B1：设置页返回入口
   await sleep(300);
   ok("PL6 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
@@ -127,7 +127,7 @@ try {
   await sleep(300);
 
   // 禁用 → 卸载清理
-  ok("PL6 reopen admin", await clickBtn("插件管理"));
+  ok("PL6 reopen admin", await openSettings(page, "插件"));
   await sleep(400);
   ok("PL6 disable plugin", await clickBtn("禁用"));
   await sleep(800);

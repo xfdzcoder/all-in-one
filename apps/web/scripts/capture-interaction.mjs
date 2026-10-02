@@ -6,7 +6,7 @@
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { ADMIN_PASSWORD, makeClickBtn } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeClickBtn, openSettings } from "./lib/verify-kit.mjs";
 
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
@@ -174,7 +174,7 @@ await installLayoutGuard(page);
   await sleep(400);
 
   // ── 交互面 · 数据源管理（三页签）──
-  await clickBtn("数据源管理");
+  await openSettings(page, "数据源");
   await sleep(500);
   await shot("s-data-admin-todo");
   await page.evaluate(() => {

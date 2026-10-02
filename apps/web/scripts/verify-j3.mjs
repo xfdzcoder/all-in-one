@@ -5,7 +5,7 @@
  * Run: node scripts/verify-j3.mjs (server :3000, preview :4173)
  */
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -54,16 +54,14 @@ try {
   );
   ok("J3/D10 no edit entry on mobile", editVisible === false);
 
-  // D41: 数据源管理移动端可达（数据操作非布局编辑）
-  const dataAdminVisible = await page.evaluate(() =>
+  // D41: 数据源管理移动端可达（数据操作非布局编辑）—— B1 起入口 = 设置 → 数据源
+  const settingsVisible = await page.evaluate(() =>
     [...document.querySelectorAll("button")].some(
-      (b) => b.textContent.trim() === "数据源管理" && b.offsetParent !== null,
+      (b) => b.textContent.trim() === "设置" && b.offsetParent !== null,
     ),
   );
-  ok("J3/D41 data admin reachable on mobile", dataAdminVisible === true);
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "数据源管理")?.click(),
-  );
+  ok("J3/D41 settings entry reachable on mobile", settingsVisible === true);
+  ok("J3/D41 data source menu reachable on mobile", await openSettings(page, "数据源"));
   await sleep(500);
   ok(
     "J3/D41 data admin page opens on mobile",
@@ -113,8 +111,10 @@ try {
     ok("J3 todo create on mobile", false, "no todo input found");
   }
 
-  // J3: RSS 信息流可浏览
-  const hasRss = await page.evaluate(() => document.body.textContent.includes("信息流"));
+  // J3: RSS 卡可浏览（Q85 后卡片标题 = 「RSS」——原「信息流」断言自改名起陈旧）
+  const hasRss = await page.evaluate(() =>
+    [...document.querySelectorAll(".wb-widget")].some((w) => (w.textContent ?? "").includes("RSS")),
+  );
   ok("J3 rss content visible on mobile", hasRss);
 } catch (e) {
   ok("flow completed", false, String(e).slice(0, 200));

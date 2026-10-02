@@ -7,7 +7,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "node:http";
-import { ADMIN_PASSWORD, makeClickBtn } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeClickBtn, openSettings } from "./lib/verify-kit.mjs";
 
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
@@ -263,7 +263,7 @@ await installLayoutGuard(page);
   await clickBtn("取消", true);
   await sleep(400);
 
-  await clickBtn("插件管理");
+  await openSettings(page, "插件");
   await sleep(500);
   await shot("08-plugin-admin");
   await page.keyboard.press("Escape");

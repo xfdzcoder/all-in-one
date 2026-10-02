@@ -9,6 +9,7 @@
  */
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
+import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
 import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
@@ -107,6 +108,8 @@ const frameState = (url) =>
 try {
   await page.goto(WEB, { waitUntil: "networkidle0" });
   await login(page); // TST-14：登录块单点（选择器变更只改 verify-kit）
+  // TST-19：测前快照布局、测后还原 —— 本脚本加的 iframe 卡不留用户盘（此前漏接守卫，实测污染过「用户页面禁止修改」）
+  await installLayoutGuard(page);
 
   ok("J7 enter edit", await clickBtn("编辑页面"));
   await sleep(300);
@@ -162,6 +165,7 @@ try {
   ok("flow completed", false, String(e).slice(0, 200));
 }
 
+await restoreLayouts(page).catch((e) => console.error("!! 布局还原失败（TST-19）：", e?.message ?? e));
 await browser.close();
 embeddable.close();
 blocked.close();

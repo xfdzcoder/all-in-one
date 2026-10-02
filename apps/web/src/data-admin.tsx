@@ -56,7 +56,7 @@ const TAG_COLORS = [
   { value: "teal", label: "青" },
 ];
 
-export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialTab?: string }) {
+export function DataAdmin({ onBack, initialTab, embedded }: { onBack?: () => void; initialTab?: string; embedded?: boolean }) {
   const { data: dashboards } = useDashboards();
   const todos = useTodos(undefined, undefined, true); // Q29b：管理面含归档
   const sources = useFeedSources();
@@ -193,9 +193,12 @@ export function DataAdmin({ onBack, initialTab }: { onBack: () => void; initialT
   return (
     <div className="wb-admin">
       <div className="wb-admin__bar">
-        <Button variant="default" size="xs" onClick={onBack}>
-          ← 返回工作台
-        </Button>
+        {/* 嵌入设置页时（B1）返回入口在设置页顶栏，这里不再重复 */}
+        {!embedded && (
+          <Button variant="default" size="xs" onClick={onBack}>
+            ← 返回工作台
+          </Button>
+        )}
         <Title order={4} className="wb-admin__title">
           数据源管理
         </Title>

@@ -11,7 +11,7 @@
 import { createServer } from "node:http";
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, sleep } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -104,7 +104,7 @@ await installLayoutGuard(page);
   await sleep(1000);
   ok("GMAIL exit edit", await clickBtn("完成编辑"));
   await sleep(300);
-  ok("GMAIL open account manager", await clickBtn("数据源管理")); // D42：管理在数据源管理页
+  ok("GMAIL open account manager", await openSettings(page, "数据源")); // D42：管理在数据源管理页
   await sleep(500);
   await page.evaluate(() => {
     const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "邮箱");

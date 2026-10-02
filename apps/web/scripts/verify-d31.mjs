@@ -7,7 +7,7 @@
  */
 import puppeteer from "puppeteer-core";
 import { installLayoutGuard, restoreLayouts } from "./lib/fixture-guard.mjs";
-import { login, makeClickBtn, makeOk, sleep, uniqId, waitFor, waitForText } from "./lib/verify-kit.mjs";
+import { login, makeClickBtn, makeOk, openSettings, sleep, uniqId, waitFor, waitForText } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -110,7 +110,7 @@ await installLayoutGuard(page);
 
   // ② 信息流源退订二次确认（Q22b-2：退订入口移至「数据源管理 · 信息源」——点击按钮，非药丸）
   const openUnsub = async () => {
-    await clickBtn("数据源管理"); // 幂等：已开时点击仍保持打开
+    await openSettings(page, "数据源"); // 幂等：已开时点击仍保持打开
     await sleep(400);
     await page.evaluate(() => {
       const tab = [...document.querySelectorAll(".wb-admin [role=tab]")].find(

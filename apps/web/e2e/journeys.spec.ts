@@ -184,7 +184,9 @@ test("J4 data/view separation: card name = task group, data admin shares state (
   await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
 
   // 数据/视图分离：同一数据在「数据源管理」按卡片名称分组可见
-  await page.getByRole("button", { name: "数据源管理" }).click();
+  // B1：头部「数据源管理/插件管理/主题切换/退出登录」四按钮 → 单个「设置」（TST-23 双实现同步）
+  await page.getByRole("button", { name: "设置" }).click();
+  await page.getByRole("button", { name: "数据源", exact: true }).click();
   await page.waitForTimeout(600);
   // Q29b：任务页签 = 单 ToDo 视图 —— 下拉选中目标
   await page.getByRole("combobox", { name: "分组选择" }).click(); // WEB-22 术语统一（ToDo→分组）——TST-23 双实现同步

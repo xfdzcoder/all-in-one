@@ -114,6 +114,20 @@ export const waitForText = (page, text, { present = true, timeoutMs = 8000 } = {
     { timeoutMs },
   );
 
+/**
+ * 进入设置页某菜单（**B1**：头部「数据源管理 / 插件管理 / 主题切换 / 退出登录」四按钮
+ * 收进单个「设置」，左右分栏设置页承载）。
+ * `tab` = 菜单文本（账户 / 外观 / 插件 / 数据源 / 关于）；已在设置页时只切菜单（幂等）。
+ * 返回是否成功（TST-15：布尔契约，勿把失败原因当 truthy 吞掉）。
+ */
+export async function openSettings(page, tab) {
+  const clickBtn = makeClickBtn(page);
+  const inSettings = await page.evaluate(() => Boolean(document.querySelector(".wb-settings")));
+  if (!inSettings && !(await clickBtn("设置"))) return false;
+  await sleep(300);
+  return clickBtn(tab);
+}
+
 // ── 临时草稿盘（**TST-23**：verify 脚本零接触用户页面）────────────────────
 //
 // 背景（用户反馈②，2026-10-02）：历史脚本普遍 `find(title === "首页") ?? list[0]`

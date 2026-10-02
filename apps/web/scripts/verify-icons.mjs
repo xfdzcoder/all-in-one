@@ -8,7 +8,7 @@ import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import puppeteer from "puppeteer-core";
-import { ADMIN_PASSWORD, makeOk, sleep, uniqId } from "./lib/verify-kit.mjs";
+import { ADMIN_PASSWORD, makeOk, openSettings, sleep, uniqId } from "./lib/verify-kit.mjs";
 
 const WEB = "http://localhost:4173/";
 const results = [];
@@ -38,9 +38,7 @@ try {
   await page.waitForSelector(".grid-stack", { timeout: 15000 });
   await sleep(400);
 
-  await page.evaluate(() =>
-    [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "数据源管理" && b.offsetParent !== null)?.click(),
-  );
+  ok("ICONS open data source panel", await openSettings(page, "数据源"));
   await sleep(500);
   await page.evaluate(() =>
     [...document.querySelectorAll(".wb-admin [role=tab]")].find((t) => t.textContent.trim() === "图标")?.click(),

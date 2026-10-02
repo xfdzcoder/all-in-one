@@ -1242,6 +1242,89 @@ a.wb-widget__title-link:focus-visible {
   width: min(320px, 100%);
 }
 
+/* ── 设置页（B1：头部四按钮 → 单「设置」，左右分栏；类名即公共 API 可被 /custom.css 覆盖）── */
+.wb-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-space-3);
+  padding: var(--wb-space-4);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.wb-settings__body {
+  display: flex;
+  gap: var(--wb-space-4);
+  align-items: flex-start;
+}
+
+.wb-settings__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 180px;
+  position: sticky;
+  top: var(--wb-space-3);
+}
+
+.wb-settings__item {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-space-2);
+  padding: var(--wb-space-2) var(--wb-space-3);
+  border-radius: var(--wb-radius-sm);
+  color: var(--wb-color-text-muted);
+  transition: background var(--wb-transition), color var(--wb-transition);
+}
+
+.wb-settings__item:hover {
+  background: var(--wb-color-surface-hover);
+  color: var(--wb-color-text);
+}
+
+.wb-settings__item--active {
+  background: var(--wb-color-surface-hover);
+  color: var(--wb-color-text);
+  font-weight: var(--wb-weight-semibold);
+}
+
+.wb-settings__item-icon {
+  display: inline-flex;
+}
+
+.wb-settings__panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-settings__section {
+  max-width: 760px;
+}
+
+.wb-settings__data {
+  width: 100%;
+}
+
+/* 移动端（D10 只浏览操作）：左菜单折叠为顶部横向滚动 */
+@media (max-width: 767px) {
+  .wb-settings__body {
+    flex-direction: column;
+  }
+
+  .wb-settings__nav {
+    flex-direction: row;
+    flex: none;
+    overflow-x: auto;
+    position: static;
+    padding-bottom: var(--wb-space-1);
+  }
+
+  .wb-settings__item {
+    white-space: nowrap;
+  }
+}
+
 .wb-admin__table {
   display: flex;
   flex-direction: column;
