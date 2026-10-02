@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import type { WidgetDataState } from "@all-in-one/widget-sdk";
-import { api, type FeedAgg, type TodoItem } from "./api";
+import { api, type DataSourceRow, type FeedAgg, type TodoItem } from "./api";
 import { DATA_ROOT_KEYS, qk, qkRoot, sseKeysFor } from "./query-keys";
 import { normalizeTagIds } from "./config-form-utils";
 import { reportError } from "./feedback";
@@ -942,15 +942,29 @@ export function useResolvedSourceConfig<T extends Record<string, unknown>>(
 }
 
 /**
- * 卡片标题跳转地址（Q86 / **D59**）= 绑定数据源的 `config.url`。
- * 未绑定连接 / 连接无 url / url 不是 http(s) → `undefined`（标题不渲染成链接）。
+ * 服务类组件的连接元信息（**WEB-12 收口**）：显示名 + 标题跳转 + 是否绑定，**一次订阅**。
+ *
+ * 此前各组件手写「`useDataSources()` 全量查表找 row + `useSourceHomeUrl()` **内部再查一次全量**」，
+ * 同端点两份订阅（monitor 用 kind 键查名、又用全量键查 url —— 真的发两次请求）。
+ * 现在一次查询拿全；`kind` 缺省 = 查全量（service-overview 这类连接 kind 不固定的组件用）。
+ * `homeUrl`（Q86/**D59**）= 绑定数据源的 `config.url`；无 url 或非 http(s) → `undefined`（标题不渲染成链接）。
  */
-export function useSourceHomeUrl(sourceId: unknown): string | undefined {
-  const all = useDataSources();
+export function useSourceMeta(
+  kind: string | undefined,
+  sourceId: unknown,
+): { row: DataSourceRow | undefined; sourceName: string | undefined; homeUrl: string | undefined; bound: boolean } {
+  const sources = useDataSources(kind);
   const sid = typeof sourceId === "string" ? sourceId : "";
-  const row = (all.data ?? []).find((r) => r.id === sid);
-  const url = (row?.config as Record<string, unknown> | undefined)?.url;
-  return typeof url === "string" && /^https?:\/\//i.test(url) ? url : undefined;
+  return useMemo(() => {
+    const row = (sources.data ?? []).find((r) => r.id === sid);
+    const url = row?.config?.url;
+    return {
+      row,
+      sourceName: row?.name,
+      homeUrl: typeof url === "string" && /^https?:\/\//i.test(url) ? url : undefined,
+      bound: Boolean(row),
+    };
+  }, [sources.data, sid]);
 }
 
 /** 页面列表（Q29b：任务页签标注所在 Dashboard）。 */

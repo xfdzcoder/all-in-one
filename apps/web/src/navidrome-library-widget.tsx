@@ -1,14 +1,13 @@
 import { IconDiscOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Group, Text } from "@mantine/core";
+import { Text } from "@mantine/core";
 
-import { useMediaOptionLabel, useNavidromeLibrary, useSourceHomeUrl } from "./data-hooks";
+import { useMediaOptionLabel, useNavidromeLibrary, useSourceMeta } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { ServiceIcon } from "./service-icon";
-import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading, IconAction } from "./ui";
+import { SourceHint, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Navidrome 专辑墙（FR-X3 只读深度，**D50**）：最近添加专辑网格。
@@ -41,39 +40,27 @@ export function NavidromeLibraryWidget({
 }) {
   const { data, loading, error, refresh } = useNavidromeLibrary(sourceId, limit, refreshSec, artistId);
   const [preview, setPreview] = useState<{ cover: string; name: string; artist?: string } | null>(null);
-  const all = useDataSources();
-  const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
-  // Q86/D59：标题区跳转到该数据源站点
-  const homeUrl = useSourceHomeUrl(sourceId);
+  // WEB-12：连接元信息一次订阅（Q86/D59 标题区跳转到该数据源站点）
+  const { row, homeUrl } = useSourceMeta(undefined, sourceId);
   // Q94（反馈④）：标题带上**所选艺人名**（配置只存 id，这里解析成名称）
   // WEB-10：只订阅「艺人选项」一个查询（原先 useDynamicOptionsMap 会拉 12+ 个查询）
   const artistLabel = useMediaOptionLabel(artistId ? "navidrome-artists" : undefined, sourceId, artistId);
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle
-          icon={<ServiceIcon name="navidrome" size={16} />}
-          title={
-            <>
-              专辑墙{row?.name ? ` · ${row.name}` : ""}
-              {artistLabel ? ` · ${artistLabel}` : ""}
-            </>
-          }
-          href={homeUrl}
-        />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle
+        icon={<ServiceIcon name="navidrome" size={16} />}
+        title={
+          <>
+            专辑墙{row?.name ? ` · ${row.name}` : ""}
+            {artistLabel ? ` · ${artistLabel}` : ""}
+          </>
+        }
+        href={homeUrl}
+        actions={<IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>}
+      />
 
-      {!sourceId && (
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Navidrome 连接
-          </Text>
-        </div>
-      )}
+      {!sourceId && <SourceHint text="暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Navidrome 连接" />}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 

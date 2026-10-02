@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ActionIcon, Tooltip } from "@mantine/core";
+import { ActionIcon, Button, Text, Tooltip } from "@mantine/core";
 
 /** 图标动作按钮（Q65/D52「文字按钮尽量 icon 化」）：图标 + tooltip + aria-label + sr-only 文本。
  *  sr-only 保留可访问名与 verify 文本匹配兼容（视觉上只剩图标）——
@@ -138,5 +138,27 @@ export function RelativeTime({ value, prefix }: { value: string | number | Date;
       {prefix}
       {formatRelative(value) || "—"}
     </span>
+  );
+}
+
+/** 服务类组件空态引导（**WEB-12 收口**）：提示文案 + 可选「去添加」跳转。
+ *  跳转走 `wb:navigate`（Q36 既有范式：组件不直接引路由，头部监听该事件切视图）；
+ *  DOM 与此前各组件手写的 `.wb-widget__hint` 块完全同构。 */
+export function SourceHint({ text, actionLabel }: { text: string; actionLabel?: string }) {
+  return (
+    <div className="wb-widget__hint">
+      <Text size="xs" c="dimmed">
+        {text}
+      </Text>
+      {actionLabel && (
+        <Button
+          size="compact-xs"
+          variant="default"
+          onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "sources" } }))}
+        >
+          {actionLabel}
+        </Button>
+      )}
+    </div>
   );
 }

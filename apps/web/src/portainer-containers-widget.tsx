@@ -1,13 +1,12 @@
 import { IconRefresh, IconRotateClockwise } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Code, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Code, Modal, Stack, Text } from "@mantine/core";
 
-import { usePortainerContainers, usePortainerLogs, usePortainerRestart, useSourceHomeUrl } from "./data-hooks";
+import { usePortainerContainers, usePortainerLogs, usePortainerRestart, useSourceMeta } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
-import { useDataSources } from "./data-hooks";
 import { ConfirmAction } from "./confirm";
-import { WbAlert, WbLoading, IconAction } from "./ui";
+import { SourceHint, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Portainer 容器清单（FR-X3 只读深度，**D50**）：状态/端口/镜像，点行看日志尾部（只读）。
@@ -17,14 +16,12 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
   const { data, loading, error, refresh } = usePortainerContainers(sourceId, refreshSec);
   const restart = usePortainerRestart(sourceId);
   const [logsFor, setLogsFor] = useState<{ id: string; name: string } | null>(null);
-  const all = useDataSources();
-  const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
-  // Q86/D59：标题区跳转到该数据源站点
-  const homeUrl = useSourceHomeUrl(sourceId);
+  // WEB-12：连接元信息一次订阅（Q86/D59 标题区跳转到该数据源站点）
+  const { row, homeUrl } = useSourceMeta(undefined, sourceId);
   const logs = usePortainerLogs(logsFor ? sourceId : undefined, logsFor?.id);
 
   // Q56/D51：重启白名单（连接配置 restartAllow；空 = 不显示重启入口，服务端同样拒绝）
-  const allowRaw = (row as { config?: Record<string, unknown> } | undefined)?.config?.restartAllow;
+  const allowRaw = row?.config?.restartAllow;
   const allowSet = new Set(
     (Array.isArray(allowRaw) ? allowRaw : typeof allowRaw === "string" ? allowRaw.split(/[,，]/) : [])
       .map((x) => String(x).trim())
@@ -36,29 +33,23 @@ export function PortainerContainersWidget({ sourceId, refreshSec }: { sourceId?:
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle
-          icon={<ServiceIcon name="portainer" size={16} />}
-          title={<>容器清单{row?.name ? ` · ${row.name}` : ""}</>}
-          href={homeUrl}
-        />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          {containers.length > 0 && (
-            <Badge size="xs" variant="light" color={abnormal.length > 0 ? "red" : "green"}>
-              {containers.length - abnormal.length}/{containers.length} 正常
-            </Badge>
-          )}
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle
+        icon={<ServiceIcon name="portainer" size={16} />}
+        title={<>容器清单{row?.name ? ` · ${row.name}` : ""}</>}
+        href={homeUrl}
+        actions={
+          <>
+            {containers.length > 0 && (
+              <Badge size="xs" variant="light" color={abnormal.length > 0 ? "red" : "green"}>
+                {containers.length - abnormal.length}/{containers.length} 正常
+              </Badge>
+            )}
+            <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
+          </>
+        }
+      />
 
-      {!sourceId && (
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Portainer 连接
-          </Text>
-        </div>
-      )}
+      {!sourceId && <SourceHint text="暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Portainer 连接" />}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {restart.error && <WbAlert tone="error" size="sm">重启失败：{restart.error}</WbAlert>}

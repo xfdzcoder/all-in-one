@@ -1,13 +1,13 @@
 import { IconExternalLink, IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Badge, Group, Text } from "@mantine/core";
+import { Badge, Text } from "@mantine/core";
 
-import { useDataSources, useImmichGallery, useMediaOptionLabel, useSourceHomeUrl } from "./data-hooks";
+import { useImmichGallery, useMediaOptionLabel, useSourceMeta } from "./data-hooks";
 import { MediaLightbox } from "./media-lightbox";
 import { MediaWall } from "./media-wall";
 import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
-import { RelativeTime, WbAlert, WbLoading, IconAction } from "./ui";
+import { RelativeTime, SourceHint, WbAlert, WbLoading, IconAction } from "./ui";
 
 /**
  * Immich 照片墙（FR-X3 只读深度，**D50**）：最近照片网格。
@@ -51,39 +51,27 @@ export function ImmichGalleryWidget({
     const it = items[next];
     setPreview({ thumb: it.thumb, href: it.href, at: it.at });
   };
-  const all = useDataSources();
-  const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
-  // Q86/D59：标题区跳转到 Immich 站点
-  const homeUrl = useSourceHomeUrl(sourceId);
+  // WEB-12：连接元信息一次订阅（Q86/D59 标题区跳转到 Immich 站点）
+  const { row, homeUrl } = useSourceMeta(undefined, sourceId);
   // Q94（反馈④）：标题带上**所选相册名**（配置只存 id，这里解析成名称）
   // WEB-10：只订阅「相册选项」一个查询（原先 useDynamicOptionsMap 会拉 12+ 个查询）
   const albumLabel = useMediaOptionLabel(albumId ? "immich-albums" : undefined, sourceId, albumId);
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle
-          icon={<ServiceIcon name="immich" size={16} />}
-          title={
-            <>
-              照片墙{row?.name ? ` · ${row.name}` : ""}
-              {albumLabel ? ` · ${albumLabel}` : ""}
-            </>
-          }
-          href={homeUrl}
-        />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle
+        icon={<ServiceIcon name="immich" size={16} />}
+        title={
+          <>
+            照片墙{row?.name ? ` · ${row.name}` : ""}
+            {albumLabel ? ` · ${albumLabel}` : ""}
+          </>
+        }
+        href={homeUrl}
+        actions={<IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>}
+      />
 
-      {!sourceId && (
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Immich 连接
-          </Text>
-        </div>
-      )}
+      {!sourceId && <SourceHint text="暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Immich 连接" />}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {data && data.items.length === 0 && !error && (

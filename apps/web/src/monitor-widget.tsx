@@ -2,10 +2,10 @@ import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Card, Group, JsonInput, Modal, Progress, Stack, Text } from "@mantine/core";
 
-import { useDataSources, useMonitorData, useResolvedSourceConfig, useSourceHomeUrl } from "./data-hooks";
+import { useMonitorData, useResolvedSourceConfig, useSourceMeta } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
 import { copyText } from "./clipboard";
-import { WbAlert, IconAction } from "./ui";
+import { SourceHint, WbAlert, IconAction } from "./ui";
 
 /**
  * 服务器监控组件（FR：服务器监控；**D36 打通第三方服务，只做连接与展示**）。
@@ -67,47 +67,35 @@ export function MonitorWidget(config: { url?: string; refreshSec?: number } & Re
   const url = (resolved as { url?: string }).url;
   // Q85（项 11）：标题显示**实际的数据源名称**（未绑定连接时回落组件名）
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
-  const sources = useDataSources("monitor");
-  const sourceName = (sources.data ?? []).find((r) => r.id === sourceId)?.name;
-  // Q86/D59：标题区跳转到该数据源站点
-  const homeUrl = useSourceHomeUrl(sourceId);
+  // WEB-12：连接元信息一次订阅（kind=monitor；Q86/D59 标题区跳转到该数据源站点）
+  const { sourceName, homeUrl } = useSourceMeta("monitor", sourceId);
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle title={sourceName ?? "服务器监控"} href={homeUrl} />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          {data?.probe?.ok && (
-            <Badge size="xs" color="green" variant="light">
-              {data.probe.version ? `v${data.probe.version}` : "已连接"}
-            </Badge>
-          )}
-          {data && !data.probe?.ok && (
-            <Badge size="xs" color="red" variant="light">
-              探测失败
-            </Badge>
-          )}
-          {data && (
-            <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
-          )}
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle title={sourceName ?? "服务器监控"} href={homeUrl}
+        actions={
+          <>
+            {data?.probe?.ok && (
+              <Badge size="xs" color="green" variant="light">
+                {data.probe.version ? `v${data.probe.version}` : "已连接"}
+              </Badge>
+            )}
+            {data && !data.probe?.ok && (
+              <Badge size="xs" color="red" variant="light">
+                探测失败
+              </Badge>
+            )}
+            {data && (
+              <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
+            )}
+            <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
+          </>
+        }
+      />
 
       {!url && (
         // Q36：无监控源 → 引导去数据源管理配置（组件表单只做选择）
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂无监控源 —— 请到「数据源管理 · 数据连接」添加
-          </Text>
-          <Button
-            size="compact-xs"
-            variant="default"
-            onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "sources" } }))}
-          >
-            去添加监控源
-          </Button>
-        </div>
+        <SourceHint text="暂无监控源 —— 请到「数据源管理 · 数据连接」添加" actionLabel="去添加监控源" />
       )}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {data && !data.probe?.ok && (

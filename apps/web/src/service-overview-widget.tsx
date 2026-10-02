@@ -1,15 +1,14 @@
 import { IconRefresh, IconInfoCircle } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { Badge, Button, Card, Group, JsonInput, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Card, Group, JsonInput, Modal, Stack, Text } from "@mantine/core";
 
 import { isServiceOverview, validateServiceOverview } from "@all-in-one/widget-sdk";
 import type { ServiceListItem, ServiceMetric, ServiceOverview } from "@all-in-one/widget-sdk";
 
-import { useServiceOverview, useSourceHomeUrl } from "./data-hooks";
+import { useServiceOverview, useSourceMeta } from "./data-hooks";
 import { WidgetTitle } from "./widget-title";
 import { ServiceIcon } from "./service-icon";
-import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading, IconAction } from "./ui";
+import { SourceHint, WbAlert, WbLoading, IconAction } from "./ui";
 import { RelativeTime } from "./ui";
 
 /**
@@ -135,11 +134,8 @@ function ListBlock({ list }: { list: { title: string; items: ServiceListItem[] }
 export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: string; refreshSec?: number }) {
   const { data, loading, error, refresh } = useServiceOverview(sourceId, refreshSec);
   const [detailOpen, setDetailOpen] = useState(false);
-  // 连接 kind → 官方图标（画廊同款）
-  const all = useDataSources();
-  const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
-  // Q86/D59：标题区跳转到该数据源站点
-  const homeUrl = useSourceHomeUrl(sourceId);
+  // 连接 kind → 官方图标（画廊同款）；WEB-12：连接元信息一次订阅（Q86/D59 标题跳转）
+  const { row, homeUrl } = useSourceMeta(undefined, sourceId);
   const kindIcon: Record<string, string> = {
     immich: "immich",
     navidrome: "navidrome",
@@ -169,43 +165,32 @@ export function ServiceOverviewWidget({ sourceId, refreshSec }: { sourceId?: str
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle
-          icon={row && kindIcon[row.kind] ? <ServiceIcon name={kindIcon[row.kind]} size={16} /> : null}
-          title={row?.name ?? "服务概览"}
-          href={homeUrl}
-        />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          {ov?.probe?.ok && (
-            <Badge size="xs" color="green" variant="light">
-              {ov.probe.version ? `v${ov.probe.version}` : "已连接"}
-            </Badge>
-          )}
-          {ov && !ov.probe?.ok && (
-            <Badge size="xs" color="red" variant="light">
-              探测失败
-            </Badge>
-          )}
-          {ov && (
-            <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
-          )}
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle
+        icon={row && kindIcon[row.kind] ? <ServiceIcon name={kindIcon[row.kind]} size={16} /> : null}
+        title={row?.name ?? "服务概览"}
+        href={homeUrl}
+        actions={
+          <>
+            {ov?.probe?.ok && (
+              <Badge size="xs" color="green" variant="light">
+                {ov.probe.version ? `v${ov.probe.version}` : "已连接"}
+              </Badge>
+            )}
+            {ov && !ov.probe?.ok && (
+              <Badge size="xs" color="red" variant="light">
+                探测失败
+              </Badge>
+            )}
+            {ov && (
+              <IconAction label="详情" onClick={() => setDetailOpen(true)}><IconInfoCircle size={14} /></IconAction>
+            )}
+            <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
+          </>
+        }
+      />
 
       {!sourceId && (
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加服务连接
-          </Text>
-          <Button
-            size="compact-xs"
-            variant="default"
-            onClick={() => window.dispatchEvent(new CustomEvent("wb:navigate", { detail: { tab: "sources" } }))}
-          >
-            去添加连接
-          </Button>
-        </div>
+        <SourceHint text="暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加服务连接" actionLabel="去添加连接" />
       )}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
       {ov && !ov.probe?.ok && (

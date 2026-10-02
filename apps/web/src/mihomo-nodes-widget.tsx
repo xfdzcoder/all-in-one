@@ -3,8 +3,8 @@ import { Badge, Group, Stack, Text } from "@mantine/core";
 
 import { useMihomoNodes } from "./data-hooks";
 import { ServiceIcon } from "./service-icon";
-import { useDataSources } from "./data-hooks";
-import { WbAlert, WbLoading, IconAction } from "./ui";
+import { useSourceMeta } from "./data-hooks";
+import { SourceHint, WbAlert, WbLoading, IconAction } from "./ui";
 import { WidgetTitle } from "./widget-title";
 
 /**
@@ -13,28 +13,18 @@ import { WidgetTitle } from "./widget-title";
  */
 export function MihomoNodesWidget({ sourceId, refreshSec }: { sourceId?: string; refreshSec?: number }) {
   const { data, loading, error, refresh } = useMihomoNodes(sourceId, refreshSec);
-  const all = useDataSources();
-  const row = (all.data ?? []).find((r: { id: string }) => r.id === sourceId);
+  // WEB-12：连接元信息一次订阅（Mihomo 无站点 URL → 标题不渲染链接，D59）
+  const { row } = useSourceMeta(undefined, sourceId);
 
   return (
     <div className="wb-widget">
-      <Group gap={6}>
-        <WidgetTitle
-          icon={<ServiceIcon name="mihomo" size={16} />}
-          title={<>节点面板{row?.name ? ` · ${row.name}` : ""}</>}
-        />
-        <Group gap={6} wrap="nowrap" className="wb-widget__actions">
-          <IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>
-        </Group>
-      </Group>
+      <WidgetTitle
+        icon={<ServiceIcon name="mihomo" size={16} />}
+        title={<>节点面板{row?.name ? ` · ${row.name}` : ""}</>}
+        actions={<IconAction label="刷新" onClick={() => void refresh()}><IconRefresh size={14} /></IconAction>}
+      />
 
-      {!sourceId && (
-        <div className="wb-widget__hint">
-          <Text size="xs" c="dimmed">
-            暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Mihomo 连接
-          </Text>
-        </div>
-      )}
+      {!sourceId && <SourceHint text="暂未选择数据连接 —— 请到「数据源管理 · 数据连接」添加 Mihomo 连接" />}
       {loading && <WbLoading />}
       {error && <WbAlert tone="error" size="sm">{error}</WbAlert>}
 
